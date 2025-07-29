@@ -44,8 +44,10 @@ export const msalConfig: Configuration = {
     clientId: "d9e7775f-277f-40a2-8120-c485a7b5413a",              // << App Registration – Application (client) ID
     authority:
       "https://login.microsoftonline.com/ab57129b-dbfd-4cac-aa77-fc74c40364af", // or B2C authority
-    redirectUri: window.location.origin,     // http://localhost:3000 for local dev
-    postLogoutRedirectUri: "/",              // Back to home after logout
+    redirectUri:  determinedRedirectUri,     // http://localhost:3000 for local dev
+    postLogoutRedirectUri: "/",     
+    navigateToLoginRequestUrl: false,    // 👈 NEW
+    // Back to home after logout
   },
   cache: {
     cacheLocation: "sessionStorage",         // "localStorage" if you need SSO across tabs
