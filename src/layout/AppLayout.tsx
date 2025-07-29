@@ -26,7 +26,7 @@ const LayoutContent: React.FC = () => {
         <AppHeader />
 
         {/* Scrollable page content */}
-        <div className="flex-1 p-4 md:p-6 mx-auto w-full max-w-[--breakpoint-2xl]">
+        <div className="w-full h-full">
           <Outlet />
         </div>
 
