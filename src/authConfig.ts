@@ -4,11 +4,46 @@
  */
 import { LogLevel, Configuration } from "@azure/msal-browser";
 
+
+
+
+
+const currentHostname = window.location.hostname;
+
+let determinedRedirectUri;
+
+switch (currentHostname) {
+    // --- Production Environment ---
+    case 'prr.metro.net':
+        determinedRedirectUri = 'https://dsi.metro.net/auth-response'; 
+        break;
+
+    case 'webappprodtest.metro.net':
+        determinedRedirectUri = 'https://webappprodtest.metro.net/auth-response';
+        break;
+        
+    // --- Development Environment ---
+    case 'prrdev.metro.net': 
+        determinedRedirectUri = 'https://dsidev.metro.net/auth-response'; 
+        break;
+
+    // --- Local Development Environment ---
+    case 'localhost':
+        determinedRedirectUri = 'http://localhost:5173/auth-response'; 
+        break;
+
+    // --- Default/Fallback Case ---
+    default:
+        console.warn(`MSAL config: Unrecognized hostname "${currentHostname}", defaulting redirectUri to localhost.`);
+        determinedRedirectUri = 'http://localhost:5173/auth-response';
+}
+
+
 export const msalConfig: Configuration = {
   auth: {
-    clientId: "YOUR_CLIENT_ID",              // << App Registration – Application (client) ID
+    clientId: "d9e7775f-277f-40a2-8120-c485a7b5413a",              // << App Registration – Application (client) ID
     authority:
-      "https://login.microsoftonline.com/YOUR_TENANT_ID", // or B2C authority
+      "https://login.microsoftonline.com/ab57129b-dbfd-4cac-aa77-fc74c40364af", // or B2C authority
     redirectUri: window.location.origin,     // http://localhost:3000 for local dev
     postLogoutRedirectUri: "/",              // Back to home after logout
   },
