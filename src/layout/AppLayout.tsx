@@ -29,7 +29,6 @@ const LayoutContent: React.FC = () => {
       <div
   className={`flex flex-col flex-1 min-h-screen transition-all duration-300 ease-in-out ${sidebarWidth}`}
 >
-
         {/* Header (fixed height) */}
         <AppHeader />
 
