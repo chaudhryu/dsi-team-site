@@ -79,9 +79,9 @@ const AppHeader: React.FC = () => {
 
           {/* mobile logo */}
           <Link to="/" className="lg:hidden">
-  <img className="h-12 w-auto dark:hidden" src="./images/logo/metroLogoSmall.webp" alt="Logo" />
-  <img className="hidden h-12 w-auto dark:block" src="./images/logo/metroLogoSmall.webp" alt="Logo" />
-</Link>
+            <img className="h-12 w-auto dark:hidden" src="./images/logo/metroLogoSmall.webp" alt="Logo" />
+            <img className="hidden h-12 w-auto dark:block" src="./images/logo/metroLogoSmall.webp" alt="Logo" />
+          </Link>
 
           <button
             onClick={toggleApplicationMenu}
@@ -100,21 +100,27 @@ const AppHeader: React.FC = () => {
 
         {/* ─────────── Right section ─────────── */}
         <div
-          className={`${
-            isApplicationMenuOpen ? "flex" : "hidden"
-          } items-center justify-between w-full gap-4 px-5 py-4 lg:flex shadow-theme-md lg:justify-end lg:px-0 lg:shadow-none`}
+          className={`${isApplicationMenuOpen ? "flex" : "hidden"
+            } items-center justify-between w-full gap-4 px-5 py-4 lg:flex shadow-theme-md lg:justify-end lg:px-0 lg:shadow-none`}
         >
+                    <Link
+            to="/projects"
+            className="
+    inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold
+    text-gray-700 hover:text-gray-900 hover:bg-gray-100
+    dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800
+    focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600
+    transition-colors
+  "
+          >
+            Projects
+          </Link>
           <div className="flex items-center gap-2 2xsm:gap-3">
             <ThemeToggleButton />
             {authenticated}
           </div>
 
-          <Link
-  to="/projects"
-  className="text-sm font-medium hover:underline"
->
-  Projects
-</Link>
+
 
           {authenticated ? (
             <>
