@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
+import { ChevronLeftIcon} from "../../icons";
 
 import Button from "../ui/button/Button";
 import { useMsal } from "@azure/msal-react";
