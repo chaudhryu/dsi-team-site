@@ -7,7 +7,7 @@ import AppFooter from "./AppFooter";
 import { useIsAuthenticated } from "@azure/msal-react";
 
 const LayoutContent: React.FC = () => {
-  const { isExpanded, isHovered, isMobileOpen } = useSidebar();
+  const { isExpanded, isHovered } = useSidebar();
   const authenticated = useIsAuthenticated();   // NEW
 
   const sidebarWidth =
