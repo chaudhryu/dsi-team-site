@@ -109,6 +109,13 @@ const AppHeader: React.FC = () => {
             {authenticated}
           </div>
 
+          <Link
+  to="/projects"
+  className="text-sm font-medium hover:underline"
+>
+  Projects
+</Link>
+
           {authenticated ? (
             <>
               <button
