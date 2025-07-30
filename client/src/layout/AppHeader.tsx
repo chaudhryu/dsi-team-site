@@ -79,17 +79,9 @@ const AppHeader: React.FC = () => {
 
           {/* mobile logo */}
           <Link to="/" className="lg:hidden">
-            <img
-              className="dark:hidden"
-              src="./images/logo/theMetroLogo.webp"
-              alt="Logo"
-            />
-            <img
-              className="hidden dark:block"
-              src="./images/logo/theMetroLogo.webp"
-              alt="Logo"
-            />
-          </Link>
+  <img className="h-12 w-auto dark:hidden" src="./images/logo/metroLogoSmall.webp" alt="Logo" />
+  <img className="hidden h-12 w-auto dark:block" src="./images/logo/metroLogoSmall.webp" alt="Logo" />
+</Link>
 
           <button
             onClick={toggleApplicationMenu}
@@ -116,6 +108,13 @@ const AppHeader: React.FC = () => {
             <ThemeToggleButton />
             {authenticated}
           </div>
+
+          <Link
+  to="/projects"
+  className="text-sm font-medium hover:underline"
+>
+  Projects
+</Link>
 
           {authenticated ? (
             <>
