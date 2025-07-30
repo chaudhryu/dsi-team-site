@@ -115,7 +115,7 @@ const AppHeader: React.FC = () => {
         >
           <div className="flex items-center gap-2 2xsm:gap-3">
             <ThemeToggleButton />
-            {authenticated && <NotificationDropdown />}
+            {authenticated}
           </div>
 
           {authenticated ? (
@@ -126,7 +126,6 @@ const AppHeader: React.FC = () => {
               >
                 Sign&nbsp;out
               </button>
-              <UserDropdown />
             </>
           ) : (
             <Link
