@@ -4,7 +4,7 @@ import SignUp from "./pages/AuthPages/SignUp";
 import NotFound from "./pages/OtherPage/NotFound";
 import UserProfiles from "./pages/UserProfiles";
 import Images from "./pages/UiElements/Images";
-
+import Accomplishments from "./pages/Accomplishments";
 import Calendar from "./pages/Calendar";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -18,7 +18,7 @@ export default function App() {
     <>
  <Router>
   <ScrollToTop />
-  <Routes>                    {/* <-- put Routes back */}
+  <Routes>                    
 
   <Route path="/auth-response" element={<AuthCallback />} />
 
@@ -26,12 +26,13 @@ export default function App() {
   <Route element={<AppLayout />}>
     <Route index element={<Home />} />          {/* Public */}
     <Route path="/images" element={<Images />} />{/* Public */}
-    {/* Whatever else should be public… */}
 
     {/* ---------- Auth‑only pages ---------- */}
     <Route element={<ProtectedRoute />}>
       <Route path="/profile" element={<UserProfiles />} />
       <Route path="/calendar" element={<Calendar />} />
+      <Route path="/submit-accomplishment" element={<Accomplishments />} />
+
       {/* add other private routes here */}
     </Route>
   </Route>
