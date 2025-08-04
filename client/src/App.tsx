@@ -4,9 +4,8 @@ import SignUp from "./pages/AuthPages/SignUp";
 import NotFound from "./pages/OtherPage/NotFound";
 import UserProfiles from "./pages/UserProfiles";
 import Images from "./pages/UiElements/Images";
-import Accomplishments from "./pages/Accomplishments";
 import Calendar from "./pages/Calendar";
-
+import SubmitAccomplishments from "./pages/SubmitAccomplishments";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
@@ -31,7 +30,7 @@ export default function App() {
     <Route element={<ProtectedRoute />}>
       <Route path="/profile" element={<UserProfiles />} />
       <Route path="/calendar" element={<Calendar />} />
-      <Route path="/submit-accomplishment" element={<Accomplishments />} />
+      <Route path="/submit-accomplishments" element={<SubmitAccomplishments />} />
 
       {/* add other private routes here */}
     </Route>

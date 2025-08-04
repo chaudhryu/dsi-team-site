@@ -33,7 +33,11 @@ const navItems: NavItem[] = [
   {
     icon: <CalenderIcon />,
     name: "Accomplishments",
-    subItems: [{ name: "Submit Accomplishment", path: "/submit-accomplishment", pro: false }],
+    subItems: [
+      { name: "Submit Accomplishment", path: "/submit-accomplishments", pro: false },
+      { name: "Previous Accomplishments", path: "/view-accomplishments", pro: false }
+
+    ],
   },
   {
     icon: <UserCircleIcon />,

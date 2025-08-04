@@ -8,7 +8,7 @@ import TextArea from "../components/form/input/TextArea";
 import { useState } from "react";
 import Button from "../components/ui/button/Button";
 import { BoxIcon } from "../icons";
-export default function Accomplishments() {
+export default function ViewAccomplishments() {
     const [message, setMessage] = useState("");
 
   return (
