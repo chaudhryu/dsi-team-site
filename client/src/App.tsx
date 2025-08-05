@@ -11,7 +11,7 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
-import AuthCallback from "./pages/AuthCallback";
+import AuthCallback from "./pages/Private/Auth/AuthCallback";
 
 export default function App() {
   return (

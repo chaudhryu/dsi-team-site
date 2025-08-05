@@ -2,7 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { PublicClientApplication } from "@azure/msal-browser";
 import {MsalProvider} from "@azure/msal-react"
-import { msalConfig } from "./authConfig.ts";
+import { msalConfig } from "../src/config/authConfig.tsx";
 import "./index.css";
 import "swiper/swiper-bundle.css";
 import "flatpickr/dist/flatpickr.css";

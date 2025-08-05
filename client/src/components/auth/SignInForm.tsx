@@ -3,7 +3,7 @@ import { ChevronLeftIcon} from "../../icons";
 
 import Button from "../ui/button/Button";
 import { useMsal } from "@azure/msal-react";
-import { loginRequest } from "../../authConfig";
+import { loginRequest } from "../../config/authConfig";
 
 export default function SignInForm() {
   const { instance } = useMsal();
