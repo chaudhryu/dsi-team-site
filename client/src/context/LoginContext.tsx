@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState,  } from 'react'
 
 
 interface LoginContextType {
   loginEmployee: any;
-  isAdmin: boolean | undefined;
+  //isAdmin: boolean | undefined;
   initializeSession: (user: any) => void;
 }
 
@@ -11,7 +11,7 @@ const LoginContext = createContext<LoginContextType | null>(null)
 
 export const LoginProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [loginEmployee, setLoginEmployee] = useState(null)
-  const [isAdmin, setIsAdmin] = useState(undefined)
+  //const [isAdmin, setIsAdmin] = useState(undefined)
 
  
   const initializeSession = (user:any) => {
@@ -21,7 +21,7 @@ export const LoginProvider: React.FC<{ children: React.ReactNode }> = ({ childre
  
 
   return (
-    <LoginContext.Provider value={{ loginEmployee, isAdmin, initializeSession }}>
+    <LoginContext.Provider value={{ loginEmployee, initializeSession }}>
       {children}
     </LoginContext.Provider>
   )
