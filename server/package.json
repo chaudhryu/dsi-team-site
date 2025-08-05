@@ -1,0 +1,28 @@
+{
+  "name": "nestjs-weekly-accomplishment",
+  "version": "1.0.0",
+  "description": "NestJS backend with CRUD and weekly accomplishment tracking",
+  "scripts": {
+    "build": "nest build",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:debug": "nest start --debug --watch"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/core": "^10.0.0",
+    "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/typeorm": "^10.0.0",
+    "nest-winston": "^1.10.2",
+    "sqlite3": "^5.1.6",
+    "typeorm": "^0.3.17",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^10.0.0",
+    "@nestjs/schematics": "^10.0.0",
+    "@nestjs/testing": "^10.0.0",
+    "typescript": "^5.0.0"
+  }
+}

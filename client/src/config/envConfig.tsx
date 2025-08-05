@@ -7,6 +7,7 @@ export const envConfig = {
   empApiProdSelectBaseUrl: 'https://apip.metro.net/ws/rest/fis/v1/',
   empApiDevSelectBaseUrl: 'https://apit.metro.net/ws/rest/fis/v1/',
   fisApiBaseUrlOld: 'http://apisvc.metro.net/fis/',
+  backendApiBaseUrl: import.meta.env.VITE_API_URL,
   roleTypeAdmin: 'Admin',
   roleTypeUser: 'User',
   ssLsrShortName: 'SS/LSR',
