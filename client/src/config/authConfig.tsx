@@ -3,7 +3,7 @@
  * Replace the placeholders with your real Azure values.
  */
 import { LogLevel, Configuration } from "@azure/msal-browser";
-
+import { envConfig } from '../config/envConfig';
 
 
 
@@ -41,7 +41,7 @@ switch (currentHostname) {
 
 export const msalConfig: Configuration = {
   auth: {
-    clientId: "d9e7775f-277f-40a2-8120-c485a7b5413a",              // << App Registration – Application (client) ID
+    clientId: envConfig.azureClientId, // Your client ID
     authority:
       "https://login.microsoftonline.com/ab57129b-dbfd-4cac-aa77-fc74c40364af", // or B2C authority
     redirectUri:  determinedRedirectUri,     // http://localhost:3000 for local dev
