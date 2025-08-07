@@ -27,6 +27,9 @@ switch (currentHostname) {
         determinedRedirectUri = 'https://dsidev.metro.net/auth-response'; 
         break;
 
+    case 'dsi-team-site.vercel.app': 
+        determinedRedirectUri = 'https://dsi-team-site.vercel.app/auth-response'; 
+        break;
     // --- Local Development Environment ---
     case 'localhost':
         determinedRedirectUri = 'http://localhost:5173/auth-response'; 
