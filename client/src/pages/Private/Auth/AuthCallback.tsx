@@ -1,153 +1,114 @@
-// src/pages/AuthPages/AuthCallback.tsx
+// src/pages/AuthCallback.tsx
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
-import {
-  InteractionRequiredAuthError,
-  InteractionStatus,
-  AccountInfo,
-} from "@azure/msal-browser";
+import { InteractionRequiredAuthError, InteractionStatus } from "@azure/msal-browser";   // ✅ correct import
 import Swal from "sweetalert2";
-import { fetchEmployeeDetails } from "../../../Data/actions/EmployeeAction";
+import {fetchEmployeeDetails} from '../../../Data/actions/EmployeeAction';
 import { getMsGraphMe } from "../../../Data/api/graphApi";
-import { useLogin } from "../../../context/LoginContext";
-
-/* ────────────────────────────────────────────────────────────────── */
-/* 1. Type & initial object                                          */
-/* ────────────────────────────────────────────────────────────────── */
-
-interface EmployeeSession {
-  badge: string;
-  firstName: string;
-  lastName: string;
-  emailAddress: string;
-  department: string;
-  costCenter: string;
-  phoneNumber: string;
-  position: string;
-  role: "User" | "Admin";
-  isManager: boolean;
-  isSsLsr: boolean;
-  isCs: boolean;
-  managerBadge: string;
-  managerFisrtName: string;
-  managerLastName: string;
-  managerEmailAddress: string;
-  managerPhoneNumber: string;
-  vendorId?: string;
-}
-
-const loginEmployee: EmployeeSession = {
-  badge: "",
-  firstName: "",
-  lastName: "",
-  emailAddress: "",
-  department: "",
-  costCenter: "",
-  phoneNumber: "",
-  position: "",
-  role: "User",
+import { useLogin } from '../../../context/LoginContext';
+var loginEmployee = {
+  badge: '',
+  firstName: '',
+  lastName: '',
+  emailAddress: '',
+  department: '',
+  costCenter: '',
+  phoneNumber: '',
+  position: '',
+  role: 'User', // default role, either User, or Admin
   isManager: false,
   isSsLsr: false,
   isCs: false,
-  managerBadge: "",
-  managerFisrtName: "",
-  managerLastName: "",
-  managerEmailAddress: "",
-  managerPhoneNumber: "",
-  vendorId: "",
-};
-
-/* ────────────────────────────────────────────────────────────────── */
-/* 2. Component                                                      */
-/* ────────────────────────────────────────────────────────────────── */
-
+  managerBadge: '',
+  managerFisrtName: '',
+  managerLastName: '',
+  managerEmailAddress: '',
+  managerPhoneNumber: '',
+  vendorId: '', //  vendorId property
+}
 export default function AuthCallback() {
-  const { instance, inProgress } = useMsal();
+  const { inProgress,instance,accounts } = useMsal();
   const navigate = useNavigate();
-  const { initializeSession } = useLogin() ?? {};
-
-  /* ❶ Process the Entra redirect once */
-  useEffect(() => {
+  const loginContext = useLogin();
+  const initializeSession = loginContext?.initializeSession;
+  const request = {
+    scopes: ['user.read'],
+    account: accounts[0],
+  }
+  const requestUserProfileData = async () => {
     instance
-      .handleRedirectPromise()
-      .then((response) => {
-        const account = response?.account || instance.getAllAccounts()[0];
-        if (account) instance.setActiveAccount(account);
+      .acquireTokenSilent(request)
+      .then((response) => {       
+        getMsGraphMe(response.accessToken).then((data: { officeLocation: any; }) => {
+          // get officeLocation which is employee badge
+
+          fetchEmployeeInfo(data?.officeLocation)
+        })
       })
-      .catch((err) => console.error("handleRedirectPromise error:", err));
-  }, []);
-
-  /* ❷ When MSAL is idle, get user profile */
-  useEffect(() => {
-    if (inProgress === InteractionStatus.None) {
-      const account = instance.getActiveAccount();
-      if (account) {
-        requestUserProfileData(account);
-      } else {
-        instance.loginRedirect({ scopes: ["User.Read"] });
-      }
-    }
-  }, [inProgress]);
-
-  /* ❸ Token → Graph → your back‑end */
-  const requestUserProfileData = (account: AccountInfo) => {
-    instance
-      .acquireTokenSilent({ scopes: ["User.Read"], account })
-      .then((token) => getMsGraphMe(token.accessToken))
-      .then((graph) => fetchEmployeeInfo(graph.officeLocation))
       .catch((error) => {
         if (
           error instanceof InteractionRequiredAuthError ||
-          error.errorCode === "monitor_window_timeout"
+          error.errorCode === 'monitor_window_timeout'
         ) {
           Swal.fire({
-            icon: "warning",
-            title: "Session Expired",
-            text: "Please sign in again.",
-            confirmButtonText: "Re‑login",
-          }).then(() => instance.logoutRedirect());
+            icon: 'warning',
+            title: 'Session Expired',
+            text: 'Your session has expired. Please sign in again.',
+            confirmButtonText: 'Re-login',
+            allowOutsideClick: false,
+          }).then(() => {
+            instance.logoutRedirect() // or acquireTokenRedirect() if you prefer
+          })
         } else {
-          console.error("Unexpected MSAL error:", error);
+          console.error('Unexpected MSAL error:', error)
         }
-      });
-  };
-
-  /* ❹ Call back‑end, populate session object, save & redirect */
-  const fetchEmployeeInfo = async (badge: string) => {
+      })
+  }
+  
+  const fetchEmployeeInfo = async (badgeNumber:string) => {
     try {
-      const response = await fetchEmployeeDetails(badge);
+      const response = await fetchEmployeeDetails(badgeNumber)
 
       if (response.status === 200) {
-        const emp = response.data;
+        const empData = response.data
+        console.log(empData)
 
-        loginEmployee.badge = badge;
-        loginEmployee.firstName = emp.employeeFirstName ?? "";
-        loginEmployee.lastName = emp.employeeLastName ?? "";
-        loginEmployee.emailAddress = emp.employeeEmailAddress ?? "";
-        loginEmployee.department = emp.department ?? "";
-        loginEmployee.position = emp.jobClassTitle ?? "";
-        loginEmployee.costCenter = emp.costCenter ?? "";
-        loginEmployee.phoneNumber = emp.employeeWorkPhone ?? "";
-        loginEmployee.managerBadge = emp.managerBadgeNumber ?? "";
-        loginEmployee.managerFisrtName = emp.managerFirstName ?? "";
-        loginEmployee.managerLastName = emp.managerLastName ?? "";
-        loginEmployee.managerEmailAddress = emp.managerEmailAddress ?? "";
-        loginEmployee.managerPhoneNumber = emp.managerWorkPhone ?? "";
-        // role / flags can be set here as well
+        loginEmployee.badge = badgeNumber
+        loginEmployee.firstName = empData.employeeFirstName || ''
+        loginEmployee.lastName = empData.employeeLastName
+        loginEmployee.emailAddress = empData.employeeEmailAddress
+        loginEmployee.department = empData.department
+        loginEmployee.position = empData.jobClassTitle
+        loginEmployee.costCenter = empData.costCenter
+        loginEmployee.phoneNumber = empData.employeeWorkPhone
+        loginEmployee.managerBadge = empData.managerBadgeNumber
+        loginEmployee.managerFisrtName = empData.managerFirstName
+        loginEmployee.managerLastName = empData.managerLastName
+        loginEmployee.managerEmailAddress = empData.managerEmailAddress
+        loginEmployee.managerPhoneNumber = empData.managerWorkPhone      
       }
-    } catch (_) {
-      /* user not found: keep defaults */
-    } finally {
-      if (initializeSession) initializeSession(loginEmployee);
+    } catch (error) {
+      // A login user is not found in user_profile database.
+      // This user's role is "User" as default.
+      // DO NOTHING
+    }finally{
+      // Initialize session with the loginEmployee object
+      if (initializeSession) {
+        initializeSession(loginEmployee);
+      }
+      // Redirect to home page after successful login
       navigate("/", { replace: true });
     }
-  };
+  }
+  useEffect(() => {
+    if (inProgress === InteractionStatus.None) {
+      const fetchData = async () => {
+        await requestUserProfileData()
+      }
+      fetchData()
+    }
+  }, [inProgress, navigate]);
 
-  /* ❺ Friendly placeholder while all of the above runs */
-  return (
-    <div className="flex h-screen items-center justify-center">
-      <p className="text-lg">Signing you in…</p>
-    </div>
-  );
+  return null;
 }
