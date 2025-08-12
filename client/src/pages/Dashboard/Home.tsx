@@ -60,7 +60,7 @@ export default function Home() {
           {/* CTA buttons */}
           <div className="mt-10 flex items-center justify-center gap-x-6">
             <Link
-              to="/projects"
+              to="/projects-external"
               className="rounded-md bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
             >
               View projects
