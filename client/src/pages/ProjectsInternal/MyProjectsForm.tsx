@@ -1,0 +1,249 @@
+import React, { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import Label from "@/components/form/Label";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { PlusIcon, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { ITeamMember } from "@/interfaces/ITeamMember";
+import { Badge } from "@/components/ui/badge";
+
+function MyProjectsForm() {
+  const teamMembers: ITeamMember[] = [
+    { name: "Joel Joshy", avatar: "/", badgeNumber: "58146" },
+    { name: "Trung Tu", avatar: "/", badgeNumber: "11111" },
+    { name: "Usman Chaudry", avatar: "/", badgeNumber: "22222" },
+    { name: "Joe Hang", avatar: "/", badgeNumber: "22221" },
+  ];
+
+  const [selectedTeamMemberBadgeNumber, setSelectedTeamMemberBadgeNumber] =
+    useState<string>();
+  const [selectedTeamMembers, setSelectedTeamMembers] = useState<ITeamMember[]>(
+    []
+  );
+  const [selectedTechnology, setSelectedTechnology] = useState<string>();
+  const [selectedTechnologies, setSelectedTechnologies] = useState<string[]>(
+    []
+  );
+  const [teamMembersDropdownValues, setTeamMembersDropdownValues] = useState<
+    ITeamMember[]
+  >([]);
+
+  useEffect(() => {
+    setTeamMembersDropdownValues(teamMembers);
+  }, []);
+
+  const addTeamMember = () => {
+    setSelectedTeamMembers((prevSelectedTeamMembers) => {
+      const teamMemberObject = teamMembers.find(
+        (teamMember) => teamMember.badgeNumber === selectedTeamMemberBadgeNumber
+      );
+
+      if (teamMemberObject) {
+        return [...prevSelectedTeamMembers, teamMemberObject];
+      } else {
+        return prevSelectedTeamMembers;
+      }
+    });
+  };
+
+  const technologies = [
+    "React",
+    "Next.js",
+    "TypeScript",
+    "JavaScript",
+    "Node.js",
+    "Python",
+    "Java",
+    "C#",
+    "Go",
+    "Rust",
+    "PostgreSQL",
+    "MongoDB",
+    "Redis",
+    "Docker",
+    "Kubernetes",
+    "AWS",
+    "Azure",
+    "GCP",
+    "Tailwind CSS",
+    "GraphQL",
+  ];
+
+  return (
+    <Dialog>
+      <form>
+        <DialogTrigger asChild>
+          <Button size="default" variant="outline">
+            <PlusIcon className="size-3.5" color="black" />
+            Add
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="w-full max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add Project</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-row gap-10 justify-between">
+            <div className="">
+              <Label htmlFor="name-1">Project Name</Label>
+              <Input id="name-1" name="name" />
+            </div>
+            <div className="">
+              <Label htmlFor="username-1">Client Department</Label>
+              <Input id="username-1" name="username" />
+            </div>
+            <div>
+              <Label htmlFor="username-1">Status</Label>
+              <Select
+              // value={statusFilterValue}
+              // onValueChange={(value) =>
+              //   filterProjects(searchFilterValue, value)
+              // }
+              >
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="in progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="planning">Planning</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="username-1">Description</Label>
+            <Textarea></Textarea>
+          </div>
+          <div>
+            <Label htmlFor="username-1">Repository URL</Label>
+            <Input id="name-1" name="name" />
+          </div>
+          <div>
+            <Label htmlFor="username-1">Team Members</Label>
+            <div className="flex gap-2">
+              <Select
+                value={selectedTeamMemberBadgeNumber}
+                onValueChange={(value) =>
+                  setSelectedTeamMemberBadgeNumber(value)
+                }
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select Team Members" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teamMembersDropdownValues.map((teamMember) => (
+                    <SelectItem value={teamMember.badgeNumber}>
+                      {teamMember.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                onClick={addTeamMember}
+                disabled={!selectedTeamMemberBadgeNumber}
+              >
+                Add
+              </Button>
+            </div>
+            {selectedTeamMembers.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {selectedTeamMembers.map((selectedTeamMember: ITeamMember) => (
+                  <Badge
+                    key={selectedTeamMember.badgeNumber}
+                    variant="secondary"
+                    className="flex items-center gap-1"
+                  >
+                    {`${selectedTeamMember.name} (${selectedTeamMember.badgeNumber})`}
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      // onClick={() => removeTechStack(tech)}
+                    />
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="username-1">Technologies</Label>
+            <div className="flex gap-2">
+              <Select
+                value={selectedTechnology}
+                onValueChange={(value) => setSelectedTechnology(value)}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select Technologies" />
+                </SelectTrigger>
+                <SelectContent>
+                  {technologies.map((technology) => (
+                    <SelectItem value={technology}>{technology}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                onClick={() =>
+                  setSelectedTechnologies((prevSelectedTechnologies) =>
+                    selectedTechnology
+                      ? [...prevSelectedTechnologies, selectedTechnology]
+                      : prevSelectedTechnologies
+                  )
+                }
+                disabled={!selectedTechnology}
+              >
+                Add
+              </Button>
+            </div>
+            {selectedTechnologies.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {selectedTechnologies.map((selectedTechnology) => (
+                  <Badge
+                    key={selectedTechnology}
+                    variant="secondary"
+                    className="flex items-center gap-1"
+                  >
+                    {selectedTechnology}
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      // onClick={() => removeTechStack(tech)}
+                    />
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="username-1">Technologies</Label>
+            <Input id="name-1" name="name" />
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button type="submit">Add</Button>
+          </DialogFooter>
+        </DialogContent>
+      </form>
+    </Dialog>
+  );
+}
+
+export default MyProjectsForm;

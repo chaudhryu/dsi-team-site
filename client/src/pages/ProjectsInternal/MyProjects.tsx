@@ -26,7 +26,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import Button from "@/components/ui/button/Button";
+import { Button } from "@/components/ui/button";
+import { PlusIcon } from "lucide-react";
+import MyProjectsForm from "./MyProjectsForm";
 
 const projects: IProject[] = [
   {
@@ -103,7 +105,7 @@ const projects: IProject[] = [
   },
 ];
 
-export const ProjectsExternal = () => {
+export const MyProjects = () => {
   const [filteredProjects, setFilteredProjects] = useState<IProject[]>([]);
   const [totalCount, setTotalCount] = useState<number>();
   const [completedCount, setCompletedCount] = useState<number>();
@@ -185,117 +187,11 @@ export const ProjectsExternal = () => {
 
   return (
     <div className="h-auto">
-      {/* <section className="bg-gradient-to-br from-blue-50 via-white to-purple-50 h-screen">
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 mx-auto mb-50 w-full p-20">
-          <div className="text-center max-w-4xl mx-auto">
-            <h1 className="text-5xl font-bold text-white mb-6">
-              Engineering Excellence in Action
-            </h1>
-            <p className="text-white mb-8 leading-relaxed">
-              Discover the innovative solutions our software engineering team
-              has built. From AI-powered platforms to scalable web applications,
-              we deliver technology that drives real business impact.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                Explore Our Work
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              <Button variant="outline">Get In Touch</Button>
-            </div>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-row justify-center items-center gap-52">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-                <Users className="h-8 w-8 text-blue-600" />
-              </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">5000+</div>
-              <div className="text-gray-600">Users Served</div>
-            </div>
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-                <Zap className="h-8 w-8 text-green-600" />
-              </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">{30}</div>
-              <div className="text-gray-600">Projects Delivered</div>
-            </div>
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-yellow-100 rounded-full mb-4">
-                <Star className="h-8 w-8 text-yellow-600" />
-              </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">
-                {avgRating}
-              </div>
-              <div className="text-gray-600">Average Rating</div>
-            </div>
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
-                <Award className="h-8 w-8 text-purple-600" />
-              </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">5</div>
-              <div className="text-gray-600">Industry Awards</div>
-            </div>
-          </div>
-        </div>
-      </section> */}
-
-      {/* Stats Section */}
-      <section className="pr-20 pl-20">
-        <div className="flex flex-col items-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-6">
-            Our Projects
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-            Explore our complete portfolio of innovative solutions
-          </p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col items-center justify-center gap-3">
-                <p className="font-bold text-black text-center text-5xl">
-                  {totalCount}
-                </p>
-                <p className="font-medium text-gray-600 text-lg">Total</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col items-center justify-center gap-3">
-                <p className="font-bold text-green-600 text-center text-5xl">
-                  {completedCount}
-                </p>
-                <p className="font-medium text-gray-600 text-lg">Completed</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col items-center justify-center gap-3">
-                <p className="font-bold text-yellow-600 text-center text-5xl">
-                  {inProgressCount}
-                </p>
-                <p className="font-medium text-gray-600 text-lg">In Progress</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col items-center justify-center gap-3">
-                <p className="font-bold text-blue-600 text-center text-5xl">
-                  {planningCount}
-                </p>
-                <p className="font-medium text-gray-600 text-lg">Planning</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="flex justify-between items-center mb-10">
+        <div className="font-bold text-2xl">My Projects</div>
+        <MyProjectsForm />
+      </div>
+      <section>
         <div className="flex flex-col sm:flex-row gap-4 mb-8">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
