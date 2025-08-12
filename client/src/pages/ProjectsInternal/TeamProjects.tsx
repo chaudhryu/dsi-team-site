@@ -103,7 +103,7 @@ const projects: IProject[] = [
   },
 ];
 
-export const ProjectsExternal = () => {
+export const TeamProjects = () => {
   const [filteredProjects, setFilteredProjects] = useState<IProject[]>([]);
   const [totalCount, setTotalCount] = useState<number>();
   const [completedCount, setCompletedCount] = useState<number>();
@@ -243,14 +243,6 @@ export const ProjectsExternal = () => {
 
       {/* Stats Section */}
       <section className="pr-20 pl-20">
-        <div className="flex flex-col items-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-6">
-            Our Projects
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-            Explore our complete portfolio of innovative solutions
-          </p>
-        </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
