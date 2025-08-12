@@ -13,6 +13,7 @@ import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import AuthCallback from "./pages/Private/Auth/AuthCallback";
+import { ProjectsExternal } from "./pages/ProjectsExternal/ProjectsExternal";
 
 export default function App() {
   return (
@@ -27,7 +28,7 @@ export default function App() {
   <Route element={<AppLayout />}>
     <Route index element={<Home />} />          {/* Public */}
     <Route path="/images" element={<Images />} />{/* Public */}
-
+    <Route path="/projects-external" element={<ProjectsExternal/>} />
     {/* ---------- Auth‑only pages ---------- */}
     <Route element={<ProtectedRoute />}>
       <Route path="/profile" element={<UserProfiles />} />
