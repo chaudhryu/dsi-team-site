@@ -45,8 +45,16 @@ const projects: IProject[] = [
       "PostgreSQL",
     ],
     teamMembers: [
-      { name: "Usman", avatar: "/images/team/usmanChaudhr.jpg", badgeNumber: "12121" },
-      { name: "Joe Hang", avatar: "/images/team/joeHang.jpg", badgeNumber: "12222"},
+      {
+        name: "Usman",
+        avatar: "/images/team/usmanChaudhr.jpg",
+        badgeNumber: "12121",
+      },
+      {
+        name: "Joe Hang",
+        avatar: "/images/team/joeHang.jpg",
+        badgeNumber: "12222",
+      },
     ],
     githubUrl: "https://github.com/team/customer-portal",
     startDate: new Date(),
@@ -66,8 +74,16 @@ const projects: IProject[] = [
       "PostgreSQL",
     ],
     teamMembers: [
-      { name: "Usman", avatar: "/images/team/usmanChaudhr.jpg", badgeNumber: "12121" },
-      { name: "Joe Hang", avatar: "/images/team/joeHang.jpg", badgeNumber: "12231" },
+      {
+        name: "Usman",
+        avatar: "/images/team/usmanChaudhr.jpg",
+        badgeNumber: "12121",
+      },
+      {
+        name: "Joe Hang",
+        avatar: "/images/team/joeHang.jpg",
+        badgeNumber: "12231",
+      },
     ],
     githubUrl: "https://github.com/team/customer-portal",
     startDate: new Date(),
@@ -81,8 +97,16 @@ const projects: IProject[] = [
     status: "planning",
     technologies: ["Next.js", "TypeScript", "Tailwind CSS", "PostgreSQL"],
     teamMembers: [
-      { name: "Usman", avatar: "/images/team/usmanChaudhr.jpg", badgeNumber: "12121" },
-      { name: "Joe Hang", avatar: "/images/team/joeHang.jpg", badgeNumber: "12231" },
+      {
+        name: "Usman",
+        avatar: "/images/team/usmanChaudhr.jpg",
+        badgeNumber: "12121",
+      },
+      {
+        name: "Joe Hang",
+        avatar: "/images/team/joeHang.jpg",
+        badgeNumber: "12231",
+      },
     ],
     githubUrl: "https://github.com/team/customer-portal",
     startDate: new Date(),
@@ -96,8 +120,16 @@ const projects: IProject[] = [
     status: "in progress",
     technologies: ["Next.js", "TypeScript", "Tailwind CSS", "PostgreSQL"],
     teamMembers: [
-      { name: "Usman", avatar: "/images/team/usmanChaudhr.jpg", badgeNumber: "12121" },
-      { name: "Joe Hang", avatar: "/images/team/joeHang.jpg", badgeNumber: "12231" },
+      {
+        name: "Usman",
+        avatar: "/images/team/usmanChaudhr.jpg",
+        badgeNumber: "12121",
+      },
+      {
+        name: "Joe Hang",
+        avatar: "/images/team/joeHang.jpg",
+        badgeNumber: "12231",
+      },
     ],
     githubUrl: "https://github.com/team/customer-portal",
     startDate: new Date(),
@@ -107,37 +139,17 @@ const projects: IProject[] = [
 
 export const MyProjects = () => {
   const [filteredProjects, setFilteredProjects] = useState<IProject[]>([]);
-  const [totalCount, setTotalCount] = useState<number>();
-  const [completedCount, setCompletedCount] = useState<number>();
-  const [planningCount, setPlanningCount] = useState<number>();
-  const [inProgressCount, setInProgressCount] = useState<number>();
   const [searchFilterValue, setSearchFilterValue] = useState<string>("");
   const [statusFilterValue, setStatusFilterValue] = useState<string>("all");
+  const [isAddProjectFormOpen, setIsAddProjectFormOpen] =
+    useState<boolean>(false);
 
-  const setStats = (projects: IProject[]) => {
-    let inProgressCount = 0;
-    let completedCount = 0;
-    let planningCount = 0;
-
-    projects.forEach((project) => {
-      if (project.status === "completed") {
-        completedCount += 1;
-      } else if (project.status === "planning") {
-        planningCount += 1;
-      } else if (project.status === "in progress") {
-        inProgressCount += 1;
-      }
-    });
-
-    setTotalCount(projects.length);
-    setCompletedCount(completedCount);
-    setPlanningCount(inProgressCount);
-    setInProgressCount(inProgressCount);
+  const closeAddProjectForm = () => {
+    setIsAddProjectFormOpen(false);
   };
 
   useEffect(() => {
     setFilteredProjects(projects);
-    setStats(projects);
   }, []);
 
   const filterProjects = (
@@ -187,9 +199,20 @@ export const MyProjects = () => {
 
   return (
     <div className="h-auto">
+      <MyProjectForm
+        isAddProjectFormOpen={isAddProjectFormOpen}
+        closeAddProjectForm={closeAddProjectForm}
+      />
       <div className="flex justify-between items-center mb-10">
         <div className="font-bold text-2xl">My Projects</div>
-        <MyProjectForm isOpen={false} />
+        <Button
+          size="default"
+          variant="outline"
+          onClick={() => setIsAddProjectFormOpen(true)}
+        >
+          <PlusIcon className="size-3.5" color="black" />
+          Add
+        </Button>
       </div>
       <section>
         <div className="flex flex-col sm:flex-row gap-4 mb-8">
