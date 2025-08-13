@@ -1,16 +1,32 @@
+// src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { WinstonModule } from 'nest-winston';
-import { winstonConfig } from './Logger'; 
+import { winstonConfig } from './Logger';
+import { ValidationPipe } from '@nestjs/common';
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule,{logger:WinstonModule.createLogger(winstonConfig)});
+  const app = await NestFactory.create(
+    AppModule,
+    { logger: WinstonModule.createLogger(winstonConfig) }
+  );
+
   app.setGlobalPrefix('api');
-if (process.env.NODE_ENV !== 'production') {
+
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }));
+
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: [
+      'http://localhost:5173',
+      'https://police-report-request-portal-sigma.vercel.app',
+    ],
     credentials: true,
   });
-  await app.listen(3005);
-}
+
+  await app.listen(process.env.PORT || 3005);
 }
 bootstrap();
