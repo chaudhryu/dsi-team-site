@@ -1,11 +1,12 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import SignIn from "./pages/AuthPages/SignIn";
-import SignUp from "./pages/AuthPages/SignUp";
+import SignIn from "./pages/Public/AuthPages/SignIn";
+import SignUp from "./pages/Public/AuthPages/SignUp";
 import NotFound from "./pages/OtherPage/NotFound";
 import UserProfiles from "./pages/UserProfiles";
 import Images from "./pages/UiElements/Images";
 import Accomplishments from "./pages/Accomplishments";
 import Calendar from "./pages/Calendar";
+import AccomplishmentsTable from "./pages/AccomplishmentsTable";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import AppLayout from "./layout/AppLayout";
@@ -32,6 +33,7 @@ export default function App() {
       <Route path="/profile" element={<UserProfiles />} />
       <Route path="/calendar" element={<Calendar />} />
       <Route path="/submit-accomplishment" element={<Accomplishments />} />
+      <Route path="/view-accomplishments" element={<AccomplishmentsTable />} />
 
       {/* add other private routes here */}
     </Route>
