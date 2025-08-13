@@ -43,8 +43,8 @@ const projects: IProject[] = [
       "PostgreSQL",
     ],
     teamMembers: [
-      { name: "Usman", avatar: "/images/team/usmanChaudhr.jpg" },
-      { name: "Joe Hang", avatar: "/images/team/joeHang.jpg" },
+      { name: "Usman", avatar: "/images/team/usmanChaudhr.jpg", badgeNumber: "12121" },
+      { name: "Joe Hang", avatar: "/images/team/joeHang.jpg", badgeNumber: "12222"},
     ],
     githubUrl: "https://github.com/team/customer-portal",
     startDate: new Date(),
@@ -64,8 +64,8 @@ const projects: IProject[] = [
       "PostgreSQL",
     ],
     teamMembers: [
-      { name: "Usman", avatar: "/images/team/usmanChaudhr.jpg" },
-      { name: "Joe Hang", avatar: "/images/team/joeHang.jpg" },
+      { name: "Usman", avatar: "/images/team/usmanChaudhr.jpg", badgeNumber: "12121" },
+      { name: "Joe Hang", avatar: "/images/team/joeHang.jpg", badgeNumber: "12231" },
     ],
     githubUrl: "https://github.com/team/customer-portal",
     startDate: new Date(),
@@ -79,8 +79,8 @@ const projects: IProject[] = [
     status: "planning",
     technologies: ["Next.js", "TypeScript", "Tailwind CSS", "PostgreSQL"],
     teamMembers: [
-      { name: "Usman", avatar: "/images/team/usmanChaudhr.jpg" },
-      { name: "Joe Hang", avatar: "/images/team/joeHang.jpg" },
+      { name: "Usman", avatar: "/images/team/usmanChaudhr.jpg", badgeNumber: "12121" },
+      { name: "Joe Hang", avatar: "/images/team/joeHang.jpg", badgeNumber: "12231" },
     ],
     githubUrl: "https://github.com/team/customer-portal",
     startDate: new Date(),
@@ -94,8 +94,8 @@ const projects: IProject[] = [
     status: "in progress",
     technologies: ["Next.js", "TypeScript", "Tailwind CSS", "PostgreSQL"],
     teamMembers: [
-      { name: "Usman", avatar: "/images/team/usmanChaudhr.jpg" },
-      { name: "Joe Hang", avatar: "/images/team/joeHang.jpg" },
+      { name: "Usman", avatar: "/images/team/usmanChaudhr.jpg", badgeNumber: "12121" },
+      { name: "Joe Hang", avatar: "/images/team/joeHang.jpg", badgeNumber: "12231" },
     ],
     githubUrl: "https://github.com/team/customer-portal",
     startDate: new Date(),

@@ -23,13 +23,37 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ITeamMember } from "@/interfaces/ITeamMember";
 import { Badge } from "@/components/ui/badge";
+import { IProjectForm } from "@/interfaces/IProjectForm";
 
-function MyProjectsForm() {
+export const MyProjectForm: React.FC<IProjectForm> = ({isOpen}) => {
   const teamMembers: ITeamMember[] = [
     { name: "Joel Joshy", avatar: "/", badgeNumber: "58146" },
     { name: "Trung Tu", avatar: "/", badgeNumber: "11111" },
     { name: "Usman Chaudry", avatar: "/", badgeNumber: "22222" },
     { name: "Joe Hang", avatar: "/", badgeNumber: "22221" },
+  ];
+
+  const technologies = [
+    "React",
+    "Next.js",
+    "TypeScript",
+    "JavaScript",
+    "Node.js",
+    "Python",
+    "Java",
+    "C#",
+    "Go",
+    "Rust",
+    "PostgreSQL",
+    "MongoDB",
+    "Redis",
+    "Docker",
+    "Kubernetes",
+    "AWS",
+    "Azure",
+    "GCP",
+    "Tailwind CSS",
+    "GraphQL",
   ];
 
   const [selectedTeamMemberBadgeNumber, setSelectedTeamMemberBadgeNumber] =
@@ -61,33 +85,17 @@ function MyProjectsForm() {
         return prevSelectedTeamMembers;
       }
     });
+
+    setTeamMembersDropdownValues((prevTeamMembersDropdownValues) => {
+      return prevTeamMembersDropdownValues.filter(
+        (prevTeamMembersDropdownValue) =>
+          prevTeamMembersDropdownValue.badgeNumber !== selectedTeamMemberBadgeNumber
+      );
+    });
   };
 
-  const technologies = [
-    "React",
-    "Next.js",
-    "TypeScript",
-    "JavaScript",
-    "Node.js",
-    "Python",
-    "Java",
-    "C#",
-    "Go",
-    "Rust",
-    "PostgreSQL",
-    "MongoDB",
-    "Redis",
-    "Docker",
-    "Kubernetes",
-    "AWS",
-    "Azure",
-    "GCP",
-    "Tailwind CSS",
-    "GraphQL",
-  ];
-
   return (
-    <Dialog>
+    <Dialog open={isOpen}>
       <form>
         <DialogTrigger asChild>
           <Button size="default" variant="outline">
@@ -245,5 +253,3 @@ function MyProjectsForm() {
     </Dialog>
   );
 }
-
-export default MyProjectsForm;
