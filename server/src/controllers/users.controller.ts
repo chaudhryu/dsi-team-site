@@ -13,10 +13,7 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
-  @Get('user/:badge')
-  getAllForUser(@Param('badge') badge: number) {
-    return this.weeklyAccomplishment.getUserAccomplishments(+badge);
-  }
+
   
   @Get(':id')
   findOne(@Param('id') id: string): Promise<User> {
