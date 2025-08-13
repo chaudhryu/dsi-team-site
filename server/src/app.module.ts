@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule,ConfigService } from '@nestjs/config';
+import * as Joi from 'joi'; //for environment variable validation
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersService } from './services/users.service';
 import {Application,Database,Server,DatabaseLogin,User,WeeklyAccomplishment} from './entities'
@@ -8,17 +9,32 @@ import { UsersController } from './controllers/users.controller';
 import { WeeklyAccomplishmentsController } from './controllers/weekly-accomplishments.controller';
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'sqlite',
-      database: 'db.sqlite',
-      entities: [User, Application, Server, Database, DatabaseLogin, WeeklyAccomplishment],
-      synchronize: true,
-    }),
-    TypeOrmModule.forFeature([User, Application, Server, Database, DatabaseLogin, WeeklyAccomplishment]),
-    ConfigModule.forRoot({
+   ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
+      validationSchema: Joi.object({
+        NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
+        DB_TYPE: Joi.string().valid('sqlite').default('sqlite'),
+        SQLITE_DB: Joi.string().default('db.sqlite'),
+        PORT: Joi.number().default(3000),
+        CORS_ORIGIN: Joi.string().optional(),
+      }),
     }),
+
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (cfg: ConfigService) => {
+        const isDev = cfg.get('NODE_ENV') !== 'production'
+        return {
+          type: 'sqlite',
+          database: cfg.get<string>('SQLITE_DB'),
+          entities: [User, Application, Server, Database, DatabaseLogin, WeeklyAccomplishment],
+          synchronize: isDev, // ⚠️ dev only         
+          logging: isDev ? ['error', 'warn'] : ['error'],
+        }
+      },
+    }),
+    TypeOrmModule.forFeature([User, Application, Server, Database, DatabaseLogin, WeeklyAccomplishment]),
   ],
   controllers: [UsersController,WeeklyAccomplishmentsController],
   providers: [UsersService,WeeklyAccomplishmentService],

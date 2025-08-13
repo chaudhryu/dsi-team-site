@@ -8,7 +8,7 @@ export class WeeklyAccomplishment {
   id: number;
 
   @ManyToOne(() => User, { eager: true })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'badge' })
   user: User;
 
   @ManyToOne(() => Application, { eager: true })
@@ -26,7 +26,10 @@ export class WeeklyAccomplishment {
   dateSubmitted: string;
 
   @Column({ nullable: true })
-  weeklyPeriod: string;
+  startWeekDate: string;
+
+  @Column({ nullable: true })
+  endWeekDate: string;
 
   @Column({ nullable: true })
   taskStatus: string;

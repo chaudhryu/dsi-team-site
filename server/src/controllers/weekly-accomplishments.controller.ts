@@ -11,10 +11,7 @@ export class WeeklyAccomplishmentsController {
 
  
 
-  @Get('user/:badge')
-  getAllForUser(@Param('badge') badge: number) {
-    return this.weeklyAccomplishmentService.getUserAccomplishments(+badge);
-  }
+  
   
   
 }
