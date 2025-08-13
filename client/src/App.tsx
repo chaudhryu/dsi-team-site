@@ -13,6 +13,7 @@ import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import AuthCallback from "./pages/Private/Auth/AuthCallback";
+import Servers from "./pages/AuthPages/Servers";
 
 export default function App() {
   return (
@@ -34,6 +35,8 @@ export default function App() {
       <Route path="/calendar" element={<Calendar />} />
       <Route path="/submit-accomplishment" element={<Accomplishments />} />
       <Route path="/view-accomplishments" element={<AccomplishmentsTable />} />
+      <Route path="/servers" element={<Servers/>} />
+
 
       {/* add other private routes here */}
     </Route>

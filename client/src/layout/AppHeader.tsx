@@ -72,9 +72,12 @@ const AppHeader: React.FC = () => {
               )}
             </button>
           ) : (
-            <span className="text-lg font-semibold text-gray-700 dark:text-gray-200">
-              DSI&nbsp;WebApps&nbsp;Team
-            </span>
+            <Link
+            to="/"
+            className="text-lg font-semibold text-gray-700 hover:text-brand-700 dark:text-gray-200 dark:hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+          >
+            DSI&nbsp;WebApps&nbsp;Team
+          </Link>
           )}
 
           {/* mobile logo */}
