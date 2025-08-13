@@ -23,9 +23,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ITeamMember } from "@/interfaces/ITeamMember";
 import { Badge } from "@/components/ui/badge";
-import { IProjectForm } from "@/interfaces/IProjectForm";
+import { IMyProjectFormProps } from "@/interfaces/IMyProjectFormProps";
 
-export const MyProjectForm: React.FC<IProjectForm> = ({isOpen}) => {
+export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
+  isAddProjectFormOpen,
+  closeAddProjectForm,
+}) => {
   const teamMembers: ITeamMember[] = [
     { name: "Joel Joshy", avatar: "/", badgeNumber: "58146" },
     { name: "Trung Tu", avatar: "/", badgeNumber: "11111" },
@@ -56,6 +59,11 @@ export const MyProjectForm: React.FC<IProjectForm> = ({isOpen}) => {
     "GraphQL",
   ];
 
+  const [projectName, setProjectName] = useState<string>();
+  const [clientDepartment, setClientDepartment] = useState<string>();
+  const [projectStatus, setProjectStatus] = useState<string>();
+  const [description, setDescription] = useState<string>();
+  const [repositoryUrl, setRepositoryUrl] = useState<string>();
   const [selectedTeamMemberBadgeNumber, setSelectedTeamMemberBadgeNumber] =
     useState<string>();
   const [selectedTeamMembers, setSelectedTeamMembers] = useState<ITeamMember[]>(
@@ -69,8 +77,13 @@ export const MyProjectForm: React.FC<IProjectForm> = ({isOpen}) => {
     ITeamMember[]
   >([]);
 
+  const [technologiesDropdownValues, setTechnologiesDropdownValues] = useState<
+    string[]
+  >([]);
+
   useEffect(() => {
     setTeamMembersDropdownValues(teamMembers);
+    setTechnologiesDropdownValues(technologies);
   }, []);
 
   const addTeamMember = () => {
@@ -89,20 +102,50 @@ export const MyProjectForm: React.FC<IProjectForm> = ({isOpen}) => {
     setTeamMembersDropdownValues((prevTeamMembersDropdownValues) => {
       return prevTeamMembersDropdownValues.filter(
         (prevTeamMembersDropdownValue) =>
-          prevTeamMembersDropdownValue.badgeNumber !== selectedTeamMemberBadgeNumber
+          prevTeamMembersDropdownValue.badgeNumber !==
+          selectedTeamMemberBadgeNumber
       );
     });
+
+    setSelectedTeamMemberBadgeNumber("");
+  };
+
+  const addTechnology = () => {
+    setSelectedTechnologies((prevSelectedTechnologies) =>
+      selectedTechnology
+        ? [...prevSelectedTechnologies, selectedTechnology]
+        : prevSelectedTechnologies
+    );
+
+    setTechnologiesDropdownValues((prevTechnologiesDropDownValues) => {
+      return prevTechnologiesDropDownValues.filter(
+        (prevTechnologiesDropdownValue) =>
+          prevTechnologiesDropdownValue !== selectedTechnology
+      );
+    });
+
+    setSelectedTechnology("");
+  };
+
+  const clearAllFieldsAndCloseAddProjectForm = () => {
+    closeAddProjectForm();
+    setProjectName("");
+    setClientDepartment("");
+    setProjectStatus("");
+    setDescription("");
+    setRepositoryUrl("");
+    setSelectedTeamMembers([]);
+    setSelectedTechnologies([]);
+    setTeamMembersDropdownValues(teamMembers);
+    setTechnologiesDropdownValues(technologiesDropdownValues);
   };
 
   return (
-    <Dialog open={isOpen}>
+    <Dialog
+      open={isAddProjectFormOpen}
+      onOpenChange={clearAllFieldsAndCloseAddProjectForm}
+    >
       <form>
-        <DialogTrigger asChild>
-          <Button size="default" variant="outline">
-            <PlusIcon className="size-3.5" color="black" />
-            Add
-          </Button>
-        </DialogTrigger>
         <DialogContent className="w-full max-w-2xl">
           <DialogHeader>
             <DialogTitle>Add Project</DialogTitle>
@@ -110,25 +153,32 @@ export const MyProjectForm: React.FC<IProjectForm> = ({isOpen}) => {
           <div className="flex flex-row gap-10 justify-between">
             <div className="">
               <Label htmlFor="name-1">Project Name</Label>
-              <Input id="name-1" name="name" />
+              <Input
+                id="name-1"
+                name="name"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+              />
             </div>
             <div className="">
               <Label htmlFor="username-1">Client Department</Label>
-              <Input id="username-1" name="username" />
+              <Input
+                id="username-1"
+                name="username"
+                value={clientDepartment}
+                onChange={(e) => setClientDepartment(e.target.value)}
+              />
             </div>
             <div>
-              <Label htmlFor="username-1">Status</Label>
+              <Label htmlFor="username-1">Project Status</Label>
               <Select
-              // value={statusFilterValue}
-              // onValueChange={(value) =>
-              //   filterProjects(searchFilterValue, value)
-              // }
+                value={projectStatus}
+                onValueChange={(value) => setProjectStatus(value)}
               >
                 <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="in progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="planning">Planning</SelectItem>
@@ -138,11 +188,17 @@ export const MyProjectForm: React.FC<IProjectForm> = ({isOpen}) => {
           </div>
           <div>
             <Label htmlFor="username-1">Description</Label>
-            <Textarea></Textarea>
+            <Textarea
+              onChange={(e) => setDescription(e.target.value)}
+            ></Textarea>
           </div>
           <div>
             <Label htmlFor="username-1">Repository URL</Label>
-            <Input id="name-1" name="name" />
+            <Input
+              onChange={(e) => setRepositoryUrl(e.target.value)}
+              id="name-1"
+              name="name"
+            />
           </div>
           <div>
             <Label htmlFor="username-1">Team Members</Label>
@@ -183,7 +239,7 @@ export const MyProjectForm: React.FC<IProjectForm> = ({isOpen}) => {
                     {`${selectedTeamMember.name} (${selectedTeamMember.badgeNumber})`}
                     <X
                       className="h-3 w-3 cursor-pointer"
-                      // onClick={() => removeTechStack(tech)}
+                      // onClick={() => removeSelectedTechnology(tech)}
                     />
                   </Badge>
                 ))}
@@ -201,20 +257,14 @@ export const MyProjectForm: React.FC<IProjectForm> = ({isOpen}) => {
                   <SelectValue placeholder="Select Technologies" />
                 </SelectTrigger>
                 <SelectContent>
-                  {technologies.map((technology) => (
+                  {technologiesDropdownValues.map((technology) => (
                     <SelectItem value={technology}>{technology}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Button
                 type="button"
-                onClick={() =>
-                  setSelectedTechnologies((prevSelectedTechnologies) =>
-                    selectedTechnology
-                      ? [...prevSelectedTechnologies, selectedTechnology]
-                      : prevSelectedTechnologies
-                  )
-                }
+                onClick={addTechnology}
                 disabled={!selectedTechnology}
               >
                 Add
@@ -238,10 +288,6 @@ export const MyProjectForm: React.FC<IProjectForm> = ({isOpen}) => {
               </div>
             )}
           </div>
-          <div>
-            <Label htmlFor="username-1">Technologies</Label>
-            <Input id="name-1" name="name" />
-          </div>
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
@@ -252,4 +298,4 @@ export const MyProjectForm: React.FC<IProjectForm> = ({isOpen}) => {
       </form>
     </Dialog>
   );
-}
+};

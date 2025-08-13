@@ -274,7 +274,10 @@ export const TeamProjects = () => {
       </section> */}
 
       {/* Stats Section */}
-      <section className="pr-20 pl-20">
+      <section className="h-auto">
+        <div className="flex justify-between items-center mb-10">
+          <div className="font-bold text-2xl">Team Projects</div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
@@ -286,7 +289,6 @@ export const TeamProjects = () => {
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="p-6">
               <div className="flex flex-col items-center justify-center gap-3">
