@@ -1,4 +1,4 @@
-import { ITeamMembers } from "./ITeamMembers";
+import { ITeamMember } from "./ITeamMember";
 
 export interface IProject {
   id: number;
@@ -6,7 +6,7 @@ export interface IProject {
   description: string;
   status: "in progress" | "completed" | "planning";
   technologies: string[];
-  teamMembers: ITeamMembers[];
+  teamMembers: ITeamMember[];
   githubUrl?: string;
   startDate: Date;
   endDate: Date;

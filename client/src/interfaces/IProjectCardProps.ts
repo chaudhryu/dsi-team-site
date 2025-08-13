@@ -1,4 +1,4 @@
-import { ITeamMembers } from "./ITeamMembers";
+import { ITeamMember } from "./ITeamMember";
 
 export interface IProjectCardProps {
    id: string;
@@ -6,6 +6,6 @@ export interface IProjectCardProps {
     description: string;
     status: "in progress" | "completed" | "planning";
     technologies: string[];
-    teamMembers: ITeamMembers[];
+    teamMembers: ITeamMember[];
     githubUrl?: string;
 }
