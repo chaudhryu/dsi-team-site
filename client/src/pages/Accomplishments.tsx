@@ -14,7 +14,7 @@ import Label from "../components/form/Label";
 import TextArea from "../components/form/input/TextArea";
 import Button from "../components/ui/button/Button";
 import { BoxIcon } from "../icons";
-
+import LexicalEditor from '../components/TextEditor/LexicalEditor'
 // ------------------------------------------------------------------
 // Temporary user object – replace with real auth context / API data
 // ------------------------------------------------------------------
@@ -141,7 +141,8 @@ export default function Accomplishments() {
               />
               <div>
                 <Label>Description</Label>
-                <TextArea value={message} onChange={setMessage} rows={6} />
+                {/* <TextArea value={message} onChange={setMessage} rows={6} /> */}
+                <LexicalEditor />
               </div>
             </div>
 
