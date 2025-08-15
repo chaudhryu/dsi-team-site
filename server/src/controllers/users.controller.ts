@@ -1,23 +1,21 @@
-
+// src/controllers/users.controller.ts
 import { Controller, Get, Post, Body, Param, Delete, Put } from '@nestjs/common';
 import { UsersService } from '../services/users.service';
-import { WeeklyAccomplishmentService } from '../services/weekly-accomplishment.service';
 import { User } from '../entities/user.entity';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService , private readonly weeklyAccomplishment : WeeklyAccomplishmentService) {}
+  constructor(private readonly usersService: UsersService) {}
 
   @Get()
   findAll(): Promise<User[]> {
     return this.usersService.findAll();
   }
 
-
-  
-  @Get(':id')
-  findOne(@Param('id') id: string): Promise<User> {
-    return this.usersService.findOne(Number(id));
+  // GET /api/users/badge/96880
+  @Get('badge/:badge')
+  findOneByBadge(@Param('badge') badge: string): Promise<User | null> {
+    return this.usersService.findOneByBadge(Number(badge));
   }
 
   @Post()
@@ -25,13 +23,15 @@ export class UsersController {
     return this.usersService.create(data);
   }
 
-  @Put(':id')
-  update(@Param('id') id: string, @Body() data: Partial<User>): Promise<User> {
-    return this.usersService.update(Number(id), data);
+  // PUT /api/users/badge/96880
+  @Put('badge/:badge')
+  updateByBadge(@Param('badge') badge: string, @Body() data: Partial<User>): Promise<User | null> {
+    return this.usersService.updateByBadge(Number(badge), data);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string): Promise<void> {
-    return this.usersService.remove(Number(id));
+  // DELETE /api/users/badge/96880
+  @Delete('badge/:badge')
+  removeByBadge(@Param('badge') badge: string): Promise<void> {
+    return this.usersService.removeByBadge(Number(badge));
   }
 }
