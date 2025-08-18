@@ -16,15 +16,15 @@ type Accomplishment = {
   id: number;
   accomplishments: string;
   dateSubmitted: string | null;
-  startWeekDate: string;
-  endWeekDate: string;
+  startWeekDate: string; // 'YYYY-MM-DD'
+  endWeekDate: string;   // 'YYYY-MM-DD'
   taskStatus?: string | null;
 };
 
 function mondayStart(date = new Date()) {
   const d = new Date(date);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
+  const day = d.getDay(); // 0..6
+  const diff = day === 0 ? -6 : 1 - day; // back to Monday
   d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
   return d;
@@ -41,7 +41,7 @@ function ymd(d: Date) {
 }
 
 export default function Accomplishments() {
-  // Read user from localStorage (AuthCallback writes this)
+  // ---- who is logged in (from localStorage) ----
   const lsUser = useMemo(() => {
     try {
       const raw = localStorage.getItem(LOGIN_KEY);
@@ -50,83 +50,104 @@ export default function Accomplishments() {
       return null;
     }
   }, []);
-
   const badge = useMemo<number | null>(() => {
     const n = Number(lsUser?.badge);
     return Number.isFinite(n) ? n : null;
   }, [lsUser]);
 
+  // ---- week window (defaults to this week) ----
+  const [weekStart, setWeekStart] = useState<string>(() => ymd(mondayStart()));
+  const [weekEnd, setWeekEnd] = useState<string>(() => ymd(sundayEnd()));
+
+  // ---- data + UI state ----
   const [rows, setRows] = useState<Accomplishment[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);   // start true so modal won't pop early
+  const [loadedOnce, setLoadedOnce] = useState<boolean>(false);
 
   // modal state
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // form state
-  const [weekStart, setWeekStart] = useState<string>(ymd(mondayStart()));
-  const [weekEnd, setWeekEnd] = useState<string>(ymd(sundayEnd()));
+  // form
   const [text, setText] = useState("");
   const firstInputRef = useRef<HTMLTextAreaElement>(null);
 
+  // current week record if exists
   const currentRecord = useMemo(
     () =>
       rows.find(
-        (r) => r.startWeekDate === weekStart && r.endWeekDate === weekEnd,
+        (r) => r.startWeekDate === weekStart && r.endWeekDate === weekEnd
       ) || null,
-    [rows, weekStart, weekEnd],
+    [rows, weekStart, weekEnd]
   );
 
+  // a small "nudge once per week" key so we don't keep popping the modal
+  const nudgeKey = useMemo(
+    () => (badge ? `wa:nudge:${badge}:${weekStart}:${weekEnd}` : null),
+    [badge, weekStart, weekEnd]
+  );
+
+  // ---- load data ----
   const load = async () => {
     if (!badge) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, {
-        credentials: "include",
-      });
+      const res = await fetch(
+        `${API_BASE}/weekly-accomplishments/user/${badge}`,
+        { credentials: "include" }
+      );
       if (!res.ok) {
-        console.error("GET user accomplishments failed", res.status, await res.text());
+        console.error(
+          "GET user accomplishments failed",
+          res.status,
+          await res.text()
+        );
         setRows([]);
-        return;
+      } else {
+        const data = await res.json();
+        setRows(Array.isArray(data) ? data : []);
       }
-      const data = await res.json();
-      setRows(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error("Network error loading accomplishments:", e);
       setRows([]);
     } finally {
       setLoading(false);
+      setLoadedOnce(true);
     }
   };
 
   useEffect(() => {
-    setWeekStart(ymd(mondayStart()));
-    setWeekEnd(ymd(sundayEnd()));
-  }, []);
-
-  useEffect(() => {
-    load();
+    if (badge) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [badge]);
 
-  // if no record for the current week, prompt to submit
+  // Only auto-open *after* first load completes, if no record exists this week,
+  // and we haven't nudged already this week.
   useEffect(() => {
-    if (!badge || loading) return;
+    if (!badge || !loadedOnce || loading) return;
     const exists = rows.some(
-      (r) => r.startWeekDate === weekStart && r.endWeekDate === weekEnd,
+      (r) => r.startWeekDate === weekStart && r.endWeekDate === weekEnd
     );
-    if (!exists) {
+    const alreadyPrompted =
+      nudgeKey && localStorage.getItem(nudgeKey) === "seen";
+    if (!exists && !alreadyPrompted) {
       setText("");
       setError(null);
       setOpen(true);
     }
-  }, [badge, rows, loading, weekStart, weekEnd]);
+  }, [badge, rows, loading, loadedOnce, weekStart, weekEnd, nudgeKey]);
 
   useEffect(() => {
     if (open) setTimeout(() => firstInputRef.current?.focus(), 0);
   }, [open]);
 
+  const dismissNudge = () => {
+    if (nudgeKey) localStorage.setItem(nudgeKey, "seen");
+    setOpen(false);
+  };
+
+  // ---- save/create ----
   const handleSave = async () => {
     if (!badge) {
       setError("No logged-in user.");
@@ -143,19 +164,26 @@ export default function Accomplishments() {
     try {
       if (currentRecord) {
         // EDIT
-        const res = await fetch(`${API_BASE}/weekly-accomplishments/${currentRecord.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            accomplishments: text.trim(),
-            startWeekDate: currentRecord.startWeekDate,
-            endWeekDate: currentRecord.endWeekDate,
-            taskStatus: "Submitted",
-          }),
-        });
+        const res = await fetch(
+          `${API_BASE}/weekly-accomplishments/${currentRecord.id}`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              accomplishments: text.trim(),
+              startWeekDate: currentRecord.startWeekDate,
+              endWeekDate: currentRecord.endWeekDate,
+              taskStatus: "Submitted",
+            }),
+          }
+        );
         if (!res.ok) {
-          console.error("PUT weekly-accomplishments failed", res.status, await res.text());
+          console.error(
+            "PUT weekly-accomplishments failed",
+            res.status,
+            await res.text()
+          );
           setError("Failed to update. Please try again.");
           return;
         }
@@ -176,12 +204,18 @@ export default function Accomplishments() {
           }),
         });
         if (!res.ok) {
-          console.error("POST weekly-accomplishments failed", res.status, await res.text());
+          console.error(
+            "POST weekly-accomplishments failed",
+            res.status,
+            await res.text()
+          );
           setError("Failed to save. The record may already exist.");
           return;
         }
       }
 
+      // close + refresh
+      if (nudgeKey) localStorage.setItem(nudgeKey, "seen");
       setOpen(false);
       setText("");
       await load();
@@ -195,7 +229,7 @@ export default function Accomplishments() {
 
   const rowsSorted = useMemo(
     () => [...rows].sort((a, b) => (a.startWeekDate < b.startWeekDate ? 1 : -1)),
-    [rows],
+    [rows]
   );
 
   if (!badge) {
@@ -311,7 +345,7 @@ export default function Accomplishments() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
           role="dialog"
           aria-modal="true"
-          onKeyDown={(e) => e.key === "Escape" && !saving && setOpen(false)}
+          onKeyDown={(e) => e.key === "Escape" && !saving && dismissNudge()}
         >
           <div className="w-full max-w-xl rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xl">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
@@ -363,7 +397,7 @@ export default function Accomplishments() {
             </div>
 
             <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-3">
-              <Button variant="outline" size="sm" onClick={() => setOpen(false)} disabled={saving}>
+              <Button variant="outline" size="sm" onClick={dismissNudge} disabled={saving}>
                 Cancel
               </Button>
               <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
