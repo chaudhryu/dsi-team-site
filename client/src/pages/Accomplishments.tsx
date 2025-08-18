@@ -1,9 +1,8 @@
 // src/pages/Accomplishments.tsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
 import ComponentCard from "../components/common/ComponentCard";
-import DatePicker from "../components/form/date-picker";
 import Label from "../components/form/Label";
 import Button from "../components/ui/button/Button";
 import { BoxIcon } from "../icons";
@@ -21,27 +20,72 @@ type Accomplishment = {
   taskStatus?: string | null;
 };
 
+/* -------------------- date helpers (local-time safe) -------------------- */
+function ymdLocal(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function addDays(d: Date, n: number) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
 function mondayStart(date = new Date()) {
   const d = new Date(date);
-  const day = d.getDay(); // 0..6
-  const diff = day === 0 ? -6 : 1 - day; // back to Monday
+  const dow = d.getDay(); // 0..6 (Sun..Sat)
+  const diff = dow === 0 ? -6 : 1 - dow; // back to Monday
   d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
   return d;
 }
-function sundayEnd(date = new Date()) {
-  const mon = mondayStart(date);
-  const sun = new Date(mon);
-  sun.setDate(mon.getDate() + 6);
-  sun.setHours(23, 59, 59, 999);
-  return sun;
+function sundayEnd(mon: Date) {
+  const s = new Date(mon);
+  s.setDate(mon.getDate() + 6);
+  s.setHours(23, 59, 59, 999);
+  return s;
 }
-function ymd(d: Date) {
-  return d.toISOString().slice(0, 10);
+// ISO week number (Thursday rule)
+function isoWeekNumber(d: Date) {
+  const utc = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = utc.getUTCDay() || 7;
+  utc.setUTCDate(utc.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((utc.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return { week: weekNo, year: utc.getUTCFullYear() };
+}
+function fmtShort(d: Date) {
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+type WeekOpt = {
+  start: string; // YYYY-MM-DD (Monday)
+  end: string;   // YYYY-MM-DD (Sunday)
+  label: string; // e.g. "W34 (Aug 18 – Aug 24, 2025)"
+};
+
+// Build a list of week options around "now" (current week first)
+function buildWeekOptions(center = new Date(), past = 26, future = 0): WeekOpt[] {
+  const currentMon = mondayStart(center);
+  const total = past + future + 1;
+  const weeks: WeekOpt[] = [];
+
+  for (let i = 0; i < total; i++) {
+    const offsetWeeks = future - i; // places current week at index = future
+    const mon = addDays(currentMon, offsetWeeks * 7);
+    const sun = sundayEnd(mon);
+    const { week } = isoWeekNumber(mon);
+    const label = `W${String(week).padStart(2, "0")} (${fmtShort(mon)} – ${fmtShort(sun)}, ${sun.getFullYear()})`;
+    weeks.push({ start: ymdLocal(mon), end: ymdLocal(sun), label });
+  }
+
+  // most recent first (current week at top)
+  return weeks.sort((a, b) => (a.start < b.start ? 1 : -1));
 }
 
 export default function Accomplishments() {
-  // ---- who is logged in (from localStorage) ----
+  /* ---- who is logged in (from localStorage) ---- */
   const lsUser = useMemo(() => {
     try {
       const raw = localStorage.getItem(LOGIN_KEY);
@@ -55,14 +99,31 @@ export default function Accomplishments() {
     return Number.isFinite(n) ? n : null;
   }, [lsUser]);
 
-  // ---- week window (defaults to this week) ----
-  const [weekStart, setWeekStart] = useState<string>(() => ymd(mondayStart()));
-  const [weekEnd, setWeekEnd] = useState<string>(() => ymd(sundayEnd()));
+  /* ---- week dropdown ---- */
+  const weekOptions = useMemo(() => {
+    const { week } = isoWeekNumber(new Date());
+    return buildWeekOptions(new Date(), week - 1, 0);
+  }, []);
+    const [weekStart, setWeekStart] = useState<string>(() => weekOptions[0]?.start ?? ymdLocal(mondayStart()));
+  const [weekEnd, setWeekEnd] = useState<string>(() => weekOptions[0]?.end ?? ymdLocal(sundayEnd(mondayStart())));
 
-  // ---- data + UI state ----
+  const selectedLabel = useMemo(() => {
+    const opt = weekOptions.find(w => w.start === weekStart);
+    return opt ? opt.label : `${weekStart} – ${weekEnd}`;
+  }, [weekOptions, weekStart, weekEnd]);
+
+  const onSelectWeek = (e: ChangeEvent<HTMLSelectElement>) => {
+    const start = e.target.value;
+    const opt = weekOptions.find(w => w.start === start);
+    if (opt) {
+      setWeekStart(opt.start);
+      setWeekEnd(opt.end); // keep end in sync here → no effect needed
+    }
+  };
+
+  /* ---- data + UI state ---- */
   const [rows, setRows] = useState<Accomplishment[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);   // start true so modal won't pop early
-  const [loadedOnce, setLoadedOnce] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // modal state
   const [open, setOpen] = useState(false);
@@ -73,81 +134,46 @@ export default function Accomplishments() {
   const [text, setText] = useState("");
   const firstInputRef = useRef<HTMLTextAreaElement>(null);
 
-  // current week record if exists
+  // current record for selected week
   const currentRecord = useMemo(
-    () =>
-      rows.find(
-        (r) => r.startWeekDate === weekStart && r.endWeekDate === weekEnd
-      ) || null,
+    () => rows.find(r => r.startWeekDate === weekStart && r.endWeekDate === weekEnd) || null,
     [rows, weekStart, weekEnd]
   );
 
-  // a small "nudge once per week" key so we don't keep popping the modal
-  const nudgeKey = useMemo(
-    () => (badge ? `wa:nudge:${badge}:${weekStart}:${weekEnd}` : null),
-    [badge, weekStart, weekEnd]
-  );
-
-  // ---- load data ----
-  const load = async () => {
-    if (!badge) return;
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `${API_BASE}/weekly-accomplishments/user/${badge}`,
-        { credentials: "include" }
-      );
-      if (!res.ok) {
-        console.error(
-          "GET user accomplishments failed",
-          res.status,
-          await res.text()
-        );
-        setRows([]);
-      } else {
-        const data = await res.json();
-        setRows(Array.isArray(data) ? data : []);
-      }
-    } catch (e) {
-      console.error("Network error loading accomplishments:", e);
-      setRows([]);
-    } finally {
-      setLoading(false);
-      setLoadedOnce(true);
-    }
-  };
-
+  // one effect: load when we know the badge
   useEffect(() => {
-    if (badge) load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!badge) return;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, {
+          credentials: "include",
+        });
+        if (!res.ok) {
+          console.error("GET user accomplishments failed", res.status, await res.text());
+          setRows([]);
+        } else {
+          const data = await res.json();
+          setRows(Array.isArray(data) ? data : []);
+        }
+      } catch (e) {
+        console.error("Network error loading accomplishments:", e);
+        setRows([]);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [badge]);
 
-  // Only auto-open *after* first load completes, if no record exists this week,
-  // and we haven't nudged already this week.
-  useEffect(() => {
-    if (!badge || !loadedOnce || loading) return;
-    const exists = rows.some(
-      (r) => r.startWeekDate === weekStart && r.endWeekDate === weekEnd
-    );
-    const alreadyPrompted =
-      nudgeKey && localStorage.getItem(nudgeKey) === "seen";
-    if (!exists && !alreadyPrompted) {
-      setText("");
-      setError(null);
-      setOpen(true);
-    }
-  }, [badge, rows, loading, loadedOnce, weekStart, weekEnd, nudgeKey]);
-
-  useEffect(() => {
-    if (open) setTimeout(() => firstInputRef.current?.focus(), 0);
-  }, [open]);
-
-  const dismissNudge = () => {
-    if (nudgeKey) localStorage.setItem(nudgeKey, "seen");
-    setOpen(false);
+  // helper to open modal and focus the textarea (instead of an effect)
+  const openModal = (prefill = "") => {
+    setText(prefill);
+    setError(null);
+    setOpen(true);
+    setTimeout(() => firstInputRef.current?.focus(), 0);
   };
 
-  // ---- save/create ----
+  /* ---- save/create ---- */
   const handleSave = async () => {
     if (!badge) {
       setError("No logged-in user.");
@@ -164,32 +190,25 @@ export default function Accomplishments() {
     try {
       if (currentRecord) {
         // EDIT
-        const res = await fetch(
-          `${API_BASE}/weekly-accomplishments/${currentRecord.id}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({
-              accomplishments: text.trim(),
-              startWeekDate: currentRecord.startWeekDate,
-              endWeekDate: currentRecord.endWeekDate,
-              taskStatus: "Submitted",
-            }),
-          }
-        );
+        const res = await fetch(`${API_BASE}/weekly-accomplishments/${currentRecord.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            accomplishments: text.trim(),
+            startWeekDate: currentRecord.startWeekDate,
+            endWeekDate: currentRecord.endWeekDate,
+            taskStatus: "Submitted",
+          }),
+        });
         if (!res.ok) {
-          console.error(
-            "PUT weekly-accomplishments failed",
-            res.status,
-            await res.text()
-          );
+          console.error("PUT weekly-accomplishments failed", res.status, await res.text());
           setError("Failed to update. Please try again.");
           return;
         }
       } else {
         // CREATE
-        const today = ymd(new Date());
+        const today = ymdLocal(new Date());
         const res = await fetch(`${API_BASE}/weekly-accomplishments`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -204,21 +223,29 @@ export default function Accomplishments() {
           }),
         });
         if (!res.ok) {
-          console.error(
-            "POST weekly-accomplishments failed",
-            res.status,
-            await res.text()
-          );
+          console.error("POST weekly-accomplishments failed", res.status, await res.text());
           setError("Failed to save. The record may already exist.");
           return;
         }
       }
 
       // close + refresh
-      if (nudgeKey) localStorage.setItem(nudgeKey, "seen");
       setOpen(false);
       setText("");
-      await load();
+
+      // re-load without adding another effect
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, {
+          credentials: "include",
+        });
+        const data = res.ok ? await res.json() : [];
+        setRows(Array.isArray(data) ? data : []);
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false);
+      }
     } catch (e) {
       console.error("Network error saving accomplishment:", e);
       setError("Network error. Please try again.");
@@ -235,34 +262,47 @@ export default function Accomplishments() {
   if (!badge) {
     return (
       <div className="p-8">
-        <PageMeta
-          title="Weekly Accomplishments"
-          description="Submit and review your weekly accomplishments"
-        />
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          No logged-in user found. Please sign in first.
-        </p>
+        <PageMeta title="Weekly Accomplishments" description="Submit and review your weekly accomplishments" />
+        <p className="text-sm text-gray-600 dark:text-gray-300">No logged-in user found. Please sign in first.</p>
       </div>
     );
   }
 
   return (
     <div>
-      <PageMeta
-        title="Weekly Accomplishments"
-        description="Submit and review your weekly accomplishments"
-      />
+      <PageMeta title="Weekly Accomplishments" description="Submit and review your weekly accomplishments" />
       <PageBreadcrumb pageTitle="Weekly Accomplishments" />
 
       <div className="grid gap-6">
         <ComponentCard title={`Your Weekly Accomplishments (Badge ${badge})`}>
+          {/* Week selector + actions */}
           <div className="mb-6 flex flex-wrap items-center gap-3 justify-between">
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              Current week: <span className="font-medium">{weekStart}</span> →{" "}
-              <span className="font-medium">{weekEnd}</span>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-gray-600 dark:text-gray-300">Week</Label>
+              <select
+                value={weekStart}
+                onChange={onSelectWeek}
+                className="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+              >
+                {weekOptions.map((w) => (
+                  <option key={w.start} value={w.start}>
+                    {w.label}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex items-center gap-3">
-              <Button size="sm" variant="outline" onClick={load}>
+              <Button size="sm" variant="outline" onClick={() => {
+                // simply reuse the same loader
+                if (badge) {
+                  setLoading(true);
+                  fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, { credentials: "include" })
+                    .then(r => r.ok ? r.json() : [])
+                    .then(d => setRows(Array.isArray(d) ? d : []))
+                    .catch(() => {})
+                    .finally(() => setLoading(false));
+                }
+              }}>
                 {loading ? "Refreshing…" : "Refresh"}
               </Button>
               {currentRecord ? (
@@ -270,36 +310,29 @@ export default function Accomplishments() {
                   size="sm"
                   variant="primary"
                   startIcon={<BoxIcon className="size-5" />}
-                  onClick={() => {
-                    setText(currentRecord.accomplishments ?? "");
-                    setError(null);
-                    setOpen(true);
-                  }}
+                  onClick={() => openModal(currentRecord.accomplishments ?? "")}
                 >
-                  Edit current week
+                  Edit selected week
                 </Button>
               ) : (
                 <Button
                   size="sm"
                   variant="primary"
                   startIcon={<BoxIcon className="size-5" />}
-                  onClick={() => {
-                    setText("");
-                    setError(null);
-                    setOpen(true);
-                  }}
+                  onClick={() => openModal("")}
                 >
-                  Submit this week
+                  Submit for selected week
                 </Button>
               )}
             </div>
           </div>
 
+          {/* Table */}
           <div className="max-w-full overflow-x-auto">
             <table className="min-w-[900px] w-full text-left text-sm">
               <thead className="bg-gray-50 dark:bg-gray-800/60 text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-white/10">
                 <tr>
-                  <th className="px-5 py-3 font-medium w-44">Week</th>
+                  <th className="px-5 py-3 font-medium w-56">Week</th>
                   <th className="px-5 py-3 font-medium">Accomplishment</th>
                   <th className="px-5 py-3 font-medium w-28">Status</th>
                 </tr>
@@ -329,7 +362,7 @@ export default function Accomplishments() {
                 {rowsSorted.length === 0 && !loading && (
                   <tr>
                     <td className="px-5 py-8 text-center text-gray-500 dark:text-gray-400" colSpan={3}>
-                      No accomplishments yet. Submit your first one for this week.
+                      No accomplishments yet. Submit one for the selected week.
                     </td>
                   </tr>
                 )}
@@ -345,13 +378,14 @@ export default function Accomplishments() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
           role="dialog"
           aria-modal="true"
-          onKeyDown={(e) => e.key === "Escape" && !saving && dismissNudge()}
+          onKeyDown={(e) => e.key === "Escape" && !saving && setOpen(false)}
         >
           <div className="w-full max-w-xl rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xl">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {currentRecord ? "Edit Weekly Accomplishment" : "Submit Weekly Accomplishment"}
               </h3>
+              <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">Week: {selectedLabel}</div>
             </div>
 
             <div className="px-6 py-5 space-y-4">
@@ -360,29 +394,6 @@ export default function Accomplishments() {
                   {error}
                 </div>
               )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label>Week start</Label>
-                  <DatePicker
-                    id="week-start"
-                    label=""
-                    placeholder="YYYY-MM-DD"
-                    defaultDate={new Date(weekStart)}
-                    onChange={(_, s) => s && setWeekStart(s)}
-                  />
-                </div>
-                <div>
-                  <Label>Week end</Label>
-                  <DatePicker
-                    id="week-end"
-                    label=""
-                    placeholder="YYYY-MM-DD"
-                    defaultDate={new Date(weekEnd)}
-                    onChange={(_, s) => s && setWeekEnd(s)}
-                  />
-                </div>
-              </div>
 
               <div>
                 <Label>Description</Label>
@@ -397,7 +408,7 @@ export default function Accomplishments() {
             </div>
 
             <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-3">
-              <Button variant="outline" size="sm" onClick={dismissNudge} disabled={saving}>
+              <Button variant="outline" size="sm" onClick={() => setOpen(false)} disabled={saving}>
                 Cancel
               </Button>
               <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
