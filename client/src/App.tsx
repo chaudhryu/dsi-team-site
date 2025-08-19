@@ -25,7 +25,6 @@ export default function App() {
 
   <Route path="/auth-response" element={<AuthCallback />} />
 
-  {/* ---------- Layout that everyone can see ---------- */}
   <Route element={<AppLayout />}>
     <Route index element={<Home />} />          {/* Public */}
     <Route path="/images" element={<Images />} />{/* Public */}
