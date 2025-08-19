@@ -3,16 +3,14 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import Label from "@/components/form/Label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusIcon, X } from "lucide-react";
+import { X } from "lucide-react";
 import {
   Select,
   SelectContent,

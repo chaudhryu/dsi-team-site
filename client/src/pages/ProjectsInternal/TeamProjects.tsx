@@ -1,21 +1,14 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  ArrowRight,
-  CalendarDays,
-  ExternalLink,
-  Github,
+
   Search,
-  Users,
-  Zap,
+
 } from "lucide-react";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+
 } from "@/components/ui/card";
-import Badge from "@/components/ui/badge/Badge";
 import { IProject } from "@/interfaces/IProject";
 import ProjectCard from "./ProjectCard";
 import { Input } from "@/components/ui/input";
@@ -26,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import Button from "@/components/ui/button/Button";
 
 const projects: IProject[] = [
   {
