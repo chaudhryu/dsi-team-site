@@ -89,6 +89,9 @@
     "vite": "^6.1.0",
     "vite-plugin-svgr": "^4.3.0"
   },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.24.0"
+  },
   "overrides": {
     "react-helmet-async": {
       "react": "^16.8.0 || ^17 || ^18 || ^19"
@@ -100,6 +103,11 @@
     "@react-jvectormap/world": {
       "react": "^16.8.0 || ^17 || ^18 || ^19",
       "react-dom": "^16.8.0 || ^17 || ^18 || ^19"
-    }
+    },
+    "rollup": "^4.24.0"
+  },
+  "engines": {
+    "node": ">=18.18 <21",
+    "npm": ">=9"
   }
 }
