@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import Button from "@/components/ui/button/Button";
 import {
@@ -9,9 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { IProject } from "@/interfaces/IProject";
-import { IProjectCardProps } from "@/interfaces/IProjectCardProps";
 import { CalendarDays, Github } from "lucide-react";
-import { el } from "node_modules/@fullcalendar/core/internal-common";
 import React from "react";
 
 const getStatusColor = (status: string) => {
