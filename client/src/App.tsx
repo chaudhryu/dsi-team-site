@@ -15,6 +15,7 @@ import Home from "./pages/Dashboard/Home";
 import AuthCallback from "./pages/Private/Auth/AuthCallback";
 import Users from "./pages/Users";
 
+
 export default function App() {
   return (
     <>
@@ -49,6 +50,7 @@ export default function App() {
   </Routes>
 
 </Router>
+
     </>
   );
 }
