@@ -98,7 +98,7 @@ function buildWeekOptions(center = new Date(), past = 26, future = 0): WeekOpt[]
 export default function AccomplishmentsTable() {
   // 1) Build dropdown weeks (current week + previous N)
   const weekOptions = useMemo(() => {
-    // go back to the first week of the year (or up to 26 weeks)
+    // go back to the first week of the year (or at least 26 weeks)
     const { week } = isoWeekNumber(new Date());
     return buildWeekOptions(new Date(), Math.max(week - 1, 26), 0);
   }, []);
@@ -132,7 +132,9 @@ export default function AccomplishmentsTable() {
         udata.sort((a, b) => {
           const al = (a.lastName || "").toLowerCase();
           const bl = (b.lastName || "").toLowerCase();
-          if (al === bl) return (a.firstName || "").localeCompare(b.firstName || "", undefined, { sensitivity: "base" });
+          if (al === bl) {
+            return (a.firstName || "").localeCompare(b.firstName || "", undefined, { sensitivity: "base" });
+          }
           return al.localeCompare(bl);
         });
         setUsers(udata);
@@ -225,11 +227,12 @@ export default function AccomplishmentsTable() {
 
           <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
             {loading && (
-              <TableRow>
-                <TableCell className="px-5 py-4 text-gray-500 text-theme-sm dark:text-gray-400" colSpan={3}>
+              /* Use native <tr>/<td> so we can use colSpan without TS errors */
+              <tr>
+                <td className="px-5 py-4 text-gray-500 text-theme-sm dark:text-gray-400" colSpan={3}>
                   Loading…
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             )}
 
             {!loading && rows.map(({ user, wa }) => (
@@ -262,7 +265,8 @@ export default function AccomplishmentsTable() {
                     className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
                       (wa?.taskStatus ?? "Missing") === "Submitted"
                         ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
-                        : wa ? "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                        : wa
+                          ? "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
                           : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
                     }`}
                   >
@@ -273,11 +277,12 @@ export default function AccomplishmentsTable() {
             ))}
 
             {!loading && rows.length === 0 && (
-              <TableRow>
-                <TableCell className="px-5 py-8 text-center text-gray-500 dark:text-gray-400" colSpan={3}>
+              /* Use native <tr>/<td> here as well for colSpan */
+              <tr>
+                <td className="px-5 py-8 text-center text-gray-500 dark:text-gray-400" colSpan={3}>
                   No users found.
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             )}
           </TableBody>
         </Table>
