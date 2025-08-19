@@ -312,7 +312,7 @@ export default function Accomplishments() {
                   startIcon={<BoxIcon className="size-5" />}
                   onClick={() => openModal(currentRecord.accomplishments ?? "")}
                 >
-                  Edit selected week
+                  Edit the selected week
                 </Button>
               ) : (
                 <Button
