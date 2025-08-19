@@ -1,7 +1,8 @@
-import { Entity,PrimaryGeneratedColumn,ManyToOne,JoinColumn,Column } from "typeorm";
+// src/entities/WeeklyAccomplishment.entity.ts
+import { Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Column } from 'typeorm';
+import { User } from './user.entity';
+import { Application } from './Application.entity';
 
-import { User } from "./user.entity";
-import { Application } from "./Application.entity";
 @Entity()
 export class WeeklyAccomplishment {
   @PrimaryGeneratedColumn()
@@ -11,9 +12,10 @@ export class WeeklyAccomplishment {
   @JoinColumn({ name: 'badge' })
   user: User;
 
-  @ManyToOne(() => Application, { eager: true })
+  // 👇 allow nulls
+  @ManyToOne(() => Application, { eager: true, nullable: true })
   @JoinColumn({ name: 'application_id' })
-  application: Application;
+  application: Application | null;
 
   @ManyToOne(() => WeeklyAccomplishment, { nullable: true })
   @JoinColumn({ name: 'last_week_id' })

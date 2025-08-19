@@ -1,72 +1,37 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+// src/services/weekly-accomplishment.service.ts
+import {
+  Injectable,
+  NotFoundException,
+  OnApplicationBootstrap,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { WeeklyAccomplishment,User,Application } from '../entities';
-import { WeeklyAccomplishmentAppDetailDto, AppServerDto, AppDatabaseDto, DatabaseLoginDto } from '../dto/WeeklyAccomplishmentAppDetail.dto';
+import { Repository, FindOptionsWhere } from 'typeorm';
+import { WeeklyAccomplishment, Application, User } from '../entities';
+import {
+  CreateWeeklyAccomplishmentDto,
+  UpdateWeeklyAccomplishmentDto,
+} from '../dto/weekly-accomplishment.dto';
 
 @Injectable()
 export class WeeklyAccomplishmentService implements OnApplicationBootstrap {
   constructor(
     @InjectRepository(WeeklyAccomplishment)
     private readonly waRepo: Repository<WeeklyAccomplishment>,
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
-
     @InjectRepository(Application)
     private readonly appRepo: Repository<Application>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
+
+  // optional: seed or leave empty
   async onApplicationBootstrap() {
-    // Seed User if not exists
-    let user = await this.userRepo.findOne({ where: { badge: 96880 } });
-    if (!user) {
-      user = this.userRepo.create({
-        badge: 96880,
-        firstName: 'Trung',
-        lastName: 'Ty',
-        email: 'tut@metro.net',
-      });
-      await this.userRepo.save(user);
-      console.log('added User');
-    }
-
-    // Seed Application if not exists
-    let app = await this.appRepo.findOne({ where: { id: 1 } });
-    if (!app) {
-      app = this.appRepo.create({
-        id: 1,
-        appName: ' File Center',
-        // optional: add server/database fields if necessary
-      });
-      await this.appRepo.save(app);
-      console.log(' added Application');
-    }
-
-    // Seed WeeklyAccomplishment if not exists
-    const exists = await this.waRepo.findOne({
-      where: {
-        user: { badge: user.badge },
-        application: { id: app.id },
-        weeklyPeriod: '2025-W25',
-      },
-    });
-
-    if (!exists) {
-      await this.waRepo.save({
-        weeklyPeriod: '2025-W25',
-        accomplishments: 'Example accomplishment',
-        user,
-        application: app,
-        // if only have PK , can you below , type orm will link to foreign key from given PK
-        // user: { badge: user.badge },         //  only badge ID needed
-        // application: { id: app.id },        //   only app ID needed
-      });
-      console.log('added WeeklyAccomplishment');
-    }
+    // no-op
   }
 
+  // used by GET /weekly-accomplishments/user/:badge
   async getAllByUser(badge: number): Promise<WeeklyAccomplishment[]> {
     return this.waRepo.find({
-      where: { user: { badge } },
+      where: { user: { badge } as any },
       relations: [
         'application',
         'application.devServer',
@@ -76,43 +41,82 @@ export class WeeklyAccomplishmentService implements OnApplicationBootstrap {
         'application.devDatabase.logins',
         'application.prodDatabase.logins',
       ],
-      order: {
-        weeklyPeriod: 'DESC',
-      },
+      // you can add order if you like
+      // order: { startWeekDate: 'DESC' },
     });
   }
 
-  async getUserAccomplishments(badge: number): Promise<WeeklyAccomplishmentAppDetailDto[]> {
-    const records = await this.getAllByUser(badge);
-    debugger
-    return records.map(wa => {
-      const app = wa.application;
+  // used by POST /weekly-accomplishments
+  async createOrUpdate(dto: CreateWeeklyAccomplishmentDto) {
+    // Ensure user exists (we do NOT auto-create because firstName/lastName are required)
+    const user = await this.userRepo.findOne({ where: { badge: dto.userBadge } });
+    if (!user) {
+      throw new NotFoundException(`User with badge ${dto.userBadge} not found`);
+    }
 
-      const mapServer = (server): AppServerDto =>
-        server ? { id: server.id, hostname: server.hostname } : null;
+    // Optional application
+    let application: Application | null = null;
+    if (typeof dto.applicationId === 'number') {
+      application = await this.appRepo.findOne({ where: { id: dto.applicationId } });
+      if (!application) {
+        throw new NotFoundException(`Application ${dto.applicationId} not found`);
+      }
+    }
 
-      const mapDb = (db): AppDatabaseDto =>
-        db
-          ? {
-              id: db.id,
-              name: db.name,
-              logins: db.logins?.map(login => ({
-                id: login.id,
-                role: login.role,
-                username: login.username,
-              })) || [],
-            }
-          : null;
+    // Upsert by (user + week range)
+    const where: FindOptionsWhere<WeeklyAccomplishment> = {
+      user: { badge: dto.userBadge } as any,
+      startWeekDate: dto.startWeekDate,
+      endWeekDate: dto.endWeekDate,
+    };
+    let rec = await this.waRepo.findOne({ where });
 
-      return {
-        weeklyPeriod: wa.weeklyPeriod,
-        accomplishments: wa.accomplishments,
-        applicationName: app?.appName,
-        devServer: mapServer(app?.devServer),
-        prodServer: mapServer(app?.prodServer),
-        devDatabase: mapDb(app?.devDatabase),
-        prodDatabase: mapDb(app?.prodDatabase),
-      };
+    if (rec) {
+      rec.accomplishments = dto.accomplishments ?? rec.accomplishments;
+      rec.dateSubmitted = dto.dateSubmitted ?? rec.dateSubmitted ?? new Date().toISOString().slice(0, 10);
+      rec.taskStatus = dto.taskStatus ?? rec.taskStatus ?? 'Submitted';
+      if (dto.applicationId !== undefined) rec.application = application; // allow set/clear
+      return this.waRepo.save(rec);
+    }
+
+    rec = this.waRepo.create({
+      user,
+      application: application ?? null,
+      accomplishments: dto.accomplishments,
+      startWeekDate: dto.startWeekDate,
+      endWeekDate: dto.endWeekDate,
+      dateSubmitted: dto.dateSubmitted ?? new Date().toISOString().slice(0, 10),
+      taskStatus: dto.taskStatus ?? 'Submitted',
     });
+
+    return this.waRepo.save(rec);
+  }
+
+  // used by PUT /weekly-accomplishments/:id
+  async update(id: number, dto: UpdateWeeklyAccomplishmentDto) {
+    const rec = await this.waRepo.findOne({ where: { id } });
+    if (!rec) throw new NotFoundException('Weekly accomplishment not found');
+
+    // (optional) switch which user it belongs to
+    if (dto.userBadge !== undefined) {
+      const user = await this.userRepo.findOne({ where: { badge: dto.userBadge } });
+      if (!user) throw new NotFoundException(`User with badge ${dto.userBadge} not found`);
+      rec.user = user;
+    }
+
+    // (optional) set/clear application
+    if (dto.applicationId !== undefined) {
+      rec.application = dto.applicationId
+        ? await this.appRepo.findOne({ where: { id: dto.applicationId } })
+        : null;
+    }
+
+    rec.accomplishments = dto.accomplishments ?? rec.accomplishments;
+    rec.startWeekDate = dto.startWeekDate ?? rec.startWeekDate;
+    rec.endWeekDate = dto.endWeekDate ?? rec.endWeekDate;
+    rec.dateSubmitted = dto.dateSubmitted ?? rec.dateSubmitted;
+    rec.taskStatus = dto.taskStatus ?? rec.taskStatus;
+
+    return this.waRepo.save(rec);
   }
 }
