@@ -33,19 +33,31 @@ const navItems: NavItem[] = [
   {
     icon: <CalenderIcon />,
     name: "Accomplishments",
-    subItems: [{ name: "Your Accomplishments", path: "/submit-accomplishment", pro: false },
-      { name: "Team Accomplishments", path: "/view-accomplishments", pro: false }
+    subItems: [
+      {
+        name: "Your Accomplishments",
+        path: "/submit-accomplishment",
+        pro: false,
+      },
+      {
+        name: "Team Accomplishments",
+        path: "/view-accomplishments",
+        pro: false,
+      },
     ],
   },
   {
     icon: <UserCircleIcon />,
     name: "User Management",
-    path: "/profile",
+    path: "/users",
   },
   {
-    name: "Applications",
+    name: "Projects",
     icon: <ListIcon />,
-    subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
+    subItems: [
+      { name: "My Projects", path: "/my-projects", pro: false },
+      { name: "Team Projects", path: "/team-projects", pro: false },
+    ],
   },
   {
     name: "Databases",
@@ -305,7 +317,7 @@ const AppSidebar: React.FC = () => {
         }`}
       >
         <Link to="/">
-        {isExpanded || isHovered || isMobileOpen ? (
+          {isExpanded || isHovered || isMobileOpen ? (
             <>
               <img
                 className="dark:hidden"
@@ -358,9 +370,7 @@ const AppSidebar: React.FC = () => {
                     ? "lg:justify-center"
                     : "justify-start"
                 }`}
-              >
-
-              </h2>
+              ></h2>
             </div>
           </div>
         </nav>

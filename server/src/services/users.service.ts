@@ -1,34 +1,44 @@
-
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User,WeeklyAccomplishment } from '../entities/';
+import { User, WeeklyAccomplishment } from '../entities';
 
-import { Logger } from '@nestjs/common';
 @Injectable()
 export class UsersService implements OnApplicationBootstrap {
   constructor(
     @InjectRepository(User) private readonly userRepo: Repository<User>,
     @InjectRepository(WeeklyAccomplishment) private readonly accRepo: Repository<WeeklyAccomplishment>,
   ) {}
+
   private readonly logger = new Logger(UsersService.name);
+
   async onApplicationBootstrap() {
-    if ((await this.userRepo.count()) === 0) {
-      this.logger.log('Seeding initial data...');
-      const user = this.userRepo.create({ badge:96880,firstName: 'Trung',lastName:'lastName', email: 'tut@metro.net' });
-      const savedUser = await this.userRepo.save(user);
-      const weekOf = new Date().toISOString().slice(0, 10);
-    
-    }
+    this.logger.log('Ensuring seed user (idempotent)...');
+    await this.userRepo.upsert(
+      {
+        badge: 96880,
+        firstName: 'Trung',
+        lastName: 'Ty',
+        email: 'tut@metro.net',
+      },
+      ['badge'],
+    );
   }
+
+  async ensureUser(badge: number, data: Partial<User>) {
+    await this.userRepo.upsert({ badge, ...data }, ['badge']);
+    return this.userRepo.findOne({ where: { badge } });
+  }
+
+  // ---- CRUD by badge ----
 
   findAll(): Promise<User[]> {
-    this.logger.log('Fetching all users with accomplishments');
-    return this.userRepo.find({ relations: ['weeklyAccomplishments'] });
+    this.logger.log('Fetching all users');
+    return this.userRepo.find();
   }
 
-  findOne(badge: number): Promise<User> {
-    return this.userRepo.findOne({ where: { badge }, relations: ['accomplishments'] });
+  findOneByBadge(badge: number): Promise<User | null> {
+    return this.userRepo.findOne({ where: { badge } });
   }
 
   create(data: Partial<User>): Promise<User> {
@@ -36,12 +46,12 @@ export class UsersService implements OnApplicationBootstrap {
     return this.userRepo.save(user);
   }
 
-  async update(id: number, data: Partial<User>): Promise<User> {
-    await this.userRepo.update(id, data);
-    return this.findOne(id);
+  async updateByBadge(badge: number, data: Partial<User>): Promise<User | null> {
+    await this.userRepo.update({ badge }, data); // criteria object, not numeric id
+    return this.findOneByBadge(badge);
   }
 
-  async remove(id: number): Promise<void> {
-    await this.userRepo.delete(id);
+  async removeByBadge(badge: number): Promise<void> {
+    await this.userRepo.delete({ badge }); // criteria object
   }
 }
