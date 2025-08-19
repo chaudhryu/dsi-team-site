@@ -1,16 +1,28 @@
+// src/main.ts
+import 'reflect-metadata'; // safe to add; helps with decorators/validation
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { WinstonModule } from 'nest-winston';
-import { winstonConfig } from './Logger'; 
+import { ValidationPipe } from '@nestjs/common';
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule,{logger:WinstonModule.createLogger(winstonConfig)});
+  const app = await NestFactory.create(AppModule);
+
   app.setGlobalPrefix('api');
-if (process.env.NODE_ENV !== 'production') {
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
+
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: [
+      'http://localhost:5173',
+      'https://police-report-request-portal-sigma.vercel.app',
+    ],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
-  await app.listen(3005);
-}
+
+  const PORT = Number(process.env.PORT) || 3005;
+  const HOST = '0.0.0.0'; // listen on all interfaces (localhost + 127.0.0.1)
+  await app.listen(PORT, HOST);
+  console.log(`✅ API listening on http://localhost:${PORT}`);
 }
 bootstrap();
