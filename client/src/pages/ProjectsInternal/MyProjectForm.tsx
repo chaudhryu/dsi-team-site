@@ -60,8 +60,6 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
   const [projectName, setProjectName] = useState<string>();
   const [clientDepartment, setClientDepartment] = useState<string>();
   const [projectStatus, setProjectStatus] = useState<string>();
-  const [description, setDescription] = useState<string>();
-  const [repositoryUrl, setRepositoryUrl] = useState<string>();
   const [selectedTeamMemberBadgeNumber, setSelectedTeamMemberBadgeNumber] =
     useState<string>();
   const [selectedTeamMembers, setSelectedTeamMembers] = useState<ITeamMember[]>(
@@ -130,8 +128,7 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
     setProjectName("");
     setClientDepartment("");
     setProjectStatus("");
-    setDescription("");
-    setRepositoryUrl("");
+
     setSelectedTeamMembers([]);
     setSelectedTechnologies([]);
     setTeamMembersDropdownValues(teamMembers);
@@ -187,13 +184,11 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
           <div>
             <Label htmlFor="username-1">Description</Label>
             <Textarea
-              onChange={(e) => setDescription(e.target.value)}
             ></Textarea>
           </div>
           <div>
             <Label htmlFor="username-1">Repository URL</Label>
             <Input
-              onChange={(e) => setRepositoryUrl(e.target.value)}
               id="name-1"
               name="name"
             />
