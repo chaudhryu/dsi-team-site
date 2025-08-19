@@ -1,20 +1,27 @@
-
-
-import { Controller, Get, Post, Body, Param, Delete, Put } from '@nestjs/common';
-import { UsersService } from '../services/users.service';
+// src/controllers/weekly-accomplishments.controller.ts
+import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
 import { WeeklyAccomplishmentService } from '../services/weekly-accomplishment.service';
-import { User } from '../entities/user.entity';
+import { CreateWeeklyAccomplishmentDto, UpdateWeeklyAccomplishmentDto } from '../dto/weekly-accomplishment.dto';
 
 @Controller('weekly-accomplishments')
 export class WeeklyAccomplishmentsController {
-  constructor(private readonly usersService: UsersService , private readonly weeklyAccomplishmentService : WeeklyAccomplishmentService) {}
+  constructor(private readonly waService: WeeklyAccomplishmentService) {}
 
- 
-
+  // UI uses this to list user history
   @Get('user/:badge')
-  getAllForUser(@Param('badge') badge: number) {
-    return this.weeklyAccomplishmentService.getUserAccomplishments(+badge);
+  getByUser(@Param('badge') badge: string) {
+    return this.waService.getAllByUser(Number(badge));
   }
-  
-  
+
+  // Create (or upsert) current week
+  @Post()
+  create(@Body() dto: CreateWeeklyAccomplishmentDto) {
+    return this.waService.createOrUpdate(dto);
+  }
+
+  // Edit by id
+  @Put(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateWeeklyAccomplishmentDto) {
+    return this.waService.update(Number(id), dto);
+  }
 }
