@@ -17,25 +17,23 @@ export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
   @Get()
-  getProjects() {
-    return this.projectsService.getProjects;
+  getAllProjects() {
+    return this.projectsService.findAll();
   }
 
   @Get(":id")
   getProject(@Param("id") id: string) {
-    return {
-      id: id,
-    };
+    return this.projectsService.findOne(+id);
   }
 
   @Post()
   createProject(@Body() createProjectDto: CreateProjectDto) {
-    return {
-      name: createProjectDto.name,
-      description: createProjectDto.description,
-      status: createProjectDto.status,
-      githubUrl: createProjectDto.githubUrl,
-    };
+    return this.projectsService.create(
+      createProjectDto.name,
+      createProjectDto.description,
+      createProjectDto.status,
+      createProjectDto.githubUrl
+    );
   }
 
   @Put(":id")
@@ -43,17 +41,17 @@ export class ProjectsController {
     @Param("id") id: string,
     @Body() updateProjectDto: UpdateProjectDto
   ) {
-    return {
-      id,
-      name: updateProjectDto.name,
-      description: updateProjectDto.description,
-      status: updateProjectDto.status,
-      githubUrl: updateProjectDto.githubUrl,
-    };
+    return this.projectsService.update(
+      +id,
+      updateProjectDto.name,
+      updateProjectDto.description,
+      updateProjectDto.status,
+      updateProjectDto.githubUrl
+    );
   }
 
   @Put(":id")
   removeProject(@Param("id") id: string) {
-    return {};
+    return this.projectsService.delete(+id);
   }
 }

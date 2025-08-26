@@ -26,8 +26,9 @@ import { Badge } from "@/components/ui/badge";
 import { IMyProjectFormProps } from "@/interfaces/IMyProjectFormProps";
 
 export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
-  isAddProjectFormOpen,
-  closeAddProjectForm,
+  isProjectFormOpen,
+  closeProjectForm,
+  project,
 }) => {
   const teamMembers: ITeamMember[] = [
     { name: "Joel Joshy", avatar: "/", badgeNumber: "58146" },
@@ -60,10 +61,10 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
   ];
 
   const [projectName, setProjectName] = useState<string>();
-  const [clientDepartment, setClientDepartment] = useState<string>();
+  const [client, setClient] = useState<string>();
   const [projectStatus, setProjectStatus] = useState<string>();
   const [description, setDescription] = useState<string>();
-  const [repositoryUrl, setRepositoryUrl] = useState<string>();
+  const [githubUrl, setGithubUrl] = useState<string>();
   const [selectedTeamMemberBadgeNumber, setSelectedTeamMemberBadgeNumber] =
     useState<string>();
   const [selectedTeamMembers, setSelectedTeamMembers] = useState<ITeamMember[]>(
@@ -84,7 +85,28 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
   useEffect(() => {
     setTeamMembersDropdownValues(teamMembers);
     setTechnologiesDropdownValues(technologies);
+
+    if (project) {
+      setProjectName(project.name);
+      setClient(project.client);
+      setProjectStatus(project.status);
+      setDescription(project.description);
+      setSelectedTeamMembers(project.teamMembers);
+      setSelectedTechnologies(project.technologies);
+    }
   }, []);
+
+  useEffect(() => {
+    if (project) {
+      setProjectName(project.name);
+      setGithubUrl(project.githubUrl);
+      setClient(project.client);
+      setProjectStatus(project.status);
+      setDescription(project.description);
+      setSelectedTeamMembers(project.teamMembers);
+      setSelectedTechnologies(project.technologies);
+    }
+  }, [project]);
 
   const addTeamMember = () => {
     setSelectedTeamMembers((prevSelectedTeamMembers) => {
@@ -128,12 +150,12 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
   };
 
   const clearAllFieldsAndCloseAddProjectForm = () => {
-    closeAddProjectForm();
+    closeProjectForm();
     setProjectName("");
-    setClientDepartment("");
+    setClient("");
     setProjectStatus("");
     setDescription("");
-    setRepositoryUrl("");
+    setGithubUrl("");
     setSelectedTeamMembers([]);
     setSelectedTechnologies([]);
     setTeamMembersDropdownValues(teamMembers);
@@ -142,7 +164,7 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
 
   return (
     <Dialog
-      open={isAddProjectFormOpen}
+      open={isProjectFormOpen}
       onOpenChange={clearAllFieldsAndCloseAddProjectForm}
     >
       <form>
@@ -165,8 +187,8 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
               <Input
                 id="username-1"
                 name="username"
-                value={clientDepartment}
-                onChange={(e) => setClientDepartment(e.target.value)}
+                value={client}
+                onChange={(e) => setClient(e.target.value)}
               />
             </div>
             <div>
@@ -189,13 +211,14 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
           <div>
             <Label htmlFor="username-1">Description</Label>
             <Textarea
+              value={description}
               onChange={(e) => setDescription(e.target.value)}
             ></Textarea>
           </div>
           <div>
             <Label htmlFor="username-1">Repository URL</Label>
             <Input
-              onChange={(e) => setRepositoryUrl(e.target.value)}
+              onChange={(e) => setGithubUrl(e.target.value)}
               id="name-1"
               name="name"
             />

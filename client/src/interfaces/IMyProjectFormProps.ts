@@ -1,4 +1,7 @@
+import { IProject } from "./IProject";
+
 export interface IMyProjectFormProps {
-  isAddProjectFormOpen: boolean;
-  closeAddProjectForm: () => void;
+  isProjectFormOpen: boolean;
+  closeProjectForm: () => void | null;
+  project: IProject | null | undefined;
 }
