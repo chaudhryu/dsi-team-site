@@ -10,4 +10,5 @@ export interface IProject {
   githubUrl?: string;
   startDate: Date;
   endDate: Date;
+  client: string;
 }

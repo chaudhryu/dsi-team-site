@@ -29,13 +29,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 import { MyProjectForm } from "./MyProjectForm";
+import { Trash } from "lucide-react";
 
 const projects: IProject[] = [
   {
     id: 1,
     name: "Customer Portal Redesign",
     description:
-      "Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.",
+      "Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.Complete overhaul of the customer-facing portal with modern UI/UX and improved performance. Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.",
     status: "in progress",
     technologies: [
       "React",
@@ -59,6 +60,7 @@ const projects: IProject[] = [
     githubUrl: "https://github.com/team/customer-portal",
     startDate: new Date(),
     endDate: new Date(),
+    client: "RTOS/TOS",
   },
   {
     id: 2,
@@ -86,6 +88,7 @@ const projects: IProject[] = [
       },
     ],
     githubUrl: "https://github.com/team/customer-portal",
+    client: "RTOS/TOS",
     startDate: new Date(),
     endDate: new Date(),
   },
@@ -109,6 +112,7 @@ const projects: IProject[] = [
       },
     ],
     githubUrl: "https://github.com/team/customer-portal",
+    client: "RTOS/TOS",
     startDate: new Date(),
     endDate: new Date(),
   },
@@ -134,6 +138,7 @@ const projects: IProject[] = [
     githubUrl: "https://github.com/team/customer-portal",
     startDate: new Date(),
     endDate: new Date(),
+    client: "RTOS/TOS",
   },
 ];
 
@@ -143,9 +148,34 @@ export const MyProjects = () => {
   const [statusFilterValue, setStatusFilterValue] = useState<string>("all");
   const [isAddProjectFormOpen, setIsAddProjectFormOpen] =
     useState<boolean>(false);
+  const [isEditProjectFormOpen, setIsEditProjectFormOpen] =
+    useState<boolean>(false);
+  const [project, setProject] = useState<IProject | null | undefined>();
 
   const closeAddProjectForm = () => {
-    setIsAddProjectFormOpen(false);
+    setIsEditProjectFormOpen(false);
+  };
+
+  const openEditProjectForm = (project: IProject) => {
+    setIsEditProjectFormOpen(false);
+    // const project: IProject = {
+    //   id: id,
+    //   name: name,
+    //   description: description,
+    //   status: status,
+    //   technologies: technologies,
+    //   teamMembers: teamMembers,
+    //   githubUrl: githubUrl,
+    //   startDate: startDate,
+    //   endDate: endDate,
+    // };
+
+    setProject(project);
+    setIsEditProjectFormOpen(true);
+  };
+
+  const closeEditProjectForm = () => {
+    setIsEditProjectFormOpen(false);
   };
 
   useEffect(() => {
@@ -200,8 +230,15 @@ export const MyProjects = () => {
   return (
     <div className="h-auto">
       <MyProjectForm
-        isAddProjectFormOpen={isAddProjectFormOpen}
-        closeAddProjectForm={closeAddProjectForm}
+        isProjectFormOpen={isAddProjectFormOpen || isEditProjectFormOpen}
+        closeProjectForm={() => {
+          if (isAddProjectFormOpen) {
+            closeAddProjectForm();
+          } else if (isEditProjectFormOpen) {
+            closeEditProjectForm();
+          }
+        }}
+        project={project}
       />
       <div className="flex justify-between items-center mb-10">
         <div className="font-bold text-2xl">My Projects</div>
@@ -247,14 +284,8 @@ export const MyProjects = () => {
             filteredProjects.map((project) => {
               return (
                 <ProjectCard
-                  id={project.id}
-                  name={project.name}
-                  description={project.description}
-                  status={project.status}
-                  technologies={project.technologies}
-                  teamMembers={project.teamMembers}
-                  startDate={project.startDate}
-                  endDate={project.endDate}
+                  project={project}
+                  openEditProjectForm={openEditProjectForm}
                 />
               );
             })}
