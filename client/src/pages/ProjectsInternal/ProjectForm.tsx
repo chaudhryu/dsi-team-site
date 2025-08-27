@@ -12,7 +12,7 @@ import {
 import Label from "@/components/form/Label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PlusIcon, X } from "lucide-react";
+import { Github, PlusIcon, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { IMyProjectFormProps } from "@/interfaces/IMyProjectFormProps";
 import { IProject } from "@/interfaces/IProject";
 import { setEngine } from "crypto";
+import { IRepository } from "@/interfaces/IRepository";
 
 export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
   isProjectFormOpen,
@@ -90,6 +91,8 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
   const [client, setClient] = useState<string>();
   const [projectStatus, setProjectStatus] = useState<string>();
   const [description, setDescription] = useState<string>();
+  const [repositories, setRepositories] = useState<IRepository[]>([]);
+  const [repositoryLabel, setRepositoryLabel] = useState<string>();
   const [repositoryUrl, setRepositoryUrl] = useState<string>();
   const [selectedTeamMemberBadgeNumber, setSelectedTeamMemberBadgeNumber] =
     useState<string>();
@@ -125,7 +128,7 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
   useEffect(() => {
     if (project) {
       setProjectName(project.name);
-      setRepositoryUrl(project.repositoryUrl);
+      setRepositories(project.repositories);
       setClient(project.client);
       setProjectStatus(project.status);
       setDescription(project.description);
@@ -175,13 +178,24 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
     setSelectedTechnology("");
   };
 
+  const addRepository = () => {
+    setRepositories((prevRepositories) =>
+      repositoryLabel && repositoryUrl
+        ? [...prevRepositories, { label: repositoryLabel, url: repositoryUrl }]
+        : prevRepositories
+    );
+
+    setRepositoryLabel("");
+    setRepositoryUrl("");
+  };
+
   const clearAllFieldsAndCloseAddProjectForm = () => {
     closeProjectForm();
     setProjectName("");
     setClient("");
     setProjectStatus("");
     setDescription("");
-    setRepositoryUrl("");
+    setRepositories([]);
     setSelectedTeamMembers([]);
     setSelectedTechnologies([]);
     setTeamMembersDropdownValues(teamMembers);
@@ -194,7 +208,7 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
       client &&
       projectStatus &&
       description &&
-      repositoryUrl &&
+      repositories &&
       selectedTeamMembers &&
       selectedTechnologies
     ) {
@@ -205,7 +219,7 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
         status: projectStatus,
         technologies: selectedTechnologies,
         teamMembers: selectedTeamMembers,
-        repositoryUrl: repositoryUrl,
+        repositories: repositories,
         client: client,
       };
       handleProjectsCache("add", null, newProject);
@@ -214,6 +228,36 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
     } else {
       console.log("Empty Fields!");
     }
+  };
+
+  const removeSelectedTeamMember = (
+    selectedTeamMemberBadgeNumberForRemoval: string
+  ) => {
+    setSelectedTeamMembers((prevSelectedTeamMembers) =>
+      prevSelectedTeamMembers.filter(
+        (prevSelectedTeamMember: ITeamMember) =>
+          prevSelectedTeamMember.badgeNumber !==
+          selectedTeamMemberBadgeNumberForRemoval
+      )
+    );
+  };
+
+  const removeSelectedTechnology = (selectedTechnologyForRemoval: string) => {
+    setSelectedTechnologies((prevSelectedTechnologies) =>
+      prevSelectedTechnologies.filter(
+        (prevSelectedTechnology) =>
+          prevSelectedTechnology !== selectedTechnologyForRemoval
+      )
+    );
+  };
+
+  const removeRepository = (repositoryUrlForRemoval: string) => {
+    setRepositories((prevRepositories) =>
+      prevRepositories.filter(
+        (prevRepository: IRepository) =>
+          prevRepository.url !== repositoryUrlForRemoval
+      )
+    );
   };
 
   return (
@@ -270,14 +314,55 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
             ></Textarea>
           </div>
           <div>
-            <Label htmlFor="username-1">Repository URL</Label>
-            <Input
-              onChange={(e) => setRepositoryUrl(e.target.value)}
-              id="name-1"
-              name="name"
-              value={repositoryUrl}
-            />
+            <Label htmlFor="username-1">Repositories</Label>
+            <div className="flex gap-3">
+              <Input
+                onChange={(e) => setRepositoryLabel(e.target.value)}
+                value={repositoryLabel}
+                className="w-[30%]"
+                placeholder="Repository Label"
+              />
+              <Input
+                onChange={(e) => setRepositoryUrl(e.target.value)}
+                value={repositoryUrl}
+                className="w-[60%]"
+                placeholder="Repository Url"
+              />
+              <Button
+                type="button"
+                onClick={addRepository}
+                disabled={!repositoryLabel || !repositoryUrl}
+                className="w-[10%]"
+              >
+                Add
+              </Button>
+            </div>
           </div>
+          {repositories.length > 0 && (
+            <div className="flex gap-2">
+              {repositories.map((repository: IRepository) => {
+                return (
+                  <Button variant="outline" size="sm">
+                    <a
+                      href={repository.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex justify-center items-center"
+                    >
+                      <Github className="h-4 w-4 mr-1" />
+                      <span className="mr-2">{repository.label}</span>
+                    </a>
+                    <div
+                      onClick={() => removeRepository(repository.url)}
+                      className="flex justify-center items-center"
+                    >
+                      <X className="h-3 w-3 cursor-pointer" />
+                    </div>
+                  </Button>
+                );
+              })}
+            </div>
+          )}
           <div>
             <Label htmlFor="username-1">Team Members</Label>
             <div className="flex gap-2">
@@ -315,10 +400,13 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
                     className="flex items-center gap-1"
                   >
                     {`${selectedTeamMember.name} (${selectedTeamMember.badgeNumber})`}
-                    <X
-                      className="h-3 w-3 cursor-pointer"
-                      // onClick={() => removeSelectedTechnology(tech)}
-                    />
+                    <div
+                      onClick={() =>
+                        removeSelectedTeamMember(selectedTeamMember.badgeNumber)
+                      }
+                    >
+                      <X className="h-3 w-3 cursor-pointer" />
+                    </div>
                   </Badge>
                 ))}
               </div>
@@ -357,10 +445,14 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
                     className="flex items-center gap-1"
                   >
                     {selectedTechnology}
-                    <X
-                      className="h-3 w-3 cursor-pointer"
-                      // onClick={() => removeTechStack(tech)}
-                    />
+                    <div>
+                      <X
+                        className="h-3 w-3 cursor-pointer"
+                        onClick={() =>
+                          removeSelectedTechnology(selectedTechnology)
+                        }
+                      />
+                    </div>
                   </Badge>
                 ))}
               </div>

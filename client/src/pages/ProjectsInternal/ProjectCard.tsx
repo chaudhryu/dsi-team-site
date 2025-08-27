@@ -28,6 +28,7 @@ import {
 import { el } from "node_modules/@fullcalendar/core/internal-common";
 import React, { useState } from "react";
 import { MyProjectForm } from "./ProjectForm";
+import { IRepository } from "@/interfaces/IRepository";
 
 const getStatusColor = (status: string) => {
   if (status === "in progress") {
@@ -131,25 +132,29 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
 
         {/* Client */}
         <div className="mb-4">
-          <p className="text-sm font-medium text-gray-700 mb-2">Client</p>
-          <div className="flex flex-wrap gap-1">{project.client}</div>
+          <p className="text-sm font-medium text-gray-700 ">Client</p>
+          <CardDescription className="text-sm leading-relaxed">
+            {project.client}
+          </CardDescription>
         </div>
 
         {/* Actions */}
         <div className="flex gap-2">
-          {project.repositoryUrl && (
-            <Button variant="outline" size="sm">
-              <a
-                href={project.repositoryUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex"
-              >
-                <Github className="h-4 w-4 mr-2" />
-                Code
-              </a>
-            </Button>
-          )}
+          {project.repositories.map((repository: IRepository) => {
+            return (
+              <Button variant="outline" size="sm">
+                <a
+                  href={repository.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex"
+                >
+                  <Github className="h-4 w-4 mr-2" />
+                  {repository.label}
+                </a>
+              </Button>
+            );
+          })}
         </div>
       </CardContent>
     </Card>
