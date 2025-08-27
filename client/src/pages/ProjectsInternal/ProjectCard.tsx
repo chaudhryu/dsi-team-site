@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { el } from "node_modules/@fullcalendar/core/internal-common";
 import React, { useState } from "react";
-import { MyProjectForm } from "./MyProjectForm";
+import { MyProjectForm } from "./ProjectForm";
 
 const getStatusColor = (status: string) => {
   if (status === "in progress") {
@@ -40,9 +40,15 @@ const getStatusColor = (status: string) => {
 };
 
 const ProjectCard: React.FC<IProjectCardProps> = ({
+  index,
   project,
   openEditProjectForm,
+  handleProjectsCache,
 }) => {
+  const deleteProject = (id: number) => {
+    handleProjectsCache("delete", id, null);
+  };
+
   return (
     // <div>
     <Card
@@ -67,18 +73,16 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
                     <Pencil className="mr-3 h-4 w-4" />
                     Edit
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-red-600">
+                  <DropdownMenuItem
+                    className="text-red-600"
+                    onClick={() => deleteProject(project.id)}
+                  >
                     <Trash className="mr-3 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </CardTitle>
-            <div className="flex gap-2 mb-3">
-              <Badge variant="outline" className={getStatusColor(status)}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </Badge>
-            </div>
           </div>
         </div>
         <CardDescription className="text-sm leading-relaxed">
@@ -128,17 +132,15 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
         {/* Client */}
         <div className="mb-4">
           <p className="text-sm font-medium text-gray-700 mb-2">Client</p>
-          <div className="flex flex-wrap gap-1">
-            {project.client}
-          </div>
+          <div className="flex flex-wrap gap-1">{project.client}</div>
         </div>
 
         {/* Actions */}
         <div className="flex gap-2">
-          {project.githubUrl && (
+          {project.repositoryUrl && (
             <Button variant="outline" size="sm">
               <a
-                href={project.githubUrl}
+                href={project.repositoryUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex"

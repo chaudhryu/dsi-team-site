@@ -14,8 +14,7 @@ import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import AuthCallback from "./pages/Private/Auth/AuthCallback";
 import Users from "./pages/Users";
-import { MyProjects } from "./pages/ProjectsInternal/MyProjects";
-import { TeamProjects } from "./pages/ProjectsInternal/TeamProjects";
+import { Projects } from "./pages/ProjectsInternal/Projects";
 import { ProjectsExternal } from "./pages/ProjectsExternal/ProjectsExternal";
 
 export default function App() {
@@ -35,8 +34,7 @@ export default function App() {
             {/* ---------- Auth‑only pages ---------- */}
             <Route element={<ProtectedRoute />}>
               <Route path="/profile" element={<UserProfiles />} />
-              <Route path="/my-projects" element={<MyProjects />} />
-              <Route path="/team-projects" element={<TeamProjects />} />
+              <Route path="/projects" element={<Projects />} />
               <Route path="/calendar" element={<Calendar />} />
               <Route
                 path="/submit-accomplishment"

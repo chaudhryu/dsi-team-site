@@ -28,12 +28,13 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
-import { MyProjectForm } from "./MyProjectForm";
+import { MyProjectForm } from "./ProjectForm";
 import { Trash } from "lucide-react";
-import { projects } from "./ProjectsData";
+import { projectsData } from "./ProjectsData";
 import { ITeamMember } from "@/interfaces/ITeamMember";
 
-export const MyProjects = () => {
+export const Projects = () => {
+  const [projects, setProjects] = useState<IProject[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<IProject[]>([]);
   const [searchFilterValue, setSearchFilterValue] = useState<string>("");
   const [statusFilterValue, setStatusFilterValue] = useState<string>("all");
@@ -42,6 +43,10 @@ export const MyProjects = () => {
   const [isEditProjectFormOpen, setIsEditProjectFormOpen] =
     useState<boolean>(false);
   const [project, setProject] = useState<IProject | null | undefined>();
+  const [totalCount, setTotalCount] = useState<number>();
+  const [completedCount, setCompletedCount] = useState<number>();
+  const [planningCount, setPlanningCount] = useState<number>();
+  const [inProgressCount, setInProgressCount] = useState<number>();
 
   const closeAddProjectForm = () => {
     setIsAddProjectFormOpen(false);
@@ -70,8 +75,31 @@ export const MyProjects = () => {
   };
 
   useEffect(() => {
-    setFilteredProjects(projects.filter((project) => project.teamMembers.find((teamMember: ITeamMember) => teamMember.badgeNumber === localStorage.getItem('badge'))));
+    setProjects(projectsData);
+    setFilteredProjects(projectsData);
+    setStats(projectsData);
   }, []);
+
+  const setStats = (projects: IProject[]) => {
+    let inProgressCount = 0;
+    let completedCount = 0;
+    let planningCount = 0;
+
+    projects.forEach((project) => {
+      if (project.status === "completed") {
+        completedCount += 1;
+      } else if (project.status === "planning") {
+        planningCount += 1;
+      } else if (project.status === "in progress") {
+        inProgressCount += 1;
+      }
+    });
+
+    setTotalCount(projects.length);
+    setCompletedCount(completedCount);
+    setPlanningCount(planningCount);
+    setInProgressCount(inProgressCount);
+  };
 
   const filterProjects = (
     searchFilterValue: string,
@@ -118,6 +146,33 @@ export const MyProjects = () => {
     });
   };
 
+  const handleProjectsCache = (
+    action: string,
+    projectId: number | null,
+    project: IProject | null
+  ) => {
+    setProjects((prevProjects: IProject[]) => {
+      if (action === "add" && project) {
+        const newProjects = [...prevProjects, project];
+        setFilteredProjects(newProjects);
+        return newProjects;
+      }
+      // else if(action === "update"){
+      //   return
+      // }
+      else if (action === "delete") {
+        console.log("hello");
+        const newProjects = prevProjects.filter(
+          (prevProject) => prevProject.id !== projectId
+        );
+        setFilteredProjects(newProjects);
+        return newProjects;
+      } else {
+        return prevProjects;
+      }
+    });
+  };
+
   return (
     <div className="h-auto">
       <MyProjectForm
@@ -130,9 +185,11 @@ export const MyProjects = () => {
           }
         }}
         project={project}
+        handleProjectsCache={handleProjectsCache}
+        projects={projects}
       />
       <div className="flex justify-between items-center mb-10">
-        <div className="font-bold text-2xl">My Projects</div>
+        <div className="font-bold text-2xl">Projects</div>
         <Button
           size="default"
           variant="outline"
@@ -141,6 +198,50 @@ export const MyProjects = () => {
           <PlusIcon className="size-3.5" color="black" />
           Add
         </Button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center justify-center gap-3">
+              <p className="font-bold text-black text-center text-5xl">
+                {totalCount}
+              </p>
+              <p className="font-medium text-gray-600 text-lg">Total</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center justify-center gap-3">
+              <p className="font-bold text-green-600 text-center text-5xl">
+                {completedCount}
+              </p>
+              <p className="font-medium text-gray-600 text-lg">Completed</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center justify-center gap-3">
+              <p className="font-bold text-yellow-600 text-center text-5xl">
+                {inProgressCount}
+              </p>
+              <p className="font-medium text-gray-600 text-lg">In Progress</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center justify-center gap-3">
+              <p className="font-bold text-blue-600 text-center text-5xl">
+                {planningCount}
+              </p>
+              <p className="font-medium text-gray-600 text-lg">Planning</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       <section>
         <div className="flex flex-col sm:flex-row gap-4 mb-8">
@@ -172,11 +273,13 @@ export const MyProjects = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 mt-5">
           {filteredProjects &&
-            filteredProjects.map((project) => {
+            filteredProjects.map((project, index) => {
               return (
                 <ProjectCard
+                  index={index}
                   project={project}
                   openEditProjectForm={openEditProjectForm}
+                  handleProjectsCache={handleProjectsCache}
                 />
               );
             })}
