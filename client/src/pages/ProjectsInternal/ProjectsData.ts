@@ -26,7 +26,16 @@ export const projectsData: IProject[] = [
         badgeNumber: "12222",
       },
     ],
-    repositoryUrl: "https://github.com/team/customer-portal",
+    repositories: [
+      {
+        label: "Front Office",
+        url: "https://github.com/METRO-APPS/afscme-ot-forms-spfx",
+      },
+      {
+        label: "Back Office",
+        url: "https://github.com/METRO-APPS/afscme-ot-backoffice",
+      },
+    ],
     client: "RTOS/TOS",
   },
   {
@@ -54,7 +63,16 @@ export const projectsData: IProject[] = [
         badgeNumber: "12231",
       },
     ],
-    repositoryUrl: "https://github.com/team/customer-portal",
+    repositories: [
+      {
+        label: "Front Office",
+        url: "https://github.com/METRO-APPS/afscme-ot-forms-spfx",
+      },
+      {
+        label: "Back Office",
+        url: "https://github.com/METRO-APPS/afscme-ot-backoffice",
+      },
+    ],
     client: "RTOS/TOS",
   },
   {
@@ -76,7 +94,16 @@ export const projectsData: IProject[] = [
         badgeNumber: "12231",
       },
     ],
-    repositoryUrl: "https://github.com/team/customer-portal",
+    repositories: [
+      {
+        label: "Front Office",
+        url: "https://github.com/METRO-APPS/afscme-ot-forms-spfx",
+      },
+      {
+        label: "Back Office",
+        url: "https://github.com/METRO-APPS/afscme-ot-backoffice",
+      },
+    ],
     client: "RTOS/TOS",
   },
   {
@@ -98,7 +125,16 @@ export const projectsData: IProject[] = [
         badgeNumber: "12231",
       },
     ],
-    repositoryUrl: "https://github.com/team/customer-portal",
+    repositories: [
+      {
+        label: "Front Office",
+        url: "https://github.com/METRO-APPS/afscme-ot-forms-spfx",
+      },
+      {
+        label: "Back Office",
+        url: "https://github.com/METRO-APPS/afscme-ot-backoffice",
+      },
+    ],
     client: "RTOS/TOS",
   },
 ];
