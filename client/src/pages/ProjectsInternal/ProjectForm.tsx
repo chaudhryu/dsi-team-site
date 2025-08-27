@@ -24,16 +24,43 @@ import { Textarea } from "@/components/ui/textarea";
 import { ITeamMember } from "@/interfaces/ITeamMember";
 import { Badge } from "@/components/ui/badge";
 import { IMyProjectFormProps } from "@/interfaces/IMyProjectFormProps";
+import { IProject } from "@/interfaces/IProject";
+import { setEngine } from "crypto";
 
 export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
-  isAddProjectFormOpen,
-  closeAddProjectForm,
+  isProjectFormOpen,
+  closeProjectForm,
+  project,
+  handleProjectsCache,
+  projects,
 }) => {
   const teamMembers: ITeamMember[] = [
-    { name: "Joel Joshy", avatar: "/", badgeNumber: "58146" },
-    { name: "Trung Tu", avatar: "/", badgeNumber: "11111" },
-    { name: "Usman Chaudry", avatar: "/", badgeNumber: "22222" },
-    { name: "Joe Hang", avatar: "/", badgeNumber: "22221" },
+    {
+      name: "Joel Joshy",
+      avatar:
+        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
+      badgeNumber: "58146",
+    },
+    {
+      name: "Trung Tu",
+      avatar: "/images/team/trungTu.jpg",
+      badgeNumber: "11111",
+    },
+    {
+      name: "Usman Chaudry",
+      avatar: "/images/team/usmanChaudhr.jpg",
+      badgeNumber: "22222",
+    },
+    {
+      name: "Joe Hang",
+      avatar: "/images/team/joeHang.jpg",
+      badgeNumber: "22221",
+    },
+    {
+      name: "Sangjun Oh",
+      avatar: "/images/team/sangjunOh.jpg",
+      badgeNumber: "22221",
+    },
   ];
 
   const technologies = [
@@ -60,7 +87,7 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
   ];
 
   const [projectName, setProjectName] = useState<string>();
-  const [clientDepartment, setClientDepartment] = useState<string>();
+  const [client, setClient] = useState<string>();
   const [projectStatus, setProjectStatus] = useState<string>();
   const [description, setDescription] = useState<string>();
   const [repositoryUrl, setRepositoryUrl] = useState<string>();
@@ -84,7 +111,28 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
   useEffect(() => {
     setTeamMembersDropdownValues(teamMembers);
     setTechnologiesDropdownValues(technologies);
+
+    if (project) {
+      setProjectName(project.name);
+      setClient(project.client);
+      setProjectStatus(project.status);
+      setDescription(project.description);
+      setSelectedTeamMembers(project.teamMembers);
+      setSelectedTechnologies(project.technologies);
+    }
   }, []);
+
+  useEffect(() => {
+    if (project) {
+      setProjectName(project.name);
+      setRepositoryUrl(project.repositoryUrl);
+      setClient(project.client);
+      setProjectStatus(project.status);
+      setDescription(project.description);
+      setSelectedTeamMembers(project.teamMembers);
+      setSelectedTechnologies(project.technologies);
+    }
+  }, [project]);
 
   const addTeamMember = () => {
     setSelectedTeamMembers((prevSelectedTeamMembers) => {
@@ -128,9 +176,9 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
   };
 
   const clearAllFieldsAndCloseAddProjectForm = () => {
-    closeAddProjectForm();
+    closeProjectForm();
     setProjectName("");
-    setClientDepartment("");
+    setClient("");
     setProjectStatus("");
     setDescription("");
     setRepositoryUrl("");
@@ -140,12 +188,40 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
     setTechnologiesDropdownValues(technologiesDropdownValues);
   };
 
+  const submit = () => {
+    if (
+      projectName &&
+      client &&
+      projectStatus &&
+      description &&
+      repositoryUrl &&
+      selectedTeamMembers &&
+      selectedTechnologies
+    ) {
+      const newProject: IProject = {
+        id: projects.length + 1,
+        name: projectName,
+        description: description,
+        status: projectStatus,
+        technologies: selectedTechnologies,
+        teamMembers: selectedTeamMembers,
+        repositoryUrl: repositoryUrl,
+        client: client,
+      };
+      handleProjectsCache("add", null, newProject);
+      clearAllFieldsAndCloseAddProjectForm();
+      console.log("Success!");
+    } else {
+      console.log("Empty Fields!");
+    }
+  };
+
   return (
     <Dialog
-      open={isAddProjectFormOpen}
+      open={isProjectFormOpen}
       onOpenChange={clearAllFieldsAndCloseAddProjectForm}
     >
-      <form>
+      <form onSubmit={submit}>
         <DialogContent className="w-full max-w-2xl">
           <DialogHeader>
             <DialogTitle>Add Project</DialogTitle>
@@ -161,12 +237,12 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
               />
             </div>
             <div className="">
-              <Label htmlFor="username-1">Client Department</Label>
+              <Label htmlFor="username-1">Client</Label>
               <Input
                 id="username-1"
                 name="username"
-                value={clientDepartment}
-                onChange={(e) => setClientDepartment(e.target.value)}
+                value={client}
+                onChange={(e) => setClient(e.target.value)}
               />
             </div>
             <div>
@@ -189,6 +265,7 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
           <div>
             <Label htmlFor="username-1">Description</Label>
             <Textarea
+              value={description}
               onChange={(e) => setDescription(e.target.value)}
             ></Textarea>
           </div>
@@ -198,6 +275,7 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
               onChange={(e) => setRepositoryUrl(e.target.value)}
               id="name-1"
               name="name"
+              value={repositoryUrl}
             />
           </div>
           <div>
@@ -292,7 +370,9 @@ export const MyProjectForm: React.FC<IMyProjectFormProps> = ({
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button type="submit">Add</Button>
+            <Button type="submit" onClick={submit}>
+              Add
+            </Button>
           </DialogFooter>
         </DialogContent>
       </form>

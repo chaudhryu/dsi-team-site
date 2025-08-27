@@ -54,10 +54,7 @@ const navItems: NavItem[] = [
   {
     name: "Projects",
     icon: <ListIcon />,
-    subItems: [
-      { name: "My Projects", path: "/my-projects", pro: false },
-      { name: "Team Projects", path: "/team-projects", pro: false },
-    ],
+    path: "/projects",
   },
   {
     name: "Databases",

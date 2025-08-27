@@ -1,11 +1,13 @@
+import { IProject } from "./IProject";
 import { ITeamMember } from "./ITeamMember";
 
 export interface IProjectCardProps {
-   id: string;
-    name: string;
-    description: string;
-    status: "in progress" | "completed" | "planning";
-    technologies: string[];
-    teamMembers: ITeamMember[];
-    githubUrl?: string;
+  index: number;
+  openEditProjectForm: (project: IProject) => void;
+  project: IProject;
+  handleProjectsCache: (
+    action: string,
+    projectId: number | null,
+    project: IProject | null
+  ) => void;
 }
