@@ -1,6 +1,6 @@
 import { IProject } from "@/interfaces/IProject";
 
-export const projects: IProject[] = [
+export const projectsData: IProject[] = [
   {
     id: 1,
     name: "Customer Portal Redesign",
@@ -26,9 +26,7 @@ export const projects: IProject[] = [
         badgeNumber: "12222",
       },
     ],
-    githubUrl: "https://github.com/team/customer-portal",
-    startDate: new Date(),
-    endDate: new Date(),
+    repositoryUrl: "https://github.com/team/customer-portal",
     client: "RTOS/TOS",
   },
   {
@@ -56,10 +54,8 @@ export const projects: IProject[] = [
         badgeNumber: "12231",
       },
     ],
-    githubUrl: "https://github.com/team/customer-portal",
+    repositoryUrl: "https://github.com/team/customer-portal",
     client: "RTOS/TOS",
-    startDate: new Date(),
-    endDate: new Date(),
   },
   {
     id: 3,
@@ -80,10 +76,8 @@ export const projects: IProject[] = [
         badgeNumber: "12231",
       },
     ],
-    githubUrl: "https://github.com/team/customer-portal",
+    repositoryUrl: "https://github.com/team/customer-portal",
     client: "RTOS/TOS",
-    startDate: new Date(),
-    endDate: new Date(),
   },
   {
     id: 4,
@@ -104,9 +98,7 @@ export const projects: IProject[] = [
         badgeNumber: "12231",
       },
     ],
-    githubUrl: "https://github.com/team/customer-portal",
-    startDate: new Date(),
-    endDate: new Date(),
+    repositoryUrl: "https://github.com/team/customer-portal",
     client: "RTOS/TOS",
   },
 ];
