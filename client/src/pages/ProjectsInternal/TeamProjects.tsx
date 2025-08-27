@@ -27,113 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Button from "@/components/ui/button/Button";
-
-const projects: IProject[] = [
-  {
-    id: 1,
-    name: "Customer Portal Redesign",
-    description:
-      "Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.",
-    status: "in progress",
-    technologies: [
-      "React",
-      "Next.js",
-      "TypeScript",
-      "Tailwind CSS",
-      "PostgreSQL",
-    ],
-    teamMembers: [
-      {
-        name: "Usman",
-        avatar: "/images/team/usmanChaudhr.jpg",
-        badgeNumber: "12121",
-      },
-      {
-        name: "Joe Hang",
-        avatar: "/images/team/joeHang.jpg",
-        badgeNumber: "12231",
-      },
-    ],
-    githubUrl: "https://github.com/team/customer-portal",
-    startDate: new Date(),
-    endDate: new Date(),
-  },
-  {
-    id: 2,
-    name: "Customer Portal Redesign",
-    description:
-      "Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.",
-    status: "completed",
-    technologies: [
-      "React",
-      "Next.js",
-      "TypeScript",
-      "Tailwind CSS",
-      "PostgreSQL",
-    ],
-    teamMembers: [
-      {
-        name: "Usman",
-        avatar: "/images/team/usmanChaudhr.jpg",
-        badgeNumber: "12121",
-      },
-      {
-        name: "Joe Hang",
-        avatar: "/images/team/joeHang.jpg",
-        badgeNumber: "12231",
-      },
-    ],
-    githubUrl: "https://github.com/team/customer-portal",
-    startDate: new Date(),
-    endDate: new Date(),
-  },
-  {
-    id: 3,
-    name: "Customer Portal Redesign",
-    description:
-      "Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.",
-    status: "planning",
-    technologies: ["Next.js", "TypeScript", "Tailwind CSS", "PostgreSQL"],
-    teamMembers: [
-      {
-        name: "Usman",
-        avatar: "/images/team/usmanChaudhr.jpg",
-        badgeNumber: "12121",
-      },
-      {
-        name: "Joe Hang",
-        avatar: "/images/team/joeHang.jpg",
-        badgeNumber: "12231",
-      },
-    ],
-    githubUrl: "https://github.com/team/customer-portal",
-    startDate: new Date(),
-    endDate: new Date(),
-  },
-  {
-    id: 4,
-    name: "Customer Portal Redesign",
-    description:
-      "Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.",
-    status: "in progress",
-    technologies: ["Next.js", "TypeScript", "Tailwind CSS", "PostgreSQL"],
-    teamMembers: [
-      {
-        name: "Usman",
-        avatar: "/images/team/usmanChaudhr.jpg",
-        badgeNumber: "12121",
-      },
-      {
-        name: "Joe Hang",
-        avatar: "/images/team/joeHang.jpg",
-        badgeNumber: "12231",
-      },
-    ],
-    githubUrl: "https://github.com/team/customer-portal",
-    startDate: new Date(),
-    endDate: new Date(),
-  },
-];
+import { projects } from "./ProjectsData";
 
 export const TeamProjects = () => {
   const [filteredProjects, setFilteredProjects] = useState<IProject[]>([]);
@@ -354,14 +248,8 @@ export const TeamProjects = () => {
             filteredProjects.map((project) => {
               return (
                 <ProjectCard
-                  id={project.id}
-                  name={project.name}
-                  description={project.description}
-                  status={project.status}
-                  technologies={project.technologies}
-                  teamMembers={project.teamMembers}
-                  startDate={project.startDate}
-                  endDate={project.endDate}
+                  openEditProjectForm={() => {}}
+                  project={project}
                 />
               );
             })}

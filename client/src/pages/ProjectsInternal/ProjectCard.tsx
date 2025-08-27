@@ -125,6 +125,14 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
           </div>
         </div> */}
 
+        {/* Client */}
+        <div className="mb-4">
+          <p className="text-sm font-medium text-gray-700 mb-2">Client</p>
+          <div className="flex flex-wrap gap-1">
+            {project.client}
+          </div>
+        </div>
+
         {/* Actions */}
         <div className="flex gap-2">
           {project.githubUrl && (
@@ -133,6 +141,7 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
                 href={project.githubUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                className="flex"
               >
                 <Github className="h-4 w-4 mr-2" />
                 Code

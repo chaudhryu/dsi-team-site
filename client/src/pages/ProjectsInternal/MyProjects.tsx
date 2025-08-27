@@ -30,117 +30,8 @@ import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 import { MyProjectForm } from "./MyProjectForm";
 import { Trash } from "lucide-react";
-
-const projects: IProject[] = [
-  {
-    id: 1,
-    name: "Customer Portal Redesign",
-    description:
-      "Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.Complete overhaul of the customer-facing portal with modern UI/UX and improved performance. Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.",
-    status: "in progress",
-    technologies: [
-      "React",
-      "Next.js",
-      "TypeScript",
-      "Tailwind CSS",
-      "PostgreSQL",
-    ],
-    teamMembers: [
-      {
-        name: "Usman",
-        avatar: "/images/team/usmanChaudhr.jpg",
-        badgeNumber: "12121",
-      },
-      {
-        name: "Joe Hang",
-        avatar: "/images/team/joeHang.jpg",
-        badgeNumber: "12222",
-      },
-    ],
-    githubUrl: "https://github.com/team/customer-portal",
-    startDate: new Date(),
-    endDate: new Date(),
-    client: "RTOS/TOS",
-  },
-  {
-    id: 2,
-    name: "Customer Portal Redesign",
-    description:
-      "Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.",
-    status: "completed",
-    technologies: [
-      "React",
-      "Next.js",
-      "TypeScript",
-      "Tailwind CSS",
-      "PostgreSQL",
-    ],
-    teamMembers: [
-      {
-        name: "Usman",
-        avatar: "/images/team/usmanChaudhr.jpg",
-        badgeNumber: "12121",
-      },
-      {
-        name: "Joe Hang",
-        avatar: "/images/team/joeHang.jpg",
-        badgeNumber: "12231",
-      },
-    ],
-    githubUrl: "https://github.com/team/customer-portal",
-    client: "RTOS/TOS",
-    startDate: new Date(),
-    endDate: new Date(),
-  },
-  {
-    id: 3,
-    name: "Customer Portal Redesign",
-    description:
-      "Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.",
-    status: "planning",
-    technologies: ["Next.js", "TypeScript", "Tailwind CSS", "PostgreSQL"],
-    teamMembers: [
-      {
-        name: "Usman",
-        avatar: "/images/team/usmanChaudhr.jpg",
-        badgeNumber: "12121",
-      },
-      {
-        name: "Joe Hang",
-        avatar: "/images/team/joeHang.jpg",
-        badgeNumber: "12231",
-      },
-    ],
-    githubUrl: "https://github.com/team/customer-portal",
-    client: "RTOS/TOS",
-    startDate: new Date(),
-    endDate: new Date(),
-  },
-  {
-    id: 4,
-    name: "Customer Portal Redesign",
-    description:
-      "Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.",
-    status: "in progress",
-    technologies: ["Next.js", "TypeScript", "Tailwind CSS", "PostgreSQL"],
-    teamMembers: [
-      {
-        name: "Usman",
-        avatar: "/images/team/usmanChaudhr.jpg",
-        badgeNumber: "12121",
-      },
-      {
-        name: "Joe Hang",
-        avatar: "/images/team/joeHang.jpg",
-        badgeNumber: "12231",
-      },
-    ],
-    githubUrl: "https://github.com/team/customer-portal",
-    startDate: new Date(),
-    endDate: new Date(),
-    client: "RTOS/TOS",
-  },
-];
+import { projects } from "./ProjectsData";
+import { ITeamMember } from "@/interfaces/ITeamMember";
 
 export const MyProjects = () => {
   const [filteredProjects, setFilteredProjects] = useState<IProject[]>([]);
@@ -153,7 +44,7 @@ export const MyProjects = () => {
   const [project, setProject] = useState<IProject | null | undefined>();
 
   const closeAddProjectForm = () => {
-    setIsEditProjectFormOpen(false);
+    setIsAddProjectFormOpen(false);
   };
 
   const openEditProjectForm = (project: IProject) => {
@@ -179,7 +70,7 @@ export const MyProjects = () => {
   };
 
   useEffect(() => {
-    setFilteredProjects(projects);
+    setFilteredProjects(projects.filter((project) => project.teamMembers.find((teamMember: ITeamMember) => teamMember.badgeNumber === localStorage.getItem('badge'))));
   }, []);
 
   const filterProjects = (
