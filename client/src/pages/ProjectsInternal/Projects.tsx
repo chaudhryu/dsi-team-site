@@ -28,10 +28,9 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
-import { MyProjectForm } from "./ProjectForm";
-import { Trash } from "lucide-react";
+import { ProjectForm } from "./ProjectForm";
 import { projectsData } from "./ProjectsData";
-import { ITeamMember } from "@/interfaces/ITeamMember";
+import ProjectsDialog from "./ProjectsDialog";
 
 export const Projects = () => {
   const [projects, setProjects] = useState<IProject[]>([]);
@@ -47,25 +46,32 @@ export const Projects = () => {
   const [completedCount, setCompletedCount] = useState<number>();
   const [planningCount, setPlanningCount] = useState<number>();
   const [inProgressCount, setInProgressCount] = useState<number>();
+  const [
+    isDeleteProjectConfirmationDialogOpen,
+    setIsDeleteProjectConfirmationDialogOpen,
+  ] = useState<boolean>(false);
+  const [projectToDelete, setProjectToDelete] = useState<IProject | null>();
 
   const closeAddProjectForm = () => {
     setIsAddProjectFormOpen(false);
   };
 
-  const openEditProjectForm = (project: IProject) => {
-    setIsEditProjectFormOpen(false);
-    // const project: IProject = {
-    //   id: id,
-    //   name: name,
-    //   description: description,
-    //   status: status,
-    //   technologies: technologies,
-    //   teamMembers: teamMembers,
-    //   githubUrl: githubUrl,
-    //   startDate: startDate,
-    //   endDate: endDate,
-    // };
+  const closeProjectsDialog = () => {
+    setIsDeleteProjectConfirmationDialogOpen(false);
+  };
 
+  const openDeleteProjectConfirmationDialog = (project: IProject) => {
+    setProjectToDelete(project);
+    setIsDeleteProjectConfirmationDialogOpen(true);
+  };
+
+  const deleteProject = () => {
+    closeProjectsDialog();
+    handleProjectsCache("delete", projectToDelete?.id, null);
+    setProjectToDelete(null);
+  };
+
+  const openEditProjectForm = (project: IProject) => {
     setProject(project);
     setIsEditProjectFormOpen(true);
   };
@@ -103,7 +109,8 @@ export const Projects = () => {
 
   const filterProjects = (
     searchFilterValue: string,
-    statusFilterValue: string
+    statusFilterValue: string,
+    projects: IProject[]
   ) => {
     console.log(statusFilterValue);
     setSearchFilterValue(searchFilterValue);
@@ -148,24 +155,25 @@ export const Projects = () => {
 
   const handleProjectsCache = (
     action: string,
-    projectId: number | null,
+    projectId: number | null | undefined,
     project: IProject | null
   ) => {
     setProjects((prevProjects: IProject[]) => {
       if (action === "add" && project) {
         const newProjects = [...prevProjects, project];
-        setFilteredProjects(newProjects);
+        filterProjects(searchFilterValue, statusFilterValue, newProjects)
         return newProjects;
       }
-      // else if(action === "update"){
-      //   return
-      // }
+      else if(action === "update" && project){
+        const newProjects = prevProjects.map((prevProject: IProject) => prevProject.id === project.id ? project : prevProject)
+        filterProjects(searchFilterValue, statusFilterValue, newProjects)
+        return newProjects
+      }
       else if (action === "delete") {
-        console.log("hello");
         const newProjects = prevProjects.filter(
           (prevProject) => prevProject.id !== projectId
         );
-        setFilteredProjects(newProjects);
+        filterProjects(searchFilterValue, statusFilterValue, newProjects)
         return newProjects;
       } else {
         return prevProjects;
@@ -175,7 +183,7 @@ export const Projects = () => {
 
   return (
     <div className="h-auto">
-      <MyProjectForm
+      <ProjectForm
         isProjectFormOpen={isAddProjectFormOpen || isEditProjectFormOpen}
         closeProjectForm={() => {
           if (isAddProjectFormOpen) {
@@ -187,6 +195,14 @@ export const Projects = () => {
         project={project}
         handleProjectsCache={handleProjectsCache}
         projects={projects}
+      />
+      <ProjectsDialog
+        isDialogOpen={isDeleteProjectConfirmationDialogOpen}
+        dialogType={"delete"}
+        title={"Confirm Deletion"}
+        description={`Are you sure you would like to delete this project: ${projectToDelete?.name}?`}
+        close={closeProjectsDialog}
+        clickAction={deleteProject}
       />
       <div className="flex justify-between items-center mb-10">
         <div className="font-bold text-2xl">Projects</div>
@@ -251,14 +267,14 @@ export const Projects = () => {
               placeholder="Search projects, technologies, or descriptions..."
               value={searchFilterValue}
               onChange={(e) =>
-                filterProjects(e.target.value, statusFilterValue)
+                filterProjects(e.target.value, statusFilterValue, projects)
               }
               className="pl-10"
             />
           </div>
           <Select
             value={statusFilterValue}
-            onValueChange={(value) => filterProjects(searchFilterValue, value)}
+            onValueChange={(value) => filterProjects(searchFilterValue, value, projects)}
           >
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Filter by status" />
@@ -276,10 +292,12 @@ export const Projects = () => {
             filteredProjects.map((project, index) => {
               return (
                 <ProjectCard
-                  index={index}
+                  key={index}
                   project={project}
                   openEditProjectForm={openEditProjectForm}
-                  handleProjectsCache={handleProjectsCache}
+                  openDeleteProjectConfirmationDialog={
+                    openDeleteProjectConfirmationDialog
+                  }
                 />
               );
             })}

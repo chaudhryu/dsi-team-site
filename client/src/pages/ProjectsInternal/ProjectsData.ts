@@ -3,10 +3,10 @@ import { IProject } from "@/interfaces/IProject";
 export const projectsData: IProject[] = [
   {
     id: 1,
-    name: "Customer Portal Redesign",
+    name: "AFSCME OT",
     description:
-      "Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.Complete overhaul of the customer-facing portal with modern UI/UX and improved performance. Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.",
-    status: "in progress",
+      "Overtime Portal",
+    status: "In Progress",
     technologies: [
       "React",
       "Next.js",
