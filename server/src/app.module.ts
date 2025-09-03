@@ -17,6 +17,10 @@ import { WeeklyAccomplishmentsController } from "./controllers/weekly-accomplish
 import { ProjectsController } from "./controllers/projects.controller";
 import { Project } from "./entities/project.entity";
 import { ProjectsService } from "./services/projects.service";
+
+/* ⬇️ ADD THIS import */
+import { AiModule } from "./ai/ai.module";
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -79,7 +83,8 @@ import { ProjectsService } from "./services/projects.service";
       DatabaseLogin,
       WeeklyAccomplishment,
       Project,
-    ]),
+    ]) /* ⬇️ ADD THIS so /api/ai/* routes are mounted */,
+    AiModule,
   ],
   controllers: [
     UsersController,
