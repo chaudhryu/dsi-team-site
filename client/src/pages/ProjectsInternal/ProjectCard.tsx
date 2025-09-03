@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { el } from "node_modules/@fullcalendar/core/internal-common";
 import React, { useState } from "react";
-import { MyProjectForm } from "./ProjectForm";
+import { IRepository } from "@/interfaces/IRepository";
 
 const getStatusColor = (status: string) => {
   if (status === "in progress") {
@@ -40,15 +40,10 @@ const getStatusColor = (status: string) => {
 };
 
 const ProjectCard: React.FC<IProjectCardProps> = ({
-  index,
   project,
   openEditProjectForm,
-  handleProjectsCache,
+  openDeleteProjectConfirmationDialog,
 }) => {
-  const deleteProject = (id: number) => {
-    handleProjectsCache("delete", id, null);
-  };
-
   return (
     // <div>
     <Card
@@ -58,9 +53,11 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
       <CardHeader className="pb-4">
         <div className="flex items-start">
           <div className="flex-1">
-            <CardTitle className="text-xl mb-2 flex justify-between">
-              <span>{project.name}</span>
-              <DropdownMenu>
+            <div className="flex justify-between">
+              <CardTitle className="text-xl mb-2 flex justify-between">
+                {project.name}
+              </CardTitle>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
                     <EllipsisVertical className="h-5 w-5" />
@@ -75,14 +72,23 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-red-600"
-                    onClick={() => deleteProject(project.id)}
+                    onClick={() => openDeleteProjectConfirmationDialog(project)}
                   >
                     <Trash className="mr-3 h-4 w-4" />
                     Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </CardTitle>
+            </div>
+            <div className="flex gap-2 mb-3">
+              <Badge
+                variant="outline"
+                className={getStatusColor(project.status)}
+              >
+                {project.status.charAt(0).toUpperCase() +
+                  project.status.slice(1)}
+              </Badge>
+            </div>
           </div>
         </div>
         <CardDescription className="text-sm leading-relaxed">
@@ -131,25 +137,29 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
 
         {/* Client */}
         <div className="mb-4">
-          <p className="text-sm font-medium text-gray-700 mb-2">Client</p>
-          <div className="flex flex-wrap gap-1">{project.client}</div>
+          <p className="text-sm font-medium text-gray-700 ">Client</p>
+          <CardDescription className="text-sm leading-relaxed">
+            {project.client}
+          </CardDescription>
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
-          {project.repositoryUrl && (
-            <Button variant="outline" size="sm">
-              <a
-                href={project.repositoryUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex"
-              >
-                <Github className="h-4 w-4 mr-2" />
-                Code
-              </a>
-            </Button>
-          )}
+        <div className="flex flex-wrap gap-2">
+          {project.repositories.map((repository: IRepository, index) => {
+            return (
+              <Button variant="outline" size="sm" key={index}>
+                <a
+                  href={repository.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex"
+                >
+                  <Github className="h-4 w-4 mr-2" />
+                  {repository.label}
+                </a>
+              </Button>
+            );
+          })}
         </div>
       </CardContent>
     </Card>

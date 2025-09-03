@@ -1,3 +1,4 @@
+import { IRepository } from "./IRepository";
 import { ITeamMember } from "./ITeamMember";
 
 export interface IProject {
@@ -7,6 +8,6 @@ export interface IProject {
   status: string;
   technologies: string[];
   teamMembers: ITeamMember[];
-  repositoryUrl?: string;
+  repositories: IRepository[];
   client: string;
 }
