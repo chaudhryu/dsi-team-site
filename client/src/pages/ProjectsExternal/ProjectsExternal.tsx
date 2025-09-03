@@ -1,13 +1,21 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-
+  ArrowRight,
+  CalendarDays,
+  ExternalLink,
+  Github,
   Search,
+  Users,
+  Zap,
 } from "lucide-react";
 import {
   Card,
   CardContent,
-
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
+import Badge from "@/components/ui/badge/Badge";
 import { IProject } from "@/interfaces/IProject";
 import ProjectCard from "./ProjectCard";
 import { Input } from "@/components/ui/input";
@@ -18,81 +26,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const projects: IProject[] = [
-  {
-    id: 1,
-    name: "Customer Portal Redesign",
-    description:
-      "Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.",
-    status: "in progress",
-    technologies: [
-      "React",
-      "Next.js",
-      "TypeScript",
-      "Tailwind CSS",
-      "PostgreSQL",
-    ],
-    teamMembers: [
-      { name: "Usman", avatar: "/images/team/usmanChaudhr.jpg", badgeNumber: "12121" },
-      { name: "Joe Hang", avatar: "/images/team/joeHang.jpg", badgeNumber: "12222"},
-    ],
-    githubUrl: "https://github.com/team/customer-portal",
-    startDate: new Date(),
-    endDate: new Date(),
-  },
-  {
-    id: 2,
-    name: "Customer Portal Redesign",
-    description:
-      "Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.",
-    status: "completed",
-    technologies: [
-      "React",
-      "Next.js",
-      "TypeScript",
-      "Tailwind CSS",
-      "PostgreSQL",
-    ],
-    teamMembers: [
-      { name: "Usman", avatar: "/images/team/usmanChaudhr.jpg", badgeNumber: "12121" },
-      { name: "Joe Hang", avatar: "/images/team/joeHang.jpg", badgeNumber: "12231" },
-    ],
-    githubUrl: "https://github.com/team/customer-portal",
-    startDate: new Date(),
-    endDate: new Date(),
-  },
-  {
-    id: 3,
-    name: "Customer Portal Redesign",
-    description:
-      "Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.",
-    status: "planning",
-    technologies: ["Next.js", "TypeScript", "Tailwind CSS", "PostgreSQL"],
-    teamMembers: [
-      { name: "Usman", avatar: "/images/team/usmanChaudhr.jpg", badgeNumber: "12121" },
-      { name: "Joe Hang", avatar: "/images/team/joeHang.jpg", badgeNumber: "12231" },
-    ],
-    githubUrl: "https://github.com/team/customer-portal",
-    startDate: new Date(),
-    endDate: new Date(),
-  },
-  {
-    id: 4,
-    name: "Customer Portal Redesign",
-    description:
-      "Complete overhaul of the customer-facing portal with modern UI/UX and improved performance.",
-    status: "in progress",
-    technologies: ["Next.js", "TypeScript", "Tailwind CSS", "PostgreSQL"],
-    teamMembers: [
-      { name: "Usman", avatar: "/images/team/usmanChaudhr.jpg", badgeNumber: "12121" },
-      { name: "Joe Hang", avatar: "/images/team/joeHang.jpg", badgeNumber: "12231" },
-    ],
-    githubUrl: "https://github.com/team/customer-portal",
-    startDate: new Date(),
-    endDate: new Date(),
-  },
-];
+import Button from "@/components/ui/button/Button";
+import { projectsData } from "@/dummydata/ProjectsData";
 
 export const ProjectsExternal = () => {
   const [filteredProjects, setFilteredProjects] = useState<IProject[]>([]);
@@ -120,13 +55,13 @@ export const ProjectsExternal = () => {
 
     setTotalCount(projects.length);
     setCompletedCount(completedCount);
-    setPlanningCount(inProgressCount);
+    setPlanningCount(planningCount);
     setInProgressCount(inProgressCount);
   };
 
   useEffect(() => {
-    setFilteredProjects(projects);
-    setStats(projects);
+    setFilteredProjects(projectsData);
+    setStats(projectsData);
   }, []);
 
   const filterProjects = (
@@ -138,22 +73,22 @@ export const ProjectsExternal = () => {
     setStatusFilterValue(statusFilterValue);
     setFilteredProjects(() => {
       const searchFilteredProjects = searchFilterValue
-        ? projects.filter((project) => {
+        ? projectsData.filter((projectData) => {
             return (
-              project.name
+              projectData.name
                 .toLowerCase()
                 .includes(searchFilterValue.toLowerCase()) ||
-              project.description
+              projectData.description
                 .toLowerCase()
                 .includes(searchFilterValue.toLowerCase()) ||
-              project.technologies?.some((technology) =>
+              projectData.technologies?.some((technology) =>
                 technology
                   .toLowerCase()
                   .includes(searchFilterValue.toLowerCase())
               )
             );
           })
-        : projects;
+        : projectsData;
 
       const searchAndStatusFilteredProjects =
         statusFilterValue && statusFilterValue !== "all"
@@ -325,8 +260,8 @@ export const ProjectsExternal = () => {
                   status={project.status}
                   technologies={project.technologies}
                   teamMembers={project.teamMembers}
-                  startDate={project.startDate}
-                  endDate={project.endDate}
+                  repositories={project.repositories}
+                  client={project.client}
                 />
               );
             })}

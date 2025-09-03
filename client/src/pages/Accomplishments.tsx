@@ -1,5 +1,5 @@
 // src/pages/Accomplishments.tsx
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
 import ComponentCard from "../components/common/ComponentCard";
@@ -8,15 +8,20 @@ import Button from "../components/ui/button/Button";
 import { BoxIcon } from "../icons";
 import { envConfig } from "../config/envConfig";
 
+// 🚨 Requires: npm i react-quill-new dompurify
+import ReactQuill from "react-quill-new";
+import "react-quill-new/dist/quill.snow.css";
+import DOMPurify from "dompurify";
+
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 const LOGIN_KEY = envConfig.loginEmpKey || "loginEmployee";
 
 type Accomplishment = {
   id: number;
-  accomplishments: string;
+  accomplishments: string; // sanitized HTML string
   dateSubmitted: string | null;
   startWeekDate: string; // 'YYYY-MM-DD'
-  endWeekDate: string;   // 'YYYY-MM-DD'
+  endWeekDate: string; // 'YYYY-MM-DD'
   taskStatus?: string | null;
 };
 
@@ -52,7 +57,7 @@ function isoWeekNumber(d: Date) {
   const day = utc.getUTCDay() || 7;
   utc.setUTCDate(utc.getUTCDate() + 4 - day);
   const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil((((utc.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  const weekNo = Math.ceil(((utc.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
   return { week: weekNo, year: utc.getUTCFullYear() };
 }
 function fmtShort(d: Date) {
@@ -61,7 +66,7 @@ function fmtShort(d: Date) {
 
 type WeekOpt = {
   start: string; // YYYY-MM-DD (Monday)
-  end: string;   // YYYY-MM-DD (Sunday)
+  end: string; // YYYY-MM-DD (Sunday)
   label: string; // e.g. "W34 (Aug 18 – Aug 24, 2025)"
 };
 
@@ -84,6 +89,42 @@ function buildWeekOptions(center = new Date(), past = 26, future = 0): WeekOpt[]
   return weeks.sort((a, b) => (a.start < b.start ? 1 : -1));
 }
 
+/* -------------------- editor config + sanitizers -------------------- */
+const quillModules = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ["bold", "italic", "underline", "strike"],
+    [{ list: "ordered" }, { list: "bullet" }],
+    ["blockquote", "code-block", "link"],
+    ["clean"],
+  ],
+};
+
+const quillFormats: string[] = [
+  "header",
+  "bold",
+  "italic",
+  "underline",
+  "strike",
+  "list",
+  "bullet",
+  "blockquote",
+  "code-block",
+  "link",
+];
+
+// Keep Quill's data-* attributes (used for lists/checkboxes) and common safe attrs.
+const sanitizeHtml = (html: string) =>
+  DOMPurify.sanitize(html, {
+    ALLOW_DATA_ATTR: true,
+    ADD_ATTR: ["class", "target", "rel", "data-list", "data-checked", "data-indent", "data-value"],
+  });
+
+const plainTextFromHtml = (html: string) =>
+  DOMPurify.sanitize(html, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })
+    .replace(/\u00a0/g, " ")
+    .trim();
+
 export default function Accomplishments() {
   /* ---- who is logged in (from localStorage) ---- */
   const lsUser = useMemo(() => {
@@ -104,17 +145,17 @@ export default function Accomplishments() {
     const { week } = isoWeekNumber(new Date());
     return buildWeekOptions(new Date(), week - 1, 0);
   }, []);
-    const [weekStart, setWeekStart] = useState<string>(() => weekOptions[0]?.start ?? ymdLocal(mondayStart()));
+  const [weekStart, setWeekStart] = useState<string>(() => weekOptions[0]?.start ?? ymdLocal(mondayStart()));
   const [weekEnd, setWeekEnd] = useState<string>(() => weekOptions[0]?.end ?? ymdLocal(sundayEnd(mondayStart())));
 
   const selectedLabel = useMemo(() => {
-    const opt = weekOptions.find(w => w.start === weekStart);
+    const opt = weekOptions.find((w) => w.start === weekStart);
     return opt ? opt.label : `${weekStart} – ${weekEnd}`;
   }, [weekOptions, weekStart, weekEnd]);
 
   const onSelectWeek = (e: ChangeEvent<HTMLSelectElement>) => {
     const start = e.target.value;
-    const opt = weekOptions.find(w => w.start === start);
+    const opt = weekOptions.find((w) => w.start === start);
     if (opt) {
       setWeekStart(opt.start);
       setWeekEnd(opt.end); // keep end in sync here → no effect needed
@@ -130,13 +171,12 @@ export default function Accomplishments() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // form
+  // form (HTML from editor)
   const [text, setText] = useState("");
-  const firstInputRef = useRef<HTMLTextAreaElement>(null);
 
   // current record for selected week
   const currentRecord = useMemo(
-    () => rows.find(r => r.startWeekDate === weekStart && r.endWeekDate === weekEnd) || null,
+    () => rows.find((r) => r.startWeekDate === weekStart && r.endWeekDate === weekEnd) || null,
     [rows, weekStart, weekEnd]
   );
 
@@ -165,12 +205,11 @@ export default function Accomplishments() {
     })();
   }, [badge]);
 
-  // helper to open modal and focus the textarea (instead of an effect)
+  // helper to open modal with optional prefill
   const openModal = (prefill = "") => {
     setText(prefill);
     setError(null);
     setOpen(true);
-    setTimeout(() => firstInputRef.current?.focus(), 0);
   };
 
   /* ---- save/create ---- */
@@ -179,13 +218,19 @@ export default function Accomplishments() {
       setError("No logged-in user.");
       return;
     }
-    if (!text.trim()) {
+
+    // Validate there's real (non-empty) content
+    const hasContent = plainTextFromHtml(text).length > 0;
+    if (!hasContent) {
       setError("Please enter your accomplishments for the week.");
       return;
     }
 
     setSaving(true);
     setError(null);
+
+    // Sanitize before sending to the API
+    const cleanHtml = sanitizeHtml(text);
 
     try {
       if (currentRecord) {
@@ -195,7 +240,7 @@ export default function Accomplishments() {
           headers: { "Content-Type": "application/json" },
           credentials: "include",
           body: JSON.stringify({
-            accomplishments: text.trim(),
+            accomplishments: cleanHtml,
             startWeekDate: currentRecord.startWeekDate,
             endWeekDate: currentRecord.endWeekDate,
             taskStatus: "Submitted",
@@ -215,7 +260,7 @@ export default function Accomplishments() {
           credentials: "include",
           body: JSON.stringify({
             userBadge: badge,
-            accomplishments: text.trim(),
+            accomplishments: cleanHtml,
             dateSubmitted: today,
             startWeekDate: weekStart,
             endWeekDate: weekEnd,
@@ -292,17 +337,22 @@ export default function Accomplishments() {
               </select>
             </div>
             <div className="flex items-center gap-3">
-              <Button size="sm" variant="outline" onClick={() => {
-                // simply reuse the same loader
-                if (badge) {
-                  setLoading(true);
-                  fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, { credentials: "include" })
-                    .then(r => r.ok ? r.json() : [])
-                    .then(d => setRows(Array.isArray(d) ? d : []))
-                    .catch(() => {})
-                    .finally(() => setLoading(false));
-                }
-              }}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (badge) {
+                    setLoading(true);
+                    fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, {
+                      credentials: "include",
+                    })
+                      .then((r) => (r.ok ? r.json() : []))
+                      .then((d) => setRows(Array.isArray(d) ? d : []))
+                      .catch(() => {})
+                      .finally(() => setLoading(false));
+                  }
+                }}
+              >
                 {loading ? "Refreshing…" : "Refresh"}
               </Button>
               {currentRecord ? (
@@ -343,8 +393,20 @@ export default function Accomplishments() {
                     <td className="px-5 py-4 text-gray-600 dark:text-gray-400">
                       {r.startWeekDate} → {r.endWeekDate}
                     </td>
-                    <td className="px-5 py-4 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-                      {r.accomplishments || "—"}
+                    <td className="px-5 py-4 text-gray-800 dark:text-gray-200">
+                      {r.accomplishments ? (
+                        // ⬇️ Wrap with Quill's viewer classes so list markers render
+                        <div className="ql-snow">
+                          <div
+                            className="ql-editor max-w-none"
+                            dangerouslySetInnerHTML={{
+                              __html: sanitizeHtml(r.accomplishments),
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="px-5 py-4">
                       <span
@@ -396,14 +458,15 @@ export default function Accomplishments() {
               )}
 
               <div>
-                <Label>Description</Label>
-                <textarea
-                  ref={firstInputRef}
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  rows={8}
-                  className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                />
+                  <ReactQuill
+                    theme="snow"
+                    value={text}
+                    onChange={(value) => setText(value)}
+                    modules={quillModules}
+                    formats={quillFormats}
+                    style={{ height: 240 }}
+                    className="text-sm text-gray-900 dark:text-gray-100 pb-6"
+                  />
               </div>
             </div>
 

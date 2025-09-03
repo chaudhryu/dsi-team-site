@@ -1,13 +1,13 @@
+import { IRepository } from "./IRepository";
 import { ITeamMember } from "./ITeamMember";
 
 export interface IProject {
   id: number;
   name: string;
   description: string;
-  status: "in progress" | "completed" | "planning";
+  status: string;
   technologies: string[];
   teamMembers: ITeamMember[];
-  githubUrl?: string;
-  startDate: Date;
-  endDate: Date;
+  repositories: IRepository[];
+  client: string;
 }
