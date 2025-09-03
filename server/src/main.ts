@@ -17,10 +17,7 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: [
-      "http://localhost:5173",
-      "https://police-report-request-portal-sigma.vercel.app",
-    ],
+    origin: "*",
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],

@@ -15,7 +15,7 @@ import { envConfig } from "../config/envConfig";
 import DOMPurify from "dompurify";
 import "react-quill-new/dist/quill.snow.css";
 
-const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
+const API_BASE = envConfig.backendApiBaseUrl ;
 
 /* -------------------- Types -------------------- */
 type User = {

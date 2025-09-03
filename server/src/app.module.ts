@@ -17,6 +17,8 @@ import { WeeklyAccomplishmentsController } from "./controllers/weekly-accomplish
 import { ProjectsController } from "./controllers/projects.controller";
 import { Project } from "./entities/project.entity";
 import { ProjectsService } from "./services/projects.service";
+import { AiController } from "./ai/ai.controller";
+import { AiService } from "./ai/ai.service";
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -85,7 +87,8 @@ import { ProjectsService } from "./services/projects.service";
     UsersController,
     WeeklyAccomplishmentsController,
     ProjectsController,
+    AiController
   ],
-  providers: [UsersService, WeeklyAccomplishmentService, ProjectsService],
+  providers: [UsersService, WeeklyAccomplishmentService, ProjectsService, AiService],
 })
 export class AppModule {}
