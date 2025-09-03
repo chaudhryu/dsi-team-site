@@ -1,6 +1,7 @@
+// src/app.module.ts
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import * as Joi from "joi"; //for environment variable validation
+import * as Joi from "joi";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { UsersService } from "./services/users.service";
 import {
@@ -17,15 +18,17 @@ import { WeeklyAccomplishmentsController } from "./controllers/weekly-accomplish
 import { ProjectsController } from "./controllers/projects.controller";
 import { Project } from "./entities/project.entity";
 import { ProjectsService } from "./services/projects.service";
+
+/* ⬇️ ADD THIS import */
+import { AiModule } from "./ai/ai.module";
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: `.env.${process.env.NODE_ENV || "development"}`,
       validationSchema: Joi.object({
-        NODE_ENV: Joi.string()
-          .valid("development", "production", "test")
-          .default("development"),
+        NODE_ENV: Joi.string().valid("development", "production", "test").default("development"),
         DB_TYPE: Joi.string().valid("sqlite").default("sqlite"),
         SQLITE_DB: Joi.string().default("db.sqlite"),
         PORT: Joi.number().default(3000),
@@ -40,20 +43,13 @@ import { ProjectsService } from "./services/projects.service";
         return {
           type: "sqlite",
           database: cfg.get<string>("SQLITE_DB"),
-          entities: [
-            User,
-            Application,
-            Project,
-            Server,
-            Database,
-            DatabaseLogin,
-            WeeklyAccomplishment,
-          ],
-          synchronize: isDev, // ⚠️ dev only
+          entities: [User, Application, Project, Server, Database, DatabaseLogin, WeeklyAccomplishment],
+          synchronize: isDev,
           logging: isDev ? ["error", "warn"] : ["error"],
         };
       },
     }),
+
     TypeOrmModule.forFeature([
       User,
       Application,
@@ -64,12 +60,11 @@ import { ProjectsService } from "./services/projects.service";
       WeeklyAccomplishment,
       Project,
     ]),
+
+    /* ⬇️ ADD THIS so /api/ai/* routes are mounted */
+    AiModule,
   ],
-  controllers: [
-    UsersController,
-    WeeklyAccomplishmentsController,
-    ProjectsController,
-  ],
+  controllers: [UsersController, WeeklyAccomplishmentsController, ProjectsController],
   providers: [UsersService, WeeklyAccomplishmentService, ProjectsService],
 })
 export class AppModule {}
