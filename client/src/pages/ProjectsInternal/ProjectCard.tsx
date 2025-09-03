@@ -144,7 +144,7 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {project.repositories.map((repository: IRepository, index) => {
             return (
               <Button variant="outline" size="sm" key={index}>
