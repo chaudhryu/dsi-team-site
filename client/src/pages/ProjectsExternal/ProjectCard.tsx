@@ -29,9 +29,7 @@ const ProjectCard: React.FC<IProject> = ({
   status,
   technologies,
   teamMembers,
-  githubUrl,
-  startDate,
-  endDate,
+  client,
 }) => {
   return (
     <Card key={id} className="hover:shadow-lg transition-shadow duration-200">
@@ -79,19 +77,15 @@ const ProjectCard: React.FC<IProject> = ({
           </div>
         </div>
 
-        {/* Timeline */}
         <div className="mb-4">
-          <div className="flex items-center text-sm text-gray-600">
-            <CalendarDays className="h-4 w-4 mr-2" />
-            <span>
-              {new Date(startDate).toLocaleDateString()}
-              {endDate && ` - ${new Date(endDate).toLocaleDateString()}`}
-            </span>
-          </div>
+          <p className="text-sm font-medium text-gray-700 ">Client</p>
+          <CardDescription className="text-sm leading-relaxed">
+            {client}
+          </CardDescription>
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
+        {/* <div className="flex gap-2">
           {githubUrl && (
             <Button variant="outline" size="sm">
               <a href={githubUrl} target="_blank" rel="noopener noreferrer">
@@ -100,7 +94,7 @@ const ProjectCard: React.FC<IProject> = ({
               </a>
             </Button>
           )}
-        </div>
+        </div> */}
       </CardContent>
     </Card>
   );

@@ -14,42 +14,49 @@ import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import AuthCallback from "./pages/Private/Auth/AuthCallback";
 import Users from "./pages/Users";
-
+import { Projects } from "./pages/ProjectsInternal/Projects";
+import { ProjectsExternal } from "./pages/ProjectsExternal/ProjectsExternal";
 
 export default function App() {
   return (
     <>
- <Router>
-  <ScrollToTop />
-  <Routes>                    
+      <Router>
+        <ScrollToTop />
+        <Routes>
+          <Route path="/auth-response" element={<AuthCallback />} />
 
-  <Route path="/auth-response" element={<AuthCallback />} />
+          {/* ---------- Layout that everyone can see ---------- */}
+          <Route element={<AppLayout />}>
+            <Route index element={<Home />} /> {/* Public */}
+            <Route path="/images" element={<Images />} />
+            {/* Public */}
+            <Route path="/projects-external" element={<ProjectsExternal />} />
+            {/* ---------- Auth‑only pages ---------- */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/profile" element={<UserProfiles />} />
+              <Route path="/projects" element={<Projects />} />
+              <Route path="/calendar" element={<Calendar />} />
+              <Route
+                path="/submit-accomplishment"
+                element={<Accomplishments />}
+              />
+              <Route
+                path="/view-accomplishments"
+                element={<AccomplishmentsTable />}
+              />
+              <Route path="/users" element={<Users />} />
 
-  <Route element={<AppLayout />}>
-    <Route index element={<Home />} />          {/* Public */}
-    <Route path="/images" element={<Images />} />{/* Public */}
+              {/* add other private routes here */}
+            </Route>
+          </Route>
 
-    {/* ---------- Auth‑only pages ---------- */}
-    <Route element={<ProtectedRoute />}>
-      <Route path="/profile" element={<UserProfiles />} />
-      <Route path="/calendar" element={<Calendar />} />
-      <Route path="/submit-accomplishment" element={<Accomplishments />} />
-      <Route path="/view-accomplishments" element={<AccomplishmentsTable />} />
-      <Route path="/users" element={<Users />} />
+          {/* Auth screens */}
+          <Route path="/signin" element={<SignIn />} />
+          <Route path="/signup" element={<SignUp />} />
 
-      {/* add other private routes here */}
-    </Route>
-  </Route>
-
-  {/* Auth screens */}
-  <Route path="/signin" element={<SignIn />} />
-  <Route path="/signup" element={<SignUp />} />
-
-  <Route path="*" element={<NotFound />} />
-  </Routes>
-
-</Router>
-
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Router>
     </>
   );
 }
