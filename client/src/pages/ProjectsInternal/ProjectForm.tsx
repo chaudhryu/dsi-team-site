@@ -281,12 +281,9 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
     );
   };
 
-  const removeRepository = (repositoryUrlForRemoval: string) => {
+  const removeRepository = (indexToRemove: number) => {
     setRepositories((prevRepositories) =>
-      prevRepositories.filter(
-        (prevRepository: IRepository) =>
-          prevRepository.url !== repositoryUrlForRemoval
-      )
+      prevRepositories.filter((_, index) => index !== indexToRemove)
     );
   };
 
@@ -297,7 +294,7 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
     >
       <DialogContent className="w-full max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Add Project</DialogTitle>
+          <DialogTitle>{project ? "Edit Project" : "Add Project"}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-row gap-10 justify-between">
           <div className="">
@@ -368,8 +365,8 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
           </div>
         </div>
         {repositories.length > 0 && (
-          <div className="flex gap-2">
-            {repositories.map((repository: IRepository) => {
+          <div className="flex flex-wrap gap-2">
+            {repositories.map((repository: IRepository, index: number) => {
               return (
                 <Button variant="outline" size="sm">
                   <a
@@ -382,7 +379,7 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
                     <span className="mr-2">{repository.label}</span>
                   </a>
                   <div
-                    onClick={() => removeRepository(repository.url)}
+                    onClick={() => removeRepository(index)}
                     className="flex justify-center items-center"
                   >
                     <X className="h-3 w-3 cursor-pointer" />

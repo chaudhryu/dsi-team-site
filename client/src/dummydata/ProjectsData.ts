@@ -4,9 +4,8 @@ export const projectsData: IProject[] = [
   {
     id: 1,
     name: "AFSCME OT",
-    description:
-      "Overtime Portal",
-    status: "In Progress",
+    description: "Overtime Portal",
+    status: "in progress",
     technologies: [
       "React",
       "Next.js",
@@ -16,8 +15,9 @@ export const projectsData: IProject[] = [
     ],
     teamMembers: [
       {
-        name: "Usman",
-        avatar: "/images/team/usmanChaudhr.jpg",
+        name: "Joel Joshy",
+        avatar:
+          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
         badgeNumber: "12121",
       },
       {

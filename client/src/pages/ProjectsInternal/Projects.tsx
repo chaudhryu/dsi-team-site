@@ -29,8 +29,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 import { ProjectForm } from "./ProjectForm";
-import { projectsData } from "./ProjectsData";
 import ProjectsDialog from "./ProjectsDialog";
+import { projectsData } from "@/dummydata/ProjectsData";
 
 export const Projects = () => {
   const [projects, setProjects] = useState<IProject[]>([]);
@@ -77,6 +77,7 @@ export const Projects = () => {
   };
 
   const closeEditProjectForm = () => {
+    setProject(null);
     setIsEditProjectFormOpen(false);
   };
 
@@ -161,19 +162,22 @@ export const Projects = () => {
     setProjects((prevProjects: IProject[]) => {
       if (action === "add" && project) {
         const newProjects = [...prevProjects, project];
-        filterProjects(searchFilterValue, statusFilterValue, newProjects)
+        setStats(newProjects);
+        filterProjects(searchFilterValue, statusFilterValue, newProjects);
         return newProjects;
-      }
-      else if(action === "update" && project){
-        const newProjects = prevProjects.map((prevProject: IProject) => prevProject.id === project.id ? project : prevProject)
-        filterProjects(searchFilterValue, statusFilterValue, newProjects)
-        return newProjects
-      }
-      else if (action === "delete") {
+      } else if (action === "update" && project) {
+        const newProjects = prevProjects.map((prevProject: IProject) =>
+          prevProject.id === project.id ? project : prevProject
+        );
+        setStats(newProjects);
+        filterProjects(searchFilterValue, statusFilterValue, newProjects);
+        return newProjects;
+      } else if (action === "delete") {
         const newProjects = prevProjects.filter(
           (prevProject) => prevProject.id !== projectId
         );
-        filterProjects(searchFilterValue, statusFilterValue, newProjects)
+        setStats(newProjects);
+        filterProjects(searchFilterValue, statusFilterValue, newProjects);
         return newProjects;
       } else {
         return prevProjects;
@@ -274,7 +278,9 @@ export const Projects = () => {
           </div>
           <Select
             value={statusFilterValue}
-            onValueChange={(value) => filterProjects(searchFilterValue, value, projects)}
+            onValueChange={(value) =>
+              filterProjects(searchFilterValue, value, projects)
+            }
           >
             <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Filter by status" />
