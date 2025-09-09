@@ -1,6 +1,14 @@
-
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany,ManyToMany,PrimaryColumn } from 'typeorm';
-import { WeeklyAccomplishment } from './WeeklyAccomplishment.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  ManyToMany,
+  PrimaryColumn,
+  JoinTable,
+} from "typeorm";
+import { WeeklyAccomplishment } from "./WeeklyAccomplishment.entity";
+import { Project } from "./project.entity";
 
 @Entity()
 export class User {
@@ -22,6 +30,6 @@ export class User {
   @Column({ default: 0 })
   readOnly: number;
 
-
-  @OneToMany(() => WeeklyAccomplishment, wa => wa.user)
-  weeklyAccomplishments: WeeklyAccomplishment[];}
+  @OneToMany(() => WeeklyAccomplishment, (wa) => wa.user)
+  weeklyAccomplishments: WeeklyAccomplishment[];
+}
