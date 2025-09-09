@@ -1,23 +1,5 @@
-import React, { useEffect, useState } from "react";
-import {
-  ArrowRight,
-  CalendarDays,
-  ExternalLink,
-  Github,
-  Search,
-  Users,
-  Zap,
-} from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import Badge from "@/components/ui/badge/Badge";
-import { IProject } from "@/interfaces/IProject";
-import ProjectCard from "./ProjectCard";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -26,11 +8,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { PlusIcon } from "lucide-react";
+import { projectsData } from "@/dummydata/ProjectsData";
+import { IProject } from "@/interfaces/IProject";
+import { PlusIcon, Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import ProjectCard from "./ProjectCard";
 import { ProjectForm } from "./ProjectForm";
 import ProjectsDialog from "./ProjectsDialog";
-import { projectsData } from "@/dummydata/ProjectsData";
+import { envConfig } from "@/config/envConfig";
+
+const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3005/api";
 
 export const Projects = () => {
   const [projects, setProjects] = useState<IProject[]>([]);
@@ -51,6 +38,7 @@ export const Projects = () => {
     setIsDeleteProjectConfirmationDialogOpen,
   ] = useState<boolean>(false);
   const [projectToDelete, setProjectToDelete] = useState<IProject | null>();
+  const [isloading, setIsLoading] = useState(false);
 
   const closeAddProjectForm = () => {
     setIsAddProjectFormOpen(false);
@@ -81,8 +69,33 @@ export const Projects = () => {
     setIsEditProjectFormOpen(false);
   };
 
+  const fetchAndSetProjects = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/projects`, {
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setProjects(Array.isArray(data) ? data : []);
+        setFilteredProjects(projectsData);
+      } else {
+        const text = await res.text();
+        console.error("GET /projects failed", res.status, text);
+        setProjects([]);
+        setFilteredProjects([]);
+      }
+    } catch (e) {
+      console.error("Network error /projects:", e);
+      setProjects([]);
+      setFilteredProjects([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setProjects(projectsData);
+    fetchAndSetProjects();
     setFilteredProjects(projectsData);
     setStats(projectsData);
   }, []);
@@ -127,7 +140,7 @@ export const Projects = () => {
                 .toLowerCase()
                 .includes(searchFilterValue.toLowerCase()) ||
               project.technologies?.some((technology) =>
-                technology
+                technology.name
                   .toLowerCase()
                   .includes(searchFilterValue.toLowerCase())
               )
