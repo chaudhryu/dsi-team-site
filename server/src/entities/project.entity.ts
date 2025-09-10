@@ -24,7 +24,7 @@ export class Project {
   @Column()
   status: string;
 
-  @Column({ nullable: true }) // Allow this column to be null
+  @Column({ nullable: true }) // Allow this column to be nu ll
   githubUrl: string;
 
   @ManyToMany(() => User, { eager: true })
