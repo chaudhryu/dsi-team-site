@@ -28,6 +28,7 @@ import {
 import { el } from "node_modules/@fullcalendar/core/internal-common";
 import React, { useState } from "react";
 import { IRepository } from "@/interfaces/IRepository";
+import { getUserImage } from "./UserImageUtil";
 
 const getStatusColor = (status: string) => {
   if (status === "in progress") {
@@ -43,6 +44,7 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
   project,
   openEditProjectForm,
   openDeleteProjectConfirmationDialog,
+  isInternal,
 }) => {
   return (
     // <div>
@@ -57,28 +59,32 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
               <CardTitle className="text-xl mb-2 flex justify-between">
                 {project.name}
               </CardTitle>
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <EllipsisVertical className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => openEditProjectForm(project)}
-                  >
-                    <Pencil className="mr-3 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-red-600"
-                    onClick={() => openDeleteProjectConfirmationDialog(project)}
-                  >
-                    <Trash className="mr-3 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {isInternal && (
+                <DropdownMenu modal={false}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <EllipsisVertical className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => openEditProjectForm(project)}
+                    >
+                      <Pencil className="mr-3 h-4 w-4" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-red-600"
+                      onClick={() =>
+                        openDeleteProjectConfirmationDialog(project)
+                      }
+                    >
+                      <Trash className="mr-3 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
             <div className="flex gap-2 mb-3">
               <Badge
@@ -101,9 +107,13 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
         <div className="mb-4">
           <p className="text-sm font-medium text-gray-700 mb-2">Technologies</p>
           <div className="flex flex-wrap gap-1">
-            {project.technologies.map((tech) => (
-              <Badge key={tech} variant="secondary" className="text-xs">
-                {tech}
+            {project.technologies.map((technology) => (
+              <Badge
+                key={technology?.id}
+                variant="secondary"
+                className="text-xs"
+              >
+                {technology.name}
               </Badge>
             ))}
           </div>
@@ -113,27 +123,19 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
         <div className="mb-4">
           <p className="text-sm font-medium text-gray-700 mb-2">Team</p>
           <div className="flex -space-x-2">
-            {project.teamMembers.map((teamMember) => (
+            {project.projectMembers.map((projectMember) => (
               <Avatar
-                key={teamMember.name}
+                key={projectMember.badge}
                 className="h-8 w-8 border-2 border-white"
               >
-                <AvatarImage src={teamMember.avatar} alt={project.name} />
+                <AvatarImage
+                  src={getUserImage(projectMember.badge)}
+                  alt={project.name}
+                />
               </Avatar>
             ))}
           </div>
         </div>
-
-        {/* Timeline
-        <div className="mb-4">
-          <div className="flex items-center text-sm text-gray-600">
-            <CalendarDays className="h-4 w-4 mr-2" />
-            <span>
-              {new Date(startDate).toLocaleDateString()}
-              {endDate && ` - ${new Date(endDate).toLocaleDateString()}`}
-            </span>
-          </div>
-        </div> */}
 
         {/* Client */}
         <div className="mb-4">
@@ -143,24 +145,25 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
           </CardDescription>
         </div>
 
-        {/* Actions */}
-        <div className="flex flex-wrap gap-2">
-          {project.repositories.map((repository: IRepository, index) => {
-            return (
-              <Button variant="outline" size="sm" key={index}>
-                <a
-                  href={repository.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex"
-                >
-                  <Github className="h-4 w-4 mr-2" />
-                  {repository.label}
-                </a>
-              </Button>
-            );
-          })}
-        </div>
+        {isInternal && (
+          <div className="flex flex-wrap gap-2">
+            {project.repositories.map((repository: IRepository, index) => {
+              return (
+                <Button variant="outline" size="sm" key={index}>
+                  <a
+                    href={repository.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex"
+                  >
+                    <Github className="h-4 w-4 mr-2" />
+                    {repository.label}
+                  </a>
+                </Button>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
     // </div>

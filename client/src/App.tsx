@@ -15,7 +15,6 @@ import Home from "./pages/Dashboard/Home";
 import AuthCallback from "./pages/Private/Auth/AuthCallback";
 import Users from "./pages/Users";
 import { Projects } from "./pages/ProjectsInternal/Projects";
-import { ProjectsExternal } from "./pages/ProjectsExternal/ProjectsExternal";
 
 export default function App() {
   return (
@@ -30,11 +29,17 @@ export default function App() {
             <Route index element={<Home />} /> {/* Public */}
             <Route path="/images" element={<Images />} />
             {/* Public */}
-            <Route path="/projects-external" element={<ProjectsExternal />} />
+            <Route
+              path="/projects-external"
+              element={<Projects isInternal={false} />}
+            />
             {/* ---------- Auth‑only pages ---------- */}
             <Route element={<ProtectedRoute />}>
               <Route path="/profile" element={<UserProfiles />} />
-              <Route path="/projects" element={<Projects />} />
+              <Route
+                path="/projects-internal"
+                element={<Projects isInternal={true} />}
+              />
               <Route path="/calendar" element={<Calendar />} />
               <Route
                 path="/submit-accomplishment"

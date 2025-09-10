@@ -5,8 +5,11 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  ValidateNested,
 } from "class-validator";
 import { User } from "src/entities";
+import { Type } from "class-transformer";
+import { Repository } from "src/objects/repository";
 
 export class CreateProjectDto {
   @IsString()
@@ -19,10 +22,20 @@ export class CreateProjectDto {
   status: string; // 'YYYY-MM-DD'
 
   @IsString()
-  githubUrl: string;
+  client: string; // 'YYYY-MM-DD'
 
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => Repository)
+  repositories: Repository[];
+
+  @IsArray()
+  @IsOptional()
   projectMemberBadgeNumbers: number[];
 
+  @IsArray()
+  @IsOptional()
   technologyIds: number[];
 }
 
@@ -37,9 +50,19 @@ export class UpdateProjectDto {
   status: string; // 'YYYY-MM-DD'
 
   @IsString()
-  githubUrl: string;
+  client: string; // 'YYYY-MM-DD'
 
-  projectMemberIds: number[];
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => Repository)
+  repositories: Repository[];
 
+  @IsArray()
+  @IsOptional()
+  projectMemberBadgeNumbers: number[];
+
+  @IsArray()
+  @IsOptional()
   technologyIds: number[];
 }
