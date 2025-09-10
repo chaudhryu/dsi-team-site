@@ -1,16 +1,15 @@
 // src/pages/Accomplishments.tsx
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
 import ComponentCard from "../components/common/ComponentCard";
-import Label from "../components/form/Label";
 import Button from "../components/ui/button/Button";
 import { BoxIcon } from "../icons";
 import { envConfig } from "../config/envConfig";
 
-// 🚨 Requires: npm i react-quill-new dompurify
+// 🚨 Requires: npm i react-quill-new dompurify quill
 import ReactQuill from "react-quill-new";
-import "react-quill-new/dist/quill.snow.css";
+import "quill/dist/quill.snow.css";
 import DOMPurify from "dompurify";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
@@ -21,7 +20,7 @@ type Accomplishment = {
   accomplishments: string; // sanitized HTML string
   dateSubmitted: string | null;
   startWeekDate: string; // 'YYYY-MM-DD'
-  endWeekDate: string; // 'YYYY-MM-DD'
+  endWeekDate: string;   // 'YYYY-MM-DD'
   taskStatus?: string | null;
 };
 
@@ -64,11 +63,7 @@ function fmtShort(d: Date) {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-type WeekOpt = {
-  start: string; // YYYY-MM-DD (Monday)
-  end: string;   // YYYY-MM-DD (Sunday)
-  label: string; // e.g. "W34 (Aug 18 – Aug 24, 2025)"
-};
+type WeekOpt = { start: string; end: string; label: string };
 
 // Build a list of week options around "now" (current week first)
 function buildWeekOptions(center = new Date(), past = 26, future = 0): WeekOpt[] {
@@ -100,6 +95,7 @@ const quillModules = {
   ],
 };
 
+// ⚠️ Keep "list" only; "bullet" is a value for list, not a separate format.
 const quillFormats: string[] = [
   "header",
   "bold",
@@ -107,7 +103,6 @@ const quillFormats: string[] = [
   "underline",
   "strike",
   "list",
-  "bullet",
   "blockquote",
   "code-block",
   "link",
@@ -154,7 +149,7 @@ export default function Accomplishments() {
     return Number.isFinite(n) ? n : null;
   }, [lsUser]);
 
-  /* ---- week dropdown ---- */
+  /* ---- internal week range (for padding only) ---- */
   const weekOptions = useMemo(() => {
     const { week } = isoWeekNumber(new Date());
     return buildWeekOptions(new Date(), week - 1, 0);
@@ -166,15 +161,6 @@ export default function Accomplishments() {
     const opt = weekOptions.find((w) => w.start === weekStart);
     return opt ? opt.label : `${weekStart} – ${weekEnd}`;
   }, [weekOptions, weekStart, weekEnd]);
-
-  const onSelectWeek = (e: ChangeEvent<HTMLSelectElement>) => {
-    const start = e.target.value;
-    const opt = weekOptions.find((w) => w.start === start);
-    if (opt) {
-      setWeekStart(opt.start);
-      setWeekEnd(opt.end); // keep end in sync here → no effect needed
-    }
-  };
 
   /* ---- data + UI state ---- */
   const [rows, setRows] = useState<Accomplishment[]>([]);
@@ -362,61 +348,26 @@ export default function Accomplishments() {
 
       <div className="grid gap-6">
         <ComponentCard title={`Your Weekly Accomplishments (Badge ${badge})`}>
-          {/* Week selector + actions */}
-          <div className="mb-6 flex flex-wrap items-center gap-3 justify-between">
-            <div className="flex items-center gap-2">
-              <Label className="text-xs text-gray-600 dark:text-gray-300">Week</Label>
-              <select
-                value={weekStart}
-                onChange={onSelectWeek}
-                className="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-              >
-                {weekOptions.map((w) => (
-                  <option key={w.start} value={w.start}>
-                    {w.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  if (badge) {
-                    setLoading(true);
-                    fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, {
-                      credentials: "include",
-                    })
-                      .then((r) => (r.ok ? r.json() : []))
-                      .then((d) => setRows(Array.isArray(d) ? d : []))
-                      .catch(() => {})
-                      .finally(() => setLoading(false));
-                  }
-                }}
-              >
-                {loading ? "Refreshing…" : "Refresh"}
-              </Button>
-              {currentRecord ? (
-                <Button
-                  size="sm"
-                  variant="primary"
-                  startIcon={<BoxIcon className="size-5" />}
-                  onClick={() => openModal(currentRecord.accomplishments ?? "")}
-                >
-                  Edit the selected week
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="primary"
-                  startIcon={<BoxIcon className="size-5" />}
-                  onClick={() => openModal("")}
-                >
-                  Submit for selected week
-                </Button>
-              )}
-            </div>
+          {/* Actions (refresh only) */}
+          <div className="mb-4 flex justify-end">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                if (badge) {
+                  setLoading(true);
+                  fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, {
+                    credentials: "include",
+                  })
+                    .then((r) => (r.ok ? r.json() : []))
+                    .then((d) => setRows(Array.isArray(d) ? d : []))
+                    .catch(() => {})
+                    .finally(() => setLoading(false));
+                }
+              }}
+            >
+              {loading ? "Refreshing…" : "Refresh"}
+            </Button>
           </div>
 
           {/* Table */}
@@ -426,13 +377,13 @@ export default function Accomplishments() {
                 <tr>
                   <th className="px-5 py-3 font-medium w-56">Week</th>
                   <th className="px-5 py-3 font-medium">Accomplishment</th>
-                  <th className="px-5 py-3 font-medium w-28">Status</th>
+                  <th className="px-5 py-3 font-medium w-44">Status / Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-white/10">
                 {displayRows.map((r) => {
                   const status = r.taskStatus ?? (r.accomplishments ? "Submitted" : "Missing");
-                  const isMissing = status === "Missing";
+                  const isSubmitted = status === "Submitted";
                   return (
                     <tr key={`${r.startWeekDate}-${r.endWeekDate}`} className="hover:bg-gray-50/70 dark:hover:bg-gray-800/40">
                       <td className="px-5 py-4 text-gray-600 dark:text-gray-400">
@@ -469,9 +420,25 @@ export default function Accomplishments() {
                       </td>
 
                       <td className="px-5 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusBadgeClasses(status)}`}>
-                          {status}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusBadgeClasses(status)}`}>
+                            {status}
+                          </span>
+                          {isSubmitted && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              startIcon={<BoxIcon className="size-5" />}
+                              onClick={() => {
+                                setWeekStart(r.startWeekDate);
+                                setWeekEnd(r.endWeekDate);
+                                openModal(r.accomplishments ?? "");
+                              }}
+                            >
+                              Edit
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

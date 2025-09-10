@@ -14,6 +14,6 @@ export class Project {
   @Column()
   status: string;
 
-  @Column()
+  @Column({ nullable: true }) // Allow this column to be null
   githubUrl: string;
 }
