@@ -16,20 +16,21 @@ export class Project {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ type: "varchar", length: 125 })
   name: string;
 
-  @Column()
+  @Column({ type: "varchar", length: "MAX" })
   description: string;
 
-  @Column()
+  @Column({ type: "varchar", length: 25 })
   status: string;
 
-  @Column()
+  @Column({ type: "varchar", length: 75 })
   client: string;
 
   @Column({
-    type: "text",
+    type: "varchar",
+    length: 150,
     transformer: {
       to: (value: any) => JSON.stringify(value), // array -> string
       from: (value: string) => JSON.parse(value), // string -> array
