@@ -1,4 +1,3 @@
-// src/ai/ai.service.ts
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
@@ -12,13 +11,12 @@ const SummaryZ = z.object({
     z.object({
       badge: z.number(),
       name: z.string(),
-      summary_md: z.string().describe('Concise Markdown bullets (3–8) of shipped work & impact.'),
+      summary_md: z.string().describe('Extremely concise Markdown bullets (2–5) of key work & impact.'),
       highlights: z.array(z.string()).optional(),
       blockers: z.array(z.string()).optional(),
       next_focus: z.array(z.string()).optional(),
-    })
+    }),
   ),
-  team_themes: z.array(z.string()).optional(),
 });
 type SummaryZType = z.infer<typeof SummaryZ>;
 
@@ -29,7 +27,7 @@ export class AiService {
   private readonly baseURL: string;
 
   constructor(private readonly client: OpenAI, cfg: ConfigService) {
-    this.model = cfg.get<string>('SUMMARY_MODEL') || 'gemini-2.5-flash';
+    this.model = cfg.get<string>('SUMMARY_MODEL') || 'gemini-1.5-flash';
     this.baseURL = cfg.get<string>('OPENAI_BASE_URL') || '';
   }
 
@@ -56,7 +54,7 @@ export class AiService {
           .filter((e) => e?.text && e.text.trim())
           .map(
             (e) =>
-              `- (${e.startWeekDate}→${e.endWeekDate}) ${this.toPlain(e.text).slice(0, 2000)}`
+              `- (${e.startWeekDate}→${e.endWeekDate}) ${this.toPlain(e.text).slice(0, 2000)}`,
           );
         return `User: ${u.name} (#${u.badge})\nWindow: ${from} → ${to}\nAccomplishments:\n${
           lines.length ? lines.join('\n') : '- (none)'
@@ -82,46 +80,33 @@ export class AiService {
       /* fall through */
     }
 
-    // 1) Alternate: { team_roll_up: { individual_summaries: [...], team_themes? } }
+    // 1) Alternate: { team_roll_up: { individual_summaries: [...] } }
     if (
       raw?.team_roll_up?.individual_summaries &&
       Array.isArray(raw.team_roll_up.individual_summaries)
     ) {
-      const users = raw.team_roll_up.individual_summaries.map((u: any) => {
-        const idStr = String(u.employee_id ?? u.badge ?? '').trim();
-        const badge = Number(String(idStr).replace(/[^\d]/g, '')) || 0;
-        const name = u.name ?? u.employee_name ?? 'Unknown';
-        const summary_md = u.summary ?? u.summary_md ?? '';
-        return { badge, name, summary_md };
-      });
-      const mapped: any = {
-        users,
-        team_themes: Array.isArray(raw.team_roll_up.team_themes)
-          ? raw.team_roll_up.team_themes
-          : undefined,
-      };
-      return SummaryZ.parse(mapped);
+      const users = raw.team_roll_up.individual_summaries.map((u: any) => ({
+        badge: Number(String(u.employee_id ?? u.badge ?? '').replace(/[^\d]/g, '')) || 0,
+        name: u.name ?? u.employee_name ?? 'Unknown',
+        summary_md: u.summary ?? u.summary_md ?? '',
+      }));
+      return SummaryZ.parse({ users });
     }
 
-    // 2) Alternate: { individuals: [{ id/name/summary }], themes?: [] }
+    // 2) Alternate: { individuals: [{ id/name/summary }] }
     if (Array.isArray(raw?.individuals)) {
       const users = raw.individuals.map((u: any) => ({
         badge: Number(String(u.id ?? u.badge ?? '').replace(/[^\d]/g, '')) || 0,
         name: u.name ?? 'Unknown',
         summary_md: u.summary ?? u.summary_md ?? '',
       }));
-      const mapped: any = {
-        users,
-        team_themes: Array.isArray(raw.themes) ? raw.themes : undefined,
-      };
-      return SummaryZ.parse(mapped);
+      return SummaryZ.parse({ users });
     }
 
     // 3) Alternate: array of { name, summary } at the top
     if (Array.isArray(raw) && raw.length && (raw[0].name || raw[0].summary || raw[0].summary_md)) {
       const users = raw.map((u: any, idx: number) => ({
-        badge:
-          Number(String(u.badge ?? idx + 1).toString().replace(/[^\d]/g, '')) || idx + 1,
+        badge: Number(String(u.badge ?? idx + 1).toString().replace(/[^\d]/g, '')) || idx + 1,
         name: u.name ?? 'Unknown',
         summary_md: u.summary ?? u.summary_md ?? '',
       }));
@@ -135,18 +120,16 @@ export class AiService {
 
   async summarize(dto: SummarizeRequestDto): Promise<SummarizeResponseDto> {
     const system = [
-      'You help a manager prepare monthly roll-ups of weekly accomplishments.',
-      'Summarize each person for the date range; prefer outcomes/impact, merge duplicates, avoid trivia.',
-      'Return ONLY JSON with keys "users" and optional "team_themes". No other keys, no wrapping objects.',
+      'You are an expert at creating concise executive summaries of weekly accomplishments.',
+      'For each person, create a very brief summary (2-5 bullet points). Focus strictly on key outcomes and their impact.',
+      'Merge duplicate entries and ignore trivial tasks. Use short, direct sentences.',
+      'Return ONLY a JSON object with a single top-level key: "users".',
       'Each users[i] must have: badge (number), name (string), summary_md (string).',
       'Do not invent numbers or facts.',
     ].join(' ');
 
     const input = [
       `Date window: ${dto.from} → ${dto.to}`,
-      dto.includeTeamSummary !== false
-        ? 'Also extract 3–7 cross-cutting team themes.'
-        : 'Team themes not required.',
       'DATA START',
       this.buildCorpus(dto),
       'DATA END',
@@ -165,13 +148,13 @@ export class AiService {
             ],
             response_format: { type: 'json_object' },
             temperature: 0,
-            // Note: omit seed/top_p for Gemini compat
           });
 
           const content: any = completion.choices?.[0]?.message?.content ?? '';
-          const text = Array.isArray(content)
-            ? content.map((c: any) => (typeof c === 'string' ? c : c?.text ?? '')).join('')
-            : String(content);
+          const text =
+            Array.isArray(content)
+              ? content.map((c: any) => (typeof c === 'string' ? c : c?.text ?? '')).join('')
+              : String(content);
 
           const obj = JSON.parse(text);
           const normalized = this.normalizeToSchema(obj);
@@ -188,16 +171,17 @@ export class AiService {
               { role: 'system', content: system },
               {
                 role: 'user',
-                content: input + '\nReturn ONLY a valid JSON object for { "users": [...], "team_themes"?: [...] }.',
+                content: input + '\nReturn ONLY a valid JSON object for { "users": [...] }.',
               },
             ],
             temperature: 0,
           });
 
           const content2: any = fallback.choices?.[0]?.message?.content ?? '';
-          const text2 = Array.isArray(content2)
-            ? content2.map((c: any) => (typeof c === 'string' ? c : c?.text ?? '')).join('')
-            : String(content2);
+          const text2 =
+            Array.isArray(content2)
+              ? content2.map((c: any) => (typeof c === 'string' ? c : c?.text ?? '')).join('')
+              : String(content2);
 
           const jsonText = this.extractFirstJson(text2);
           const obj2 = JSON.parse(jsonText);
