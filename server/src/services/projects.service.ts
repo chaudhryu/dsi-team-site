@@ -11,6 +11,7 @@ import { CreateProjectDto } from "src/dto/project.dto";
 import { IsTimeZone } from "class-validator";
 import { User } from "src/entities";
 import { Technology } from "src/entities/technlogy.entity";
+import { Repository as Repos } from "src/objects/repository";
 
 @Injectable()
 export class ProjectsService {
@@ -35,7 +36,8 @@ export class ProjectsService {
     name: string,
     description: string,
     status: string,
-    githubUrl: string,
+    client: string,
+    repositories: Repos[],
     projectMemberBadgeNumbers: number[],
     technologyIds: number[]
   ) {
@@ -74,7 +76,8 @@ export class ProjectsService {
     project.name = name;
     project.description = description;
     project.status = status;
-    project.githubUrl = githubUrl;
+    project.client = client;
+    project.repositories = repositories;
     project.projectMembers = projectMembers;
     project.technologies = technologies;
     return this.projectRepository.save(project);
@@ -85,16 +88,57 @@ export class ProjectsService {
     name: string,
     description: string,
     status: string,
-    githubUrl: string
+    client: string,
+    repositories: Repos[],
+    projectMemberBadgeNumbers: number[],
+    technologyIds: number[]
   ) {
+    const projectMembers: User[] = [];
+    const technologies: Technology[] = [];
+
     const project = await this.projectRepository.findOne({ where: { id: id } });
 
-    if (project) {
+    if (!project) {
+      throw new NotFoundException(`Technology with id ${project.id} not found`);
+    }
+
+    for (const projectMemberBadgeNumber of projectMemberBadgeNumbers) {
+      const projectMemberResult = await this.userRepository.findOneBy({
+        badge: projectMemberBadgeNumber,
+      });
+
+      if (projectMemberResult) {
+        projectMembers.push(projectMemberResult);
+      } else {
+        throw new NotFoundException(
+          `Project Member with badge ${projectMemberBadgeNumber} not found`
+        );
+      }
+    }
+
+    for (const technologyId of technologyIds) {
+      const technologyResult = await this.technologyRepository.findOneBy({
+        id: technologyId,
+      });
+
+      if (technologyResult) {
+        technologies.push(technologyResult);
+      } else {
+        throw new NotFoundException(
+          `Technology with id ${technologyId} not found`
+        );
+      }
+    }
+
+    if (project && id) {
       project.name = name;
       project.description = description;
       project.status = status;
-      project.githubUrl = githubUrl;
-      return this.projectRepository.save(project);
+      project.client = client;
+      project.repositories = repositories;
+      project.projectMembers = projectMembers;
+      project.technologies = technologies;
+      return this.projectRepository.update({ id }, project);
     }
     return null;
   }

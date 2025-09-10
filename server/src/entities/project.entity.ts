@@ -9,6 +9,7 @@ import {
 } from "typeorm";
 import { User } from "./user.entity";
 import { Technology } from "./technlogy.entity";
+import { Repository } from "../objects/repository";
 
 @Entity()
 export class Project {
@@ -25,7 +26,16 @@ export class Project {
   status: string;
 
   @Column()
-  githubUrl: string;
+  client: string;
+
+  @Column({
+    type: "text",
+    transformer: {
+      to: (value: any) => JSON.stringify(value), // array -> string
+      from: (value: string) => JSON.parse(value), // string -> array
+    },
+  })
+  repositories: Repository[];
 
   @ManyToMany(() => User, { eager: true })
   @JoinTable()
