@@ -138,7 +138,7 @@ export class ProjectsService {
       project.repositories = repositories;
       project.projectMembers = projectMembers;
       project.technologies = technologies;
-      return this.projectRepository.update({ id }, project);
+      return this.projectRepository.save(project);
     }
     return null;
   }
