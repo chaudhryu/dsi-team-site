@@ -66,7 +66,7 @@ function fmtShort(d: Date) {
 
 type WeekOpt = {
   start: string; // YYYY-MM-DD (Monday)
-  end: string; // YYYY-MM-DD (Sunday)
+  end: string;   // YYYY-MM-DD (Sunday)
   label: string; // e.g. "W34 (Aug 18 – Aug 24, 2025)"
 };
 
@@ -125,6 +125,20 @@ const plainTextFromHtml = (html: string) =>
     .replace(/\u00a0/g, " ")
     .trim();
 
+/* -------------------- status badge helper -------------------- */
+function statusBadgeClasses(status?: string | null) {
+  const s = (status ?? "").toLowerCase();
+  if (s === "submitted")
+    return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300";
+  if (s === "missing")
+    return "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300";
+  if (s === "draft")
+    return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300";
+  return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+}
+
+/* ====================================================================== */
+
 export default function Accomplishments() {
   /* ---- who is logged in (from localStorage) ---- */
   const lsUser = useMemo(() => {
@@ -174,13 +188,13 @@ export default function Accomplishments() {
   // form (HTML from editor)
   const [text, setText] = useState("");
 
-  // current record for selected week
+  // current record for selected week (only considers REAL API rows)
   const currentRecord = useMemo(
     () => rows.find((r) => r.startWeekDate === weekStart && r.endWeekDate === weekEnd) || null,
     [rows, weekStart, weekEnd]
   );
 
-  // one effect: load when we know the badge
+  // load when we know the badge
   useEffect(() => {
     if (!badge) return;
     (async () => {
@@ -299,10 +313,38 @@ export default function Accomplishments() {
     }
   };
 
-  const rowsSorted = useMemo(
-    () => [...rows].sort((a, b) => (a.startWeekDate < b.startWeekDate ? 1 : -1)),
-    [rows]
-  );
+  /* -------------------- PADDED rows (show all weeks) -------------------- */
+  const displayRows = useMemo(() => {
+    // index actual rows by week key
+    const byKey = new Map<string, Accomplishment>();
+    for (const r of rows) {
+      byKey.set(`${r.startWeekDate}|${r.endWeekDate}`, r);
+    }
+
+    // build placeholders for weeks in our dropdown range
+    const padded: Accomplishment[] = weekOptions.map((w, idx) => {
+      const key = `${w.start}|${w.end}`;
+      const found = byKey.get(key);
+      if (found) return found;
+
+      return {
+        id: -1 - idx, // negative unique id for React keys
+        accomplishments: "",
+        dateSubmitted: null,
+        startWeekDate: w.start,
+        endWeekDate: w.end,
+        taskStatus: "Missing",
+      };
+    });
+
+    // include any API rows outside the current range (older/newer)
+    const inRangeKeys = new Set(padded.map((r) => `${r.startWeekDate}|${r.endWeekDate}`));
+    const extras = rows.filter((r) => !inRangeKeys.has(`${r.startWeekDate}|${r.endWeekDate}`));
+
+    const all = [...padded, ...extras];
+    all.sort((a, b) => (a.startWeekDate < b.startWeekDate ? 1 : -1)); // most recent first
+    return all;
+  }, [rows, weekOptions]);
 
   if (!badge) {
     return (
@@ -388,46 +430,52 @@ export default function Accomplishments() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-white/10">
-                {rowsSorted.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50/70 dark:hover:bg-gray-800/40">
-                    <td className="px-5 py-4 text-gray-600 dark:text-gray-400">
-                      {r.startWeekDate} → {r.endWeekDate}
-                    </td>
-                    <td className="px-5 py-4 text-gray-800 dark:text-gray-200">
-                      {r.accomplishments ? (
-                        // ⬇️ Wrap with Quill's viewer classes so list markers render
-                        <div className="ql-snow">
-                          <div
-                            className="ql-editor max-w-none"
-                            dangerouslySetInnerHTML={{
-                              __html: sanitizeHtml(r.accomplishments),
-                            }}
-                          />
-                        </div>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-5 py-4">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                          (r.taskStatus ?? "Submitted") === "Submitted"
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
-                            : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
-                        }`}
-                      >
-                        {r.taskStatus ?? "Submitted"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-                {rowsSorted.length === 0 && !loading && (
-                  <tr>
-                    <td className="px-5 py-8 text-center text-gray-500 dark:text-gray-400" colSpan={3}>
-                      No accomplishments yet. Submit one for the selected week.
-                    </td>
-                  </tr>
-                )}
+                {displayRows.map((r) => {
+                  const status = r.taskStatus ?? (r.accomplishments ? "Submitted" : "Missing");
+                  const isMissing = status === "Missing";
+                  return (
+                    <tr key={`${r.startWeekDate}-${r.endWeekDate}`} className="hover:bg-gray-50/70 dark:hover:bg-gray-800/40">
+                      <td className="px-5 py-4 text-gray-600 dark:text-gray-400">
+                        {r.startWeekDate} → {r.endWeekDate}
+                      </td>
+
+                      <td className="px-5 py-4 text-gray-800 dark:text-gray-200">
+                        {r.accomplishments ? (
+                          // ⬇️ Wrap with Quill's viewer classes so list markers render
+                          <div className="ql-snow">
+                            <div
+                              className="ql-editor max-w-none"
+                              dangerouslySetInnerHTML={{
+                                __html: sanitizeHtml(r.accomplishments),
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
+                            <span className="italic">No submission for this week.</span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setWeekStart(r.startWeekDate);
+                                setWeekEnd(r.endWeekDate);
+                                openModal("");
+                              }}
+                            >
+                              Submit now
+                            </Button>
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusBadgeClasses(status)}`}>
+                          {status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -458,15 +506,15 @@ export default function Accomplishments() {
               )}
 
               <div>
-                  <ReactQuill
-                    theme="snow"
-                    value={text}
-                    onChange={(value) => setText(value)}
-                    modules={quillModules}
-                    formats={quillFormats}
-                    style={{ height: 240 }}
-                    className="text-sm text-gray-900 dark:text-gray-100 pb-6"
-                  />
+                <ReactQuill
+                  theme="snow"
+                  value={text}
+                  onChange={(value) => setText(value)}
+                  modules={quillModules}
+                  formats={quillFormats}
+                  style={{ height: 240 }}
+                  className="text-sm text-gray-900 dark:text-gray-100 pb-6"
+                />
               </div>
             </div>
 
