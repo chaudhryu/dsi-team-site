@@ -27,7 +27,8 @@ export class ProjectsController {
       createProjectDto.name,
       createProjectDto.description,
       createProjectDto.status,
-      createProjectDto.githubUrl,
+      createProjectDto.client,
+      createProjectDto.repositories,
       createProjectDto.projectMemberBadgeNumbers,
       createProjectDto.technologyIds
     );
@@ -43,7 +44,10 @@ export class ProjectsController {
       updateProjectDto.name,
       updateProjectDto.description,
       updateProjectDto.status,
-      updateProjectDto.githubUrl
+      updateProjectDto.client,
+      updateProjectDto.repositories,
+      updateProjectDto.projectMemberBadgeNumbers,
+      updateProjectDto.technologyIds
     );
   }
 

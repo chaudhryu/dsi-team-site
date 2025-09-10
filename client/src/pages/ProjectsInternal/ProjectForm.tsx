@@ -21,7 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ITeamMember } from "@/interfaces/ITeamMember";
 import { Badge } from "@/components/ui/badge";
 import { IMyProjectFormProps } from "@/interfaces/IMyProjectFormProps";
 import { IProject } from "@/interfaces/IProject";
@@ -30,6 +29,7 @@ import { IRepository } from "@/interfaces/IRepository";
 import { envConfig } from "@/config/envConfig";
 import { Spinner, type SpinnerProps } from "@/components/ui/shadcn-io/spinner";
 import { ITechnology } from "@/interfaces/ITechnology";
+import { IProjectMember } from "@/interfaces/IProjectMember";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 
@@ -38,62 +38,26 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
   closeProjectForm,
   project,
   handleProjectsCache,
-  projects,
 }) => {
-  const teamMembers: ITeamMember[] = [
-    {
-      name: "Joel Joshy",
-      avatar:
-        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
-      badgeNumber: "58146",
-    },
-    {
-      name: "Trung Tu",
-      avatar: "/images/team/trungTu.jpg",
-      badgeNumber: "11111",
-    },
-    {
-      name: "Usman Chaudry",
-      avatar: "/images/team/usmanChaudhr.jpg",
-      badgeNumber: "22222",
-    },
-    {
-      name: "Joe Hang",
-      avatar: "/images/team/joeHang.jpg",
-      badgeNumber: "22221",
-    },
-    {
-      name: "Sangjun Oh",
-      avatar: "/images/team/sangjunOh.jpg",
-      badgeNumber: "22241",
-    },
-    {
-      name: "Sharadamani Natraj",
-      avatar: "/images/team/sharadaNataraj.jpg",
-      badgeNumber: "11112",
-    },
-  ];
-
-  const [projectName, setProjectName] = useState<string>();
+  const [name, setName] = useState<string>();
   const [client, setClient] = useState<string>();
-  const [projectStatus, setProjectStatus] = useState<string>();
+  const [status, setStatus] = useState<string>();
   const [description, setDescription] = useState<string>();
   const [repositories, setRepositories] = useState<IRepository[]>([]);
   const [repositoryLabel, setRepositoryLabel] = useState<string>();
   const [repositoryUrl, setRepositoryUrl] = useState<string>();
-  const [selectedTeamMemberBadgeNumber, setSelectedTeamMemberBadgeNumber] =
-    useState<string>();
-  const [selectedTeamMembers, setSelectedTeamMembers] = useState<ITeamMember[]>(
-    []
-  );
+  const [selectedProjectMember, setSelectedProjectMember] =
+    useState<IProjectMember | null>();
+  const [selectedProjectMembers, setSelectedProjectMembers] = useState<
+    IProjectMember[]
+  >([]);
   const [selectedTechnology, setSelectedTechnology] =
-    useState<ITechnology | null>(null);
+    useState<ITechnology | null>();
   const [selectedTechnologies, setSelectedTechnologies] = useState<
     ITechnology[]
   >([]);
-  const [teamMembersDropdownValues, setTeamMembersDropdownValues] = useState<
-    ITeamMember[]
-  >([]);
+  const [projectMembersDropdownValues, setProjectMembersDropdownValues] =
+    useState<IProjectMember[]>([]);
   const [technologiesDropdownValues, setTechnologiesDropdownValues] = useState<
     ITechnology[]
   >([]);
@@ -121,7 +85,7 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
     }
   };
 
-  const fetchAndSetTeamMembersDropdownValues = async () => {
+  const fetchAndSetProjectMembersDropdownValues = async () => {
     try {
       const res = await fetch(`${API_BASE}/users`, {
         credentials: "include",
@@ -129,15 +93,15 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
 
       if (res.ok) {
         const data = await res.json();
-        setTeamMembersDropdownValues(Array.isArray(data) ? data : []);
+        setProjectMembersDropdownValues(data);
       } else {
         const text = await res.text();
         console.error("GET /users failed", res.status, text);
-        setTeamMembersDropdownValues([]);
+        setProjectMembersDropdownValues([]);
       }
     } catch (e) {
       console.error("Network error /users:", e);
-      setTeamMembersDropdownValues([]);
+      setProjectMembersDropdownValues([]);
     }
   };
 
@@ -145,11 +109,20 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
     if (isProjectFormOpen) {
       setTimeout(() => {
         fetchAndSetTechnologiesDropdown();
-        fetchAndSetTeamMembersDropdownValues();
+        fetchAndSetProjectMembersDropdownValues();
         setIsLoading(false);
       }, 1200);
+      if (project) {
+        setName(project.name);
+        setRepositories(project.repositories);
+        setClient(project.client);
+        setStatus(project.status);
+        setDescription(project.description);
+        setSelectedProjectMembers(project.projectMembers);
+        setSelectedTechnologies(project.technologies);
+      }
     }
-  }, [isProjectFormOpen]);
+  }, [isProjectFormOpen, project]);
 
   useEffect(() => {
     // if (project) {
@@ -158,33 +131,27 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
     //   setClient(project.client);
     //   setProjectStatus(project.status);
     //   setDescription(project.description);
-    //   setSelectedTeamMembers(project.teamMembers);
+    //   setSelectedProjectMembers(project.ProjectMembers);
     //   setSelectedTechnologies(project.technologies);
     // }
   }, [project]);
 
-  const addTeamMember = () => {
-    setSelectedTeamMembers((prevSelectedTeamMembers) => {
-      const teamMemberObject = teamMembers.find(
-        (teamMember) => teamMember.badgeNumber === selectedTeamMemberBadgeNumber
-      );
+  const addProjectMember = () => {
+    if (selectedProjectMember) {
+      setSelectedProjectMembers((prevSelectedProjectMembers) => {
+        return [...prevSelectedProjectMembers, selectedProjectMember];
+      });
 
-      if (teamMemberObject) {
-        return [...prevSelectedTeamMembers, teamMemberObject];
-      } else {
-        return prevSelectedTeamMembers;
-      }
-    });
+      setProjectMembersDropdownValues((prevProjectMembersDropdownValues) => {
+        return prevProjectMembersDropdownValues.filter(
+          (prevProjectMembersDropdownValue) =>
+            prevProjectMembersDropdownValue.badge !==
+            selectedProjectMember?.badge
+        );
+      });
 
-    setTeamMembersDropdownValues((prevTeamMembersDropdownValues) => {
-      return prevTeamMembersDropdownValues.filter(
-        (prevTeamMembersDropdownValue) =>
-          prevTeamMembersDropdownValue.badgeNumber !==
-          selectedTeamMemberBadgeNumber
-      );
-    });
-
-    setSelectedTeamMemberBadgeNumber("");
+      setSelectedProjectMember(undefined);
+    }
   };
 
   const addTechnology = () => {
@@ -202,7 +169,7 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
         );
       });
 
-      setSelectedTechnology(null);
+      setSelectedTechnology(undefined);
     }
   };
 
@@ -219,88 +186,157 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
 
   const clearAllFieldsAndCloseProjectForm = () => {
     closeProjectForm();
-    setProjectName("");
+    setName("");
     setClient("");
-    setProjectStatus("");
+    setStatus("");
     setDescription("");
     setRepositories([]);
-    setSelectedTeamMembers([]);
+    setSelectedProjectMembers([]);
     setSelectedTechnologies([]);
-    setTeamMembersDropdownValues(teamMembers);
-    setTechnologiesDropdownValues(technologiesDropdownValues);
+    setProjectMembersDropdownValues([]);
+    setTechnologiesDropdownValues([]);
+    setSelectedProjectMember(undefined);
+    setSelectedTechnology(undefined);
     setIsLoading(true);
+  };
+
+  const addProject = async () => {
+    try {
+      if (
+        name &&
+        client &&
+        status &&
+        description &&
+        repositories &&
+        selectedProjectMembers &&
+        selectedTechnologies
+      ) {
+        const selectedTechnologyIds = selectedTechnologies.map(
+          (selectedTechnology) => selectedTechnology.id
+        );
+
+        const selectedProjectMemberIds = selectedProjectMembers.map(
+          (selectedProjectMember) => selectedProjectMember.badge
+        );
+
+        const res = await fetch(`${API_BASE}/projects`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            name: name,
+            description: description,
+            status: status,
+            technologyIds: selectedTechnologyIds,
+            projectMemberBadgeNumbers: selectedProjectMemberIds,
+            repositories: repositories,
+            client: client,
+          }),
+        });
+
+        if (res.ok) {
+          const newProject = await res.json();
+          handleProjectsCache("add", null, newProject);
+        }
+      } else {
+        console.log("Empty Fields!");
+      }
+    } catch (err) {
+      console.error("Network error adding project:", err);
+    } finally {
+      setIsPerformingAction(false);
+      clearAllFieldsAndCloseProjectForm();
+    }
+  };
+
+  const updateProject = async () => {
+    try {
+      if (
+        project?.id &&
+        name &&
+        client &&
+        status &&
+        description &&
+        repositories &&
+        selectedProjectMembers &&
+        selectedTechnologies
+      ) {
+        const selectedTechnologyIds = selectedTechnologies.map(
+          (selectedTechnology) => selectedTechnology.id
+        );
+
+        const selectedProjectMemberIds = selectedProjectMembers.map(
+          (selectedProjectMember) => selectedProjectMember.badge
+        );
+
+        const res = await fetch(`${API_BASE}/projects/${project.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            name: name,
+            description: description,
+            status: status,
+            technologyIds: selectedTechnologyIds,
+            projectMemberBadgeNumbers: selectedProjectMemberIds,
+            repositories: repositories,
+            client: client,
+          }),
+        });
+
+        const updatedProject: IProject = {
+          id: project.id,
+          name: name,
+          description: description,
+          status: status,
+          technologies: selectedTechnologies,
+          projectMembers: selectedProjectMembers,
+          repositories: repositories,
+          client: client,
+        };
+
+        if (res.ok) {
+          handleProjectsCache("update", null, updatedProject);
+        }
+      } else {
+        console.log("Empty Fields!");
+      }
+    } catch (err) {
+      console.error("Network error updating project:", err);
+    } finally {
+      setIsPerformingAction(false);
+      clearAllFieldsAndCloseProjectForm();
+    }
   };
 
   const performAction = () => {
     setIsPerformingAction(true);
     setTimeout(() => {
       if (!project) {
-        if (
-          projectName &&
-          client &&
-          projectStatus &&
-          description &&
-          repositories &&
-          selectedTeamMembers &&
-          selectedTechnologies
-        ) {
-          const newProject: IProject = {
-            id: projects.length + 1,
-            name: projectName,
-            description: description,
-            status: projectStatus,
-            technologies: selectedTechnologies,
-            teamMembers: selectedTeamMembers,
-            repositories: repositories,
-            client: client,
-          };
-          handleProjectsCache("add", null, newProject);
-          clearAllFieldsAndCloseProjectForm();
-          console.log("Success!");
-        } else {
-          console.log("Empty Fields!");
-        }
+        addProject();
       } else {
-        if (
-          projectName &&
-          client &&
-          projectStatus &&
-          description &&
-          repositories &&
-          selectedTeamMembers &&
-          selectedTechnologies
-        ) {
-          const updatedProject: IProject = {
-            id: project.id,
-            name: projectName,
-            description: description,
-            status: projectStatus,
-            technologies: selectedTechnologies,
-            teamMembers: selectedTeamMembers,
-            repositories: repositories,
-            client: client,
-          };
-          handleProjectsCache("update", null, updatedProject);
-          clearAllFieldsAndCloseProjectForm();
-          console.log("Success!");
-        } else {
-          console.log("Empty Fields!");
-        }
+        updateProject();
       }
-      setIsPerformingAction(false);
     }, 1200);
   };
 
-  const removeSelectedTeamMember = (
-    selectedTeamMemberBadgeNumberForRemoval: string
+  const removeSelectedProjectMember = (
+    selectedProjectMemberForRemoval: IProjectMember
   ) => {
-    setSelectedTeamMembers((prevSelectedTeamMembers) =>
-      prevSelectedTeamMembers.filter(
-        (prevSelectedTeamMember: ITeamMember) =>
-          prevSelectedTeamMember.badgeNumber !==
-          selectedTeamMemberBadgeNumberForRemoval
-      )
-    );
+    if (selectedProjectMemberForRemoval) {
+      setSelectedProjectMembers((prevSelectedProjectMembers) =>
+        prevSelectedProjectMembers.filter(
+          (prevSelectedProjectMember: IProjectMember) =>
+            prevSelectedProjectMember.badge !==
+            selectedProjectMemberForRemoval.badge
+        )
+      );
+
+      // setProjectMembersDropdownValues((prevProjectMembersDropdownValues) => [
+      //   ...prevProjectMembersDropdownValues,
+      //   selectedProjectMemberForRemoval,
+      // ]);
+    }
   };
 
   const removeSelectedTechnology = (
@@ -313,10 +349,13 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
             prevSelectedTechnology.id !== selectedTechnologyForRemoval.id
         )
       );
+
+      // setTechnologiesDropdownValues((prevTechnologiesDropDownValues) => [
+      //   selectedTechnologyForRemoval,
+      //   ...prevTechnologiesDropDownValues,
+      // ]);
     }
   };
-
-  const findAndSetSelectedTechnology = () => {};
 
   const removeRepository = (indexToRemove: number) => {
     setRepositories((prevRepositories) =>
@@ -342,8 +381,8 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
               <Input
                 id="name-1"
                 name="name"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
               />
             </div>
             <div className="">
@@ -358,8 +397,8 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
             <div>
               <Label htmlFor="username-1">Project Status</Label>
               <Select
-                value={projectStatus}
-                onValueChange={(value) => setProjectStatus(value)}
+                value={status}
+                onValueChange={(value) => setStatus(value)}
               >
                 <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Filter by status" />
@@ -430,54 +469,66 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
             </div>
           )}
           <div>
-            <Label htmlFor="username-1">Team Members</Label>
+            <Label htmlFor="username-1">Project Members</Label>
             <div className="flex gap-2">
               <Select
-                value={selectedTeamMemberBadgeNumber}
-                onValueChange={(value) =>
-                  setSelectedTeamMemberBadgeNumber(value)
-                }
+                value={selectedProjectMember?.badge}
+                onValueChange={(value) => {
+                  const projectMemberObject = projectMembersDropdownValues.find(
+                    (projectMembersDropdownValue) =>
+                      projectMembersDropdownValue.badge === value
+                  );
+                  setSelectedProjectMember(() => {
+                    if (projectMemberObject) {
+                      return projectMemberObject;
+                    } else {
+                      return undefined;
+                    }
+                  });
+                }}
               >
                 <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Select Team Members" />
+                  <SelectValue placeholder="Select Project Members" />
                 </SelectTrigger>
                 <SelectContent>
-                  {teamMembersDropdownValues.map((teamMember) => (
+                  {projectMembersDropdownValues.map((projectMember) => (
                     <SelectItem
-                      value={teamMember.badgeNumber}
-                      key={teamMember.badgeNumber}
+                      value={projectMember.badge}
+                      key={projectMember.badge}
                     >
-                      {teamMember.name}
+                      {`${projectMember.firstName} ${projectMember.lastName} (${projectMember.badge})`}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Button
                 type="button"
-                onClick={addTeamMember}
-                disabled={!selectedTeamMemberBadgeNumber}
+                onClick={addProjectMember}
+                disabled={!selectedProjectMember}
               >
                 Add
               </Button>
             </div>
-            {selectedTeamMembers.length > 0 && (
+            {selectedProjectMembers.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
-                {selectedTeamMembers.map((selectedTeamMember: ITeamMember) => (
-                  <Badge
-                    key={selectedTeamMember.badgeNumber}
-                    variant="secondary"
-                    className="flex items-center gap-1"
-                  >
-                    {`${selectedTeamMember.name} (${selectedTeamMember.badgeNumber})`}
-                    <div
-                      onClick={() =>
-                        removeSelectedTeamMember(selectedTeamMember.badgeNumber)
-                      }
+                {selectedProjectMembers.map(
+                  (selectedProjectMember: IProjectMember) => (
+                    <Badge
+                      key={selectedProjectMember.badge}
+                      variant="secondary"
+                      className="flex items-center gap-1"
                     >
-                      <X className="h-3 w-3 cursor-pointer" />
-                    </div>
-                  </Badge>
-                ))}
+                      {`${selectedProjectMember.firstName} ${selectedProjectMember.lastName} (${selectedProjectMember.badge})`}
+                      <div
+                        onClick={() =>
+                          removeSelectedProjectMember(selectedProjectMember)
+                        }
+                      >
+                        <X className="h-3 w-3 cursor-pointer" />
+                      </div>
+                    </Badge>
+                  )
+                )}
               </div>
             )}
           </div>
@@ -560,17 +611,9 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
         </DialogContent>
       ) : (
         <DialogContent>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-              alignItems: "center",
-              gap: "10px",
-            }}
-          >
-            <Spinner key={"circle"} variant={"circle"} />
-            <p>Loading...</p>
+          <div className="flex w-full h-full flex-col justify-center items-center gap-3">
+            <Spinner key={"circle"} variant={"circle"} className="w-10 h-10" />
+            <p className="text-xl">Loading...</p>
           </div>
         </DialogContent>
       )}

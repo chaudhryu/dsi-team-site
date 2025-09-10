@@ -8,7 +8,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { projectsData } from "@/dummydata/ProjectsData";
 import { IProject } from "@/interfaces/IProject";
 import { PlusIcon, Search } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -16,10 +15,12 @@ import ProjectCard from "./ProjectCard";
 import { ProjectForm } from "./ProjectForm";
 import ProjectsDialog from "./ProjectsDialog";
 import { envConfig } from "@/config/envConfig";
+import { Spinner } from "@/components/ui/shadcn-io/spinner";
+import { IProjectProps } from "@/interfaces/IProjectProps";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3005/api";
 
-export const Projects = () => {
+export const Projects: React.FC<IProjectProps> = ({ isInternal }) => {
   const [projects, setProjects] = useState<IProject[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<IProject[]>([]);
   const [searchFilterValue, setSearchFilterValue] = useState<string>("");
@@ -33,30 +34,37 @@ export const Projects = () => {
   const [completedCount, setCompletedCount] = useState<number>();
   const [planningCount, setPlanningCount] = useState<number>();
   const [inProgressCount, setInProgressCount] = useState<number>();
-  const [
-    isDeleteProjectConfirmationDialogOpen,
-    setIsDeleteProjectConfirmationDialogOpen,
-  ] = useState<boolean>(false);
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [projectToDelete, setProjectToDelete] = useState<IProject | null>();
-  const [isloading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const closeAddProjectForm = () => {
     setIsAddProjectFormOpen(false);
   };
 
   const closeProjectsDialog = () => {
-    setIsDeleteProjectConfirmationDialogOpen(false);
+    setIsDialogOpen(false);
   };
 
   const openDeleteProjectConfirmationDialog = (project: IProject) => {
     setProjectToDelete(project);
-    setIsDeleteProjectConfirmationDialogOpen(true);
+    setIsDialogOpen(true);
   };
 
-  const deleteProject = () => {
-    closeProjectsDialog();
-    handleProjectsCache("delete", projectToDelete?.id, null);
-    setProjectToDelete(null);
+  const deleteProject = async () => {
+    try {
+      if (projectToDelete) {
+        await fetch(`${API_BASE}/projects/${projectToDelete.id}`, {
+          method: "DELETE",
+        });
+        handleProjectsCache("delete", projectToDelete?.id, null);
+      }
+    } catch (err) {
+      console.error("Network error deleting project:", err);
+    } finally {
+      closeProjectsDialog();
+      setProjectToDelete(null);
+    }
   };
 
   const openEditProjectForm = (project: IProject) => {
@@ -77,8 +85,9 @@ export const Projects = () => {
 
       if (res.ok) {
         const data = await res.json();
-        setProjects(Array.isArray(data) ? data : []);
-        setFilteredProjects(projectsData);
+        setProjects(data);
+        setFilteredProjects(data);
+        setStats(data);
       } else {
         const text = await res.text();
         console.error("GET /projects failed", res.status, text);
@@ -95,9 +104,9 @@ export const Projects = () => {
   };
 
   useEffect(() => {
-    fetchAndSetProjects();
-    setFilteredProjects(projectsData);
-    setStats(projectsData);
+    setTimeout(() => {
+      fetchAndSetProjects();
+    }, 1200);
   }, []);
 
   const setStats = (projects: IProject[]) => {
@@ -198,8 +207,8 @@ export const Projects = () => {
     });
   };
 
-  return (
-    <div className="h-auto">
+  return !isLoading ? (
+    <div className="h-full">
       <ProjectForm
         isProjectFormOpen={isAddProjectFormOpen || isEditProjectFormOpen}
         closeProjectForm={() => {
@@ -211,117 +220,152 @@ export const Projects = () => {
         }}
         project={project}
         handleProjectsCache={handleProjectsCache}
-        projects={projects}
       />
       <ProjectsDialog
-        isDialogOpen={isDeleteProjectConfirmationDialogOpen}
+        isDialogOpen={isDialogOpen}
         dialogType={"delete"}
         title={"Confirm Deletion"}
         description={`Are you sure you would like to delete this project: ${projectToDelete?.name}?`}
         close={closeProjectsDialog}
         clickAction={deleteProject}
       />
-      <div className="flex justify-between items-center mb-10">
-        <div className="font-bold text-2xl">Projects</div>
-        <Button
-          size="default"
-          variant="outline"
-          onClick={() => setIsAddProjectFormOpen(true)}
-        >
-          <PlusIcon className="size-3.5" color="black" />
-          Add
-        </Button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col items-center justify-center gap-3">
-              <p className="font-bold text-black text-center text-5xl">
-                {totalCount}
-              </p>
-              <p className="font-medium text-gray-600 text-lg">Total</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col items-center justify-center gap-3">
-              <p className="font-bold text-green-600 text-center text-5xl">
-                {completedCount}
-              </p>
-              <p className="font-medium text-gray-600 text-lg">Completed</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col items-center justify-center gap-3">
-              <p className="font-bold text-yellow-600 text-center text-5xl">
-                {inProgressCount}
-              </p>
-              <p className="font-medium text-gray-600 text-lg">In Progress</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col items-center justify-center gap-3">
-              <p className="font-bold text-blue-600 text-center text-5xl">
-                {planningCount}
-              </p>
-              <p className="font-medium text-gray-600 text-lg">Planning</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      <section>
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search projects, technologies, or descriptions..."
-              value={searchFilterValue}
-              onChange={(e) =>
-                filterProjects(e.target.value, statusFilterValue, projects)
-              }
-              className="pl-10"
-            />
-          </div>
-          <Select
-            value={statusFilterValue}
-            onValueChange={(value) =>
-              filterProjects(searchFilterValue, value, projects)
-            }
+      {isInternal && (
+        <div className="flex justify-between items-center">
+          <div className="font-bold text-2xl">Projects</div>
+          <Button
+            size="default"
+            variant="outline"
+            onClick={() => setIsAddProjectFormOpen(true)}
           >
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="in progress">In Progress</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="planning">Planning</SelectItem>
-            </SelectContent>
-          </Select>
+            <PlusIcon className="size-3.5" color="black" />
+            Add
+          </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 mt-5">
-          {filteredProjects &&
-            filteredProjects.map((project, index) => {
-              return (
-                <ProjectCard
-                  key={index}
-                  project={project}
-                  openEditProjectForm={openEditProjectForm}
-                  openDeleteProjectConfirmationDialog={
-                    openDeleteProjectConfirmationDialog
+      )}
+      {!isInternal && (
+        <div className="flex flex-col items-center mt-5">
+          <h1 className="text-4xl font-bold text-gray-900 mb-6">
+            Our Projects{" "}
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 leading-relaxed">
+            Explore our complete portfolio of innovative solutions
+          </p>
+        </div>
+      )}
+      {projects && projects.length > 0 ? (
+        <div className={`w-full h-full ${isInternal ? "mt-10" : "mt-5"}`}>
+          {" "}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex flex-col items-center justify-center gap-3">
+                  <p className="font-bold text-black text-center text-5xl">
+                    {totalCount}
+                  </p>
+                  <p className="font-medium text-gray-600 text-lg">Total</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex flex-col items-center justify-center gap-3">
+                  <p className="font-bold text-green-600 text-center text-5xl">
+                    {completedCount}
+                  </p>
+                  <p className="font-medium text-gray-600 text-lg">Completed</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex flex-col items-center justify-center gap-3">
+                  <p className="font-bold text-yellow-600 text-center text-5xl">
+                    {inProgressCount}
+                  </p>
+                  <p className="font-medium text-gray-600 text-lg">
+                    In Progress
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex flex-col items-center justify-center gap-3">
+                  <p className="font-bold text-blue-600 text-center text-5xl">
+                    {planningCount}
+                  </p>
+                  <p className="font-medium text-gray-600 text-lg">Planning</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          <div>
+            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search projects, technologies, or descriptions..."
+                  value={searchFilterValue}
+                  onChange={(e) =>
+                    filterProjects(e.target.value, statusFilterValue, projects)
                   }
+                  className="pl-10"
                 />
-              );
-            })}
+              </div>
+              <Select
+                value={statusFilterValue}
+                onValueChange={(value) =>
+                  filterProjects(searchFilterValue, value, projects)
+                }
+              >
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="in progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="planning">Planning</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {filteredProjects && filteredProjects.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 mt-5">
+                {filteredProjects.map((project, index) => {
+                  return (
+                    <ProjectCard
+                      key={index}
+                      project={project}
+                      openEditProjectForm={openEditProjectForm}
+                      openDeleteProjectConfirmationDialog={
+                        openDeleteProjectConfirmationDialog
+                      }
+                      isInternal={isInternal}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex h-full w-full flex-col justify-center items-center gap-3 mt-20">
+                {" "}
+                <p className="text-xl">No Projects Found!</p>
+              </div>
+            )}
+          </div>
         </div>
-      </section>
+      ) : (
+        <div className="flex h-full w-full flex-col justify-center items-center gap-3">
+          {" "}
+          <p className="text-2xl">No Projects Found!</p>
+        </div>
+      )}
+    </div>
+  ) : (
+    <div className="flex w-full h-full flex-col justify-center items-center gap-3">
+      <Spinner key={"circle"} variant={"circle"} className="w-12 h-12" />
+      <p className="text-2xl">Loading...</p>
     </div>
   );
 };

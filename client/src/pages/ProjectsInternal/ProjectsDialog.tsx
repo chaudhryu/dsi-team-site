@@ -41,8 +41,13 @@ const ProjectsDialog: React.FC<IDialogProps> = ({
   const onClick = () => {
     setIsPerformingAction(true);
     setTimeout(() => {
-      clickAction();
-      setIsPerformingAction(false);
+      try {
+        clickAction();
+      } catch (err) {
+        console.log(err);
+      } finally {
+        setIsPerformingAction(false);
+      }
     }, 1200);
   };
 

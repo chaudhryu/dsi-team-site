@@ -18,8 +18,10 @@ export default function Home() {
       />
 
       {/* ─────────── Hero ─────────── */}
-            <div className="relative isolate overflow-hidden bg-white dark:bg-gray-900
-                     pt-14 sm:pt-20 -m-4 md:-m-6">    
+      <div
+        className="relative isolate overflow-hidden bg-white dark:bg-gray-900
+                     pt-14 sm:pt-20 -m-4 md:-m-6"
+      >
         <div
           aria-hidden="true"
           className="absolute inset-x-0 -top-40 -z-10 transform-gpu overflow-hidden blur-3xl sm:-top-80"
@@ -37,7 +39,11 @@ export default function Home() {
         <div
           className={`mx-auto flex max-w-2xl flex-col items-center px-6
                       transition-all duration-700
-                      ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
+                      ${
+                        visible
+                          ? "opacity-100 translate-y-0"
+                          : "opacity-0 translate-y-6"
+                      }`}
         >
           {/* Image (smaller, above text) */}
           <img
@@ -87,8 +93,7 @@ export default function Home() {
             }}
           />
         </div>
-           <FeatureGrid />
-
+        <FeatureGrid />
       </div>
     </>
   );

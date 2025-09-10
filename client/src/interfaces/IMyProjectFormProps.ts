@@ -9,5 +9,4 @@ export interface IMyProjectFormProps {
     projectId: number | null,
     project: IProject | null
   ) => void;
-  projects: IProject[];
 }
