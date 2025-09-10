@@ -25,8 +25,17 @@ export class Project {
   @Column()
   status: string;
 
-  @Column({ nullable: true }) // Allow this column to be nu ll
-  githubUrl: string;
+  @Column()
+  client: string;
+
+  @Column({
+    type: "text",
+    transformer: {
+      to: (value: any) => JSON.stringify(value), // array -> string
+      from: (value: string) => JSON.parse(value), // string -> array
+    },
+  })
+  repositories: Repository[];
 
   @ManyToMany(() => User, { eager: true })
   @JoinTable()
