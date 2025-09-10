@@ -21,18 +21,15 @@ export class ProjectsController {
     return this.projectsService.findAll();
   }
 
-  @Get(":id")
-  getProject(@Param("id") id: string) {
-    return this.projectsService.findOne(+id);
-  }
-
   @Post()
   createProject(@Body() createProjectDto: CreateProjectDto) {
     return this.projectsService.create(
       createProjectDto.name,
       createProjectDto.description,
       createProjectDto.status,
-      createProjectDto.githubUrl
+      createProjectDto.githubUrl,
+      createProjectDto.projectMemberBadgeNumbers,
+      createProjectDto.technologyIds
     );
   }
 

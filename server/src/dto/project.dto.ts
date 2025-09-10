@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
 } from "class-validator";
+import { User } from "src/entities";
 
 export class CreateProjectDto {
   @IsString()
@@ -19,6 +20,10 @@ export class CreateProjectDto {
 
   @IsString()
   githubUrl: string;
+
+  projectMemberBadgeNumbers: number[];
+
+  technologyIds: number[];
 }
 
 export class UpdateProjectDto {
@@ -33,4 +38,8 @@ export class UpdateProjectDto {
 
   @IsString()
   githubUrl: string;
+
+  projectMemberIds: number[];
+
+  technologyIds: number[];
 }
