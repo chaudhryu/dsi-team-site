@@ -27,6 +27,11 @@ import { IMyProjectFormProps } from "@/interfaces/IMyProjectFormProps";
 import { IProject } from "@/interfaces/IProject";
 import { setEngine } from "crypto";
 import { IRepository } from "@/interfaces/IRepository";
+import { envConfig } from "@/config/envConfig";
+import { Spinner, type SpinnerProps } from "@/components/ui/shadcn-io/spinner";
+import { ITechnology } from "@/interfaces/ITechnology";
+
+const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 
 export const ProjectForm: React.FC<IMyProjectFormProps> = ({
   isProjectFormOpen,
@@ -69,29 +74,6 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
     },
   ];
 
-  const technologies = [
-    "React",
-    "Next.js",
-    "TypeScript",
-    "JavaScript",
-    "Node.js",
-    "Python",
-    "Java",
-    "C#",
-    "Go",
-    "Rust",
-    "PostgreSQL",
-    "MongoDB",
-    "Redis",
-    "Docker",
-    "Kubernetes",
-    "AWS",
-    "Azure",
-    "GCP",
-    "Tailwind CSS",
-    "GraphQL",
-  ];
-
   const [projectName, setProjectName] = useState<string>();
   const [client, setClient] = useState<string>();
   const [projectStatus, setProjectStatus] = useState<string>();
@@ -104,35 +86,81 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
   const [selectedTeamMembers, setSelectedTeamMembers] = useState<ITeamMember[]>(
     []
   );
-  const [selectedTechnology, setSelectedTechnology] = useState<string>();
-  const [selectedTechnologies, setSelectedTechnologies] = useState<string[]>(
-    []
-  );
+  const [selectedTechnology, setSelectedTechnology] =
+    useState<ITechnology | null>(null);
+  const [selectedTechnologies, setSelectedTechnologies] = useState<
+    ITechnology[]
+  >([]);
   const [teamMembersDropdownValues, setTeamMembersDropdownValues] = useState<
     ITeamMember[]
   >([]);
-
   const [technologiesDropdownValues, setTechnologiesDropdownValues] = useState<
-    string[]
+    ITechnology[]
   >([]);
-
   const [isPerformingAction, setIsPerformingAction] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    setTeamMembersDropdownValues(teamMembers);
-    setTechnologiesDropdownValues(technologies);
-  }, []);
+  const fetchAndSetTechnologiesDropdown = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/technologies`, {
+        credentials: "include",
+      });
 
-  useEffect(() => {
-    if (project) {
-      setProjectName(project.name);
-      setRepositories(project.repositories);
-      setClient(project.client);
-      setProjectStatus(project.status);
-      setDescription(project.description);
-      setSelectedTeamMembers(project.teamMembers);
-      setSelectedTechnologies(project.technologies);
+      if (res.ok) {
+        const data = await res.json();
+        console.log(data);
+        setTechnologiesDropdownValues(data);
+      } else {
+        const text = await res.text();
+        console.error("GET /technologies failed", res.status, text);
+        setTechnologiesDropdownValues([]);
+      }
+    } catch (e) {
+      console.error("Network error /technologies:", e);
+      setTechnologiesDropdownValues([]);
     }
+  };
+
+  const fetchAndSetTeamMembersDropdownValues = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/users`, {
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setTeamMembersDropdownValues(Array.isArray(data) ? data : []);
+      } else {
+        const text = await res.text();
+        console.error("GET /users failed", res.status, text);
+        setTeamMembersDropdownValues([]);
+      }
+    } catch (e) {
+      console.error("Network error /users:", e);
+      setTeamMembersDropdownValues([]);
+    }
+  };
+
+  useEffect(() => {
+    if (isProjectFormOpen) {
+      setTimeout(() => {
+        fetchAndSetTechnologiesDropdown();
+        fetchAndSetTeamMembersDropdownValues();
+        setIsLoading(false);
+      }, 1200);
+    }
+  }, [isProjectFormOpen]);
+
+  useEffect(() => {
+    // if (project) {
+    //   setProjectName(project.name);
+    //   setRepositories(project.repositories);
+    //   setClient(project.client);
+    //   setProjectStatus(project.status);
+    //   setDescription(project.description);
+    //   setSelectedTeamMembers(project.teamMembers);
+    //   setSelectedTechnologies(project.technologies);
+    // }
   }, [project]);
 
   const addTeamMember = () => {
@@ -160,20 +188,22 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
   };
 
   const addTechnology = () => {
-    setSelectedTechnologies((prevSelectedTechnologies) =>
-      selectedTechnology
-        ? [...prevSelectedTechnologies, selectedTechnology]
-        : prevSelectedTechnologies
-    );
-
-    setTechnologiesDropdownValues((prevTechnologiesDropDownValues) => {
-      return prevTechnologiesDropDownValues.filter(
-        (prevTechnologiesDropdownValue) =>
-          prevTechnologiesDropdownValue !== selectedTechnology
+    if (selectedTechnology) {
+      setSelectedTechnologies((prevSelectedTechnologies) =>
+        selectedTechnology
+          ? [...prevSelectedTechnologies, selectedTechnology]
+          : prevSelectedTechnologies
       );
-    });
 
-    setSelectedTechnology("");
+      setTechnologiesDropdownValues((prevTechnologiesDropDownValues) => {
+        return prevTechnologiesDropDownValues.filter(
+          (prevTechnologiesDropdownValue) =>
+            prevTechnologiesDropdownValue.id !== selectedTechnology?.id
+        );
+      });
+
+      setSelectedTechnology(null);
+    }
   };
 
   const addRepository = () => {
@@ -198,6 +228,7 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
     setSelectedTechnologies([]);
     setTeamMembersDropdownValues(teamMembers);
     setTechnologiesDropdownValues(technologiesDropdownValues);
+    setIsLoading(true);
   };
 
   const performAction = () => {
@@ -272,14 +303,20 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
     );
   };
 
-  const removeSelectedTechnology = (selectedTechnologyForRemoval: string) => {
-    setSelectedTechnologies((prevSelectedTechnologies) =>
-      prevSelectedTechnologies.filter(
-        (prevSelectedTechnology) =>
-          prevSelectedTechnology !== selectedTechnologyForRemoval
-      )
-    );
+  const removeSelectedTechnology = (
+    selectedTechnologyForRemoval: ITechnology
+  ) => {
+    if (selectedTechnologyForRemoval) {
+      setSelectedTechnologies((prevSelectedTechnologies) =>
+        prevSelectedTechnologies.filter(
+          (prevSelectedTechnology) =>
+            prevSelectedTechnology.id !== selectedTechnologyForRemoval.id
+        )
+      );
+    }
   };
+
+  const findAndSetSelectedTechnology = () => {};
 
   const removeRepository = (indexToRemove: number) => {
     setRepositories((prevRepositories) =>
@@ -292,220 +329,251 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
       open={isProjectFormOpen}
       onOpenChange={clearAllFieldsAndCloseProjectForm}
     >
-      <DialogContent className="w-full max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{project ? "Edit Project" : "Add Project"}</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-row gap-10 justify-between">
-          <div className="">
-            <Label htmlFor="name-1">Project Name</Label>
-            <Input
-              id="name-1"
-              name="name"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-            />
-          </div>
-          <div className="">
-            <Label htmlFor="username-1">Client</Label>
-            <Input
-              id="username-1"
-              name="username"
-              value={client}
-              onChange={(e) => setClient(e.target.value)}
-            />
+      {!isLoading ? (
+        <DialogContent className="w-full max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {project ? "Edit Project" : "Add Project"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-row gap-10 justify-between">
+            <div className="">
+              <Label htmlFor="name-1">Project Name</Label>
+              <Input
+                id="name-1"
+                name="name"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+              />
+            </div>
+            <div className="">
+              <Label htmlFor="username-1">Client</Label>
+              <Input
+                id="username-1"
+                name="username"
+                value={client}
+                onChange={(e) => setClient(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="username-1">Project Status</Label>
+              <Select
+                value={projectStatus}
+                onValueChange={(value) => setProjectStatus(value)}
+              >
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="in progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="planning">Planning</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div>
-            <Label htmlFor="username-1">Project Status</Label>
-            <Select
-              value={projectStatus}
-              onValueChange={(value) => setProjectStatus(value)}
-            >
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="in progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="planning">Planning</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="username-1">Description</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            ></Textarea>
           </div>
-        </div>
-        <div>
-          <Label htmlFor="username-1">Description</Label>
-          <Textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          ></Textarea>
-        </div>
-        <div>
-          <Label htmlFor="username-1">Repositories</Label>
-          <div className="flex gap-3">
-            <Input
-              onChange={(e) => setRepositoryLabel(e.target.value)}
-              value={repositoryLabel}
-              className="w-[30%]"
-              placeholder="Repository Label"
-            />
-            <Input
-              onChange={(e) => setRepositoryUrl(e.target.value)}
-              value={repositoryUrl}
-              className="w-[60%]"
-              placeholder="Repository Url"
-            />
-            <Button
-              type="button"
-              onClick={addRepository}
-              disabled={!repositoryLabel || !repositoryUrl}
-              className="w-[10%]"
-            >
-              Add
-            </Button>
-          </div>
-        </div>
-        {repositories.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {repositories.map((repository: IRepository, index: number) => {
-              return (
-                <Button variant="outline" size="sm">
-                  <a
-                    href={repository.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex justify-center items-center"
-                  >
-                    <Github className="h-4 w-4 mr-1" />
-                    <span className="mr-2">{repository.label}</span>
-                  </a>
-                  <div
-                    onClick={() => removeRepository(index)}
-                    className="flex justify-center items-center"
-                  >
-                    <X className="h-3 w-3 cursor-pointer" />
-                  </div>
-                </Button>
-              );
-            })}
-          </div>
-        )}
-        <div>
-          <Label htmlFor="username-1">Team Members</Label>
-          <div className="flex gap-2">
-            <Select
-              value={selectedTeamMemberBadgeNumber}
-              onValueChange={(value) => setSelectedTeamMemberBadgeNumber(value)}
-            >
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Select Team Members" />
-              </SelectTrigger>
-              <SelectContent>
-                {teamMembersDropdownValues.map((teamMember) => (
-                  <SelectItem
-                    value={teamMember.badgeNumber}
-                    key={teamMember.badgeNumber}
-                  >
-                    {teamMember.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              type="button"
-              onClick={addTeamMember}
-              disabled={!selectedTeamMemberBadgeNumber}
-            >
-              Add
-            </Button>
-          </div>
-          {selectedTeamMembers.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {selectedTeamMembers.map((selectedTeamMember: ITeamMember) => (
-                <Badge
-                  key={selectedTeamMember.badgeNumber}
-                  variant="secondary"
-                  className="flex items-center gap-1"
-                >
-                  {`${selectedTeamMember.name} (${selectedTeamMember.badgeNumber})`}
-                  <div
-                    onClick={() =>
-                      removeSelectedTeamMember(selectedTeamMember.badgeNumber)
-                    }
-                  >
-                    <X className="h-3 w-3 cursor-pointer" />
-                  </div>
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-        <div>
-          <Label htmlFor="username-1">Technologies</Label>
-          <div className="flex gap-2">
-            <Select
-              value={selectedTechnology}
-              onValueChange={(value) => setSelectedTechnology(value)}
-            >
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Select Technologies" />
-              </SelectTrigger>
-              <SelectContent>
-                {technologiesDropdownValues.map((technology) => (
-                  <SelectItem value={technology} key={technology}>
-                    {technology}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              type="button"
-              onClick={addTechnology}
-              disabled={!selectedTechnology}
-            >
-              Add
-            </Button>
-          </div>
-          {selectedTechnologies.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {selectedTechnologies.map((selectedTechnology) => (
-                <Badge
-                  key={selectedTechnology}
-                  variant="secondary"
-                  className="flex items-center gap-1"
-                >
-                  {selectedTechnology}
-                  <div>
-                    <X
-                      className="h-3 w-3 cursor-pointer"
-                      onClick={() =>
-                        removeSelectedTechnology(selectedTechnology)
-                      }
-                    />
-                  </div>
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          {!isPerformingAction ? (
-            <div>
+          <div>
+            <Label htmlFor="username-1">Repositories</Label>
+            <div className="flex gap-3">
+              <Input
+                onChange={(e) => setRepositoryLabel(e.target.value)}
+                value={repositoryLabel}
+                className="w-[30%]"
+                placeholder="Repository Label"
+              />
+              <Input
+                onChange={(e) => setRepositoryUrl(e.target.value)}
+                value={repositoryUrl}
+                className="w-[60%]"
+                placeholder="Repository Url"
+              />
               <Button
-                variant="outline"
-                onClick={closeProjectForm}
-                className="mr-2"
+                type="button"
+                onClick={addRepository}
+                disabled={!repositoryLabel || !repositoryUrl}
+                className="w-[10%]"
               >
-                Cancel
-              </Button>
-              <Button type="submit" onClick={performAction}>
-                {project ? "Update" : "Add"}
+                Add
               </Button>
             </div>
-          ) : (
-            <div>{project ? "Updating..." : "Adding..."}</div>
+          </div>
+          {repositories.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {repositories.map((repository: IRepository, index: number) => {
+                return (
+                  <Button variant="outline" size="sm">
+                    <a
+                      href={repository.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex justify-center items-center"
+                    >
+                      <Github className="h-4 w-4 mr-1" />
+                      <span className="mr-2">{repository.label}</span>
+                    </a>
+                    <div
+                      onClick={() => removeRepository(index)}
+                      className="flex justify-center items-center"
+                    >
+                      <X className="h-3 w-3 cursor-pointer" />
+                    </div>
+                  </Button>
+                );
+              })}
+            </div>
           )}
-        </DialogFooter>
-      </DialogContent>
+          <div>
+            <Label htmlFor="username-1">Team Members</Label>
+            <div className="flex gap-2">
+              <Select
+                value={selectedTeamMemberBadgeNumber}
+                onValueChange={(value) =>
+                  setSelectedTeamMemberBadgeNumber(value)
+                }
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select Team Members" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teamMembersDropdownValues.map((teamMember) => (
+                    <SelectItem
+                      value={teamMember.badgeNumber}
+                      key={teamMember.badgeNumber}
+                    >
+                      {teamMember.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                onClick={addTeamMember}
+                disabled={!selectedTeamMemberBadgeNumber}
+              >
+                Add
+              </Button>
+            </div>
+            {selectedTeamMembers.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {selectedTeamMembers.map((selectedTeamMember: ITeamMember) => (
+                  <Badge
+                    key={selectedTeamMember.badgeNumber}
+                    variant="secondary"
+                    className="flex items-center gap-1"
+                  >
+                    {`${selectedTeamMember.name} (${selectedTeamMember.badgeNumber})`}
+                    <div
+                      onClick={() =>
+                        removeSelectedTeamMember(selectedTeamMember.badgeNumber)
+                      }
+                    >
+                      <X className="h-3 w-3 cursor-pointer" />
+                    </div>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="username-1">Technologies</Label>
+            <div className="flex gap-2">
+              <Select
+                value={selectedTechnology?.id}
+                onValueChange={(value) =>
+                  setSelectedTechnology({
+                    id: value,
+                    name:
+                      technologiesDropdownValues.find(
+                        (technologiesDropdownValue) =>
+                          technologiesDropdownValue.id === value
+                      )?.name ?? "",
+                  })
+                }
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select Technologies" />
+                </SelectTrigger>
+                <SelectContent>
+                  {technologiesDropdownValues &&
+                    technologiesDropdownValues.map((technology) => (
+                      <SelectItem key={technology.id} value={technology.id}>
+                        {technology.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                onClick={addTechnology}
+                disabled={!selectedTechnology}
+              >
+                Add
+              </Button>
+            </div>
+            {selectedTechnologies && selectedTechnologies.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {selectedTechnologies.map((selectedTechnology) => (
+                  <Badge
+                    key={selectedTechnology.id}
+                    variant="secondary"
+                    className="flex items-center gap-1"
+                  >
+                    {selectedTechnology.name}
+                    <div>
+                      <X
+                        className="h-3 w-3 cursor-pointer"
+                        onClick={() =>
+                          removeSelectedTechnology(selectedTechnology)
+                        }
+                      />
+                    </div>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            {!isPerformingAction ? (
+              <div>
+                <Button
+                  variant="outline"
+                  onClick={clearAllFieldsAndCloseProjectForm}
+                  className="mr-2"
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" onClick={performAction}>
+                  {project ? "Update" : "Add"}
+                </Button>
+              </div>
+            ) : (
+              <div>{project ? "Updating..." : "Adding..."}</div>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      ) : (
+        <DialogContent>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "10px",
+            }}
+          >
+            <Spinner key={"circle"} variant={"circle"} />
+            <p>Loading...</p>
+          </div>
+        </DialogContent>
+      )}
     </Dialog>
   );
 };

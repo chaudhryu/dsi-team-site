@@ -20,6 +20,9 @@ import { ProjectsService } from "./services/projects.service";
 
 /* ⬇️ ADD THIS import */
 import { AiModule } from "./ai/ai.module";
+import { Technology } from "./entities/technlogy.entity";
+import { TechnologiesController } from "./controllers/technologies.controller";
+import { TechnologiesService } from "./services/technologies.service";
 
 @Module({
   imports: [
@@ -40,6 +43,7 @@ import { AiModule } from "./ai/ai.module";
           User,
           Application,
           Project,
+          Technology,
           Server,
           Database,
           DatabaseLogin,
@@ -78,6 +82,7 @@ import { AiModule } from "./ai/ai.module";
       User,
       Application,
       Project,
+      Technology,
       Server,
       Database,
       DatabaseLogin,
@@ -90,7 +95,13 @@ import { AiModule } from "./ai/ai.module";
     UsersController,
     WeeklyAccomplishmentsController,
     ProjectsController,
+    TechnologiesController,
   ],
-  providers: [UsersService, WeeklyAccomplishmentService, ProjectsService],
+  providers: [
+    UsersService,
+    WeeklyAccomplishmentService,
+    ProjectsService,
+    TechnologiesService,
+  ],
 })
 export class AppModule {}

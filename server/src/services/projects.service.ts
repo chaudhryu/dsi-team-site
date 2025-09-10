@@ -1,30 +1,82 @@
-import { Injectable, Logger, OnApplicationBootstrap } from "@nestjs/common";
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnApplicationBootstrap,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
+import { In, Repository } from "typeorm";
 import { Project } from "../entities/project.entity";
 import { CreateProjectDto } from "src/dto/project.dto";
 import { IsTimeZone } from "class-validator";
+import { User } from "src/entities";
+import { Technology } from "src/entities/technlogy.entity";
 
 @Injectable()
 export class ProjectsService {
   constructor(
-    @InjectRepository(Project) private projectRepository: Repository<Project>
+    @InjectRepository(Project) private projectRepository: Repository<Project>,
+    @InjectRepository(User) private userRepository: Repository<User>,
+    @InjectRepository(Technology)
+    private technologyRepository: Repository<Technology>
   ) {}
 
   findAll() {
-    return this.projectRepository.find();
+    return this.projectRepository.find({
+      relations: { projectMembers: true, technologies: true },
+    });
   }
 
-  findOne(id: number) {
-    return this.projectRepository.findOneBy({ id });
-  }
+  // findOne(id: number) {
+  //   return this.projectRepository.findOne({ where: {id} relations: {user: true}  });
+  // }
 
-  create(name: string, description: string, status: string, githubUrl: string) {
+  async create(
+    name: string,
+    description: string,
+    status: string,
+    githubUrl: string,
+    projectMemberBadgeNumbers: number[],
+    technologyIds: number[]
+  ) {
+    const projectMembers: User[] = [];
+    const technologies: Technology[] = [];
+
+    for (const projectMemberBadgeNumber of projectMemberBadgeNumbers) {
+      const projectMemberResult = await this.userRepository.findOneBy({
+        badge: projectMemberBadgeNumber,
+      });
+
+      if (projectMemberResult) {
+        projectMembers.push(projectMemberResult);
+      } else {
+        throw new NotFoundException(
+          `Project Member with badge ${projectMemberBadgeNumber} not found`
+        );
+      }
+    }
+
+    for (const technologyId of technologyIds) {
+      const technologyResult = await this.technologyRepository.findOneBy({
+        id: technologyId,
+      });
+
+      if (technologyResult) {
+        technologies.push(technologyResult);
+      } else {
+        throw new NotFoundException(
+          `Technology with id ${technologyId} not found`
+        );
+      }
+    }
+
     const project = new Project();
     project.name = name;
     project.description = description;
     project.status = status;
     project.githubUrl = githubUrl;
+    project.projectMembers = projectMembers;
+    project.technologies = technologies;
     return this.projectRepository.save(project);
   }
 
@@ -47,7 +99,7 @@ export class ProjectsService {
     return null;
   }
 
-  delete(id: number) {
+  async delete(id: number) {
     return this.projectRepository.delete(id);
   }
 }
