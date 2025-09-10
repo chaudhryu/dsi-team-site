@@ -1,14 +1,14 @@
 import { IRepository } from "./IRepository";
-import { ITeamMember } from "./ITeamMember";
+import { IProjectMember } from "./IProjectMember";
 import { ITechnology } from "./ITechnology";
 
 export interface IProject {
-  id: number;
+  id: number | null | undefined;
   name: string;
   description: string;
   status: string;
   technologies: ITechnology[];
-  teamMembers: ITeamMember[];
+  projectMembers: IProjectMember[];
   repositories: IRepository[];
   client: string;
 }

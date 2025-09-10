@@ -54,7 +54,7 @@ const navItems: NavItem[] = [
   {
     name: "Projects",
     icon: <ListIcon />,
-    path: "/projects",
+    path: "/projects-internal",
   },
   {
     name: "Databases",
