@@ -22,21 +22,30 @@ export class Project {
   @Column({ type: "varchar", length: "MAX" })
   description: string;
 
-  @Column({ type: "varchar", length: 25 })
+  @Column({ type: "varchar", length: 50 })
   status: string;
 
-  @Column({ type: "varchar", length: 75 })
+  @Column({ type: "varchar", length: 125 })
   client: string;
 
   @Column({
     type: "varchar",
-    length: 150,
+    length: "MAX",
     transformer: {
       to: (value: any) => JSON.stringify(value), // array -> string
       from: (value: string) => JSON.parse(value), // string -> array
     },
   })
   repositories: Repository[];
+
+  @Column({ type: "varchar", length: 50 })
+  databaseServerName: string;
+
+  @Column({ type: "varchar", length: 50 })
+  databaseUserName: string;
+
+  @Column({ type: "varchar", length: 225 })
+  databasePassword: string;
 
   @ManyToMany(() => User, { eager: true })
   @JoinTable()

@@ -38,6 +38,9 @@ export class ProjectsService {
     status: string,
     client: string,
     repositories: Repos[],
+    databaseServerName: string,
+    databaseUserName: string,
+    databasePassword: string,
     projectMemberBadgeNumbers: number[],
     technologyIds: number[]
   ) {
@@ -78,8 +81,12 @@ export class ProjectsService {
     project.status = status;
     project.client = client;
     project.repositories = repositories;
+    project.databaseServerName = databaseServerName;
+    project.databaseUserName = databaseUserName;
+    project.databasePassword = databasePassword;
     project.projectMembers = projectMembers;
     project.technologies = technologies;
+
     return this.projectRepository.save(project);
   }
 
@@ -90,6 +97,9 @@ export class ProjectsService {
     status: string,
     client: string,
     repositories: Repos[],
+    databaseServerName: string,
+    databaseUserName: string,
+    databasePassword: string,
     projectMemberBadgeNumbers: number[],
     technologyIds: number[]
   ) {
@@ -136,6 +146,9 @@ export class ProjectsService {
       project.status = status;
       project.client = client;
       project.repositories = repositories;
+      project.databaseServerName = databaseServerName;
+      project.databaseUserName = databaseUserName;
+      project.databasePassword = databasePassword;
       project.projectMembers = projectMembers;
       project.technologies = technologies;
       return this.projectRepository.save(project);
