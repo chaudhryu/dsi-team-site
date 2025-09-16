@@ -29,6 +29,9 @@ export class ProjectsController {
       createProjectDto.status,
       createProjectDto.client,
       createProjectDto.repositories,
+      createProjectDto.databaseServerName,
+      createProjectDto.databaseUserName,
+      createProjectDto.databasePassword,
       createProjectDto.projectMemberBadgeNumbers,
       createProjectDto.technologyIds
     );
@@ -46,6 +49,9 @@ export class ProjectsController {
       updateProjectDto.status,
       updateProjectDto.client,
       updateProjectDto.repositories,
+      updateProjectDto.databaseServerName,
+      updateProjectDto.databaseUserName,
+      updateProjectDto.databasePassword,
       updateProjectDto.projectMemberBadgeNumbers,
       updateProjectDto.technologyIds
     );

@@ -30,6 +30,15 @@ export class CreateProjectDto {
   @Type(() => Repository)
   repositories: Repository[];
 
+  @IsString()
+  databaseServerName: string;
+
+  @IsString()
+  databaseUserName: string;
+
+  @IsString()
+  databasePassword: string;
+
   @IsArray()
   @IsOptional()
   projectMemberBadgeNumbers: number[];
@@ -57,6 +66,15 @@ export class UpdateProjectDto {
   @ValidateNested({ each: true })
   @Type(() => Repository)
   repositories: Repository[];
+
+  @IsString()
+  databaseServerName: string;
+
+  @IsString()
+  databaseUserName: string;
+
+  @IsString()
+  databasePassword: string;
 
   @IsArray()
   @IsOptional()
