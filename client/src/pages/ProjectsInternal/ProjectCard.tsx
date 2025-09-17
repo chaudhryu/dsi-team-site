@@ -1,11 +1,10 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -15,18 +14,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { IProject } from "@/interfaces/IProject";
 import { IProjectCardProps } from "@/interfaces/IProjectCardProps";
 import {
-  CalendarDays,
-  Ellipsis,
+
   EllipsisVertical,
   Github,
   Pencil,
   Trash,
 } from "lucide-react";
-import { el } from "node_modules/@fullcalendar/core/internal-common";
-import React, { useState } from "react";
+import React from "react";
 import { IRepository } from "@/interfaces/IRepository";
 import { getUserImage } from "./UserImageUtil";
 

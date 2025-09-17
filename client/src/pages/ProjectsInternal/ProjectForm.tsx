@@ -1,18 +1,15 @@
 import React, { useEffect, useState } from "react";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import Label from "@/components/form/Label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Github, PlusIcon, X } from "lucide-react";
+import { Github, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -24,10 +21,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { IMyProjectFormProps } from "@/interfaces/IMyProjectFormProps";
 import { IProject } from "@/interfaces/IProject";
-import { setEngine } from "crypto";
 import { IRepository } from "@/interfaces/IRepository";
 import { envConfig } from "@/config/envConfig";
-import { Spinner, type SpinnerProps } from "@/components/ui/shadcn-io/spinner";
+import { Spinner } from "@/components/ui/shadcn-io/spinner";
 import { ITechnology } from "@/interfaces/ITechnology";
 import { IProjectMember } from "@/interfaces/IProjectMember";
 
