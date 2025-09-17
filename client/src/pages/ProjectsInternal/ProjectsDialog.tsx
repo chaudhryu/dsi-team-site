@@ -1,20 +1,16 @@
 import React, { useState } from "react";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 
 import { Button } from "@/components/ui/button";
-import Label from "@/components/form/Label";
-import { Input } from "@/components/ui/input";
+
 import { IDialogProps } from "@/interfaces/IDialogProps";
-import { Divide } from "lucide-react";
 
 const ProjectsDialog: React.FC<IDialogProps> = ({
   isDialogOpen,
