@@ -20,6 +20,7 @@ async function bootstrap() {
     NODE_ENV: cfg.get("NODE_ENV"),
     PORT: cfg.get("PORT"),
     DBTYPE: cfg.get("DB_TYPE"),
+    DBSYNC: cfg.get("DB_SYNC"),
     OPENAI_API_KEY: mask(cfg.get("OPENAI_API_KEY")),
     GEMINI_API_KEY: mask(cfg.get("GEMINI_API_KEY")),
     OPENAI_BASE_URL: cfg.get("OPENAI_BASE_URL") ? "SET" : "MISSING",
