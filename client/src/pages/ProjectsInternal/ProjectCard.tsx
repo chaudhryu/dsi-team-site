@@ -107,7 +107,7 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
         <div className="mb-4">
           <p className="text-sm font-medium text-gray-700 mb-2">Technologies</p>
           <div className="flex flex-wrap gap-1">
-            {project.technologies.map((technology) => (
+            {project.technologies?.map((technology) => (
               <Badge
                 key={technology?.id}
                 variant="secondary"
@@ -123,7 +123,7 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
         <div className="mb-4">
           <p className="text-sm font-medium text-gray-700 mb-2">Team</p>
           <div className="flex -space-x-2">
-            {project.projectMembers.map((projectMember) => (
+            {project.projectMembers?.map((projectMember) => (
               <Avatar
                 key={projectMember.badge}
                 className="h-8 w-8 border-2 border-white"
@@ -147,7 +147,7 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
 
         {isInternal && (
           <div className="flex flex-wrap gap-2">
-            {project.repositories.map((repository: IRepository, index) => {
+            {project.repositories?.map((repository: IRepository, index) => {
               return (
                 <Button variant="outline" size="sm" key={index}>
                   <a

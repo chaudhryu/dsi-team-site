@@ -10,6 +10,8 @@ import {
 import { User } from "./user.entity";
 import { Technology } from "./technlogy.entity";
 import { Repository } from "../objects/repository";
+import { DatabasePassword } from "src/objects/databasePassword";
+import { decrypt, encrypt } from "src/utils/encryptAndDecryptPasswordsUtil";
 
 @Entity()
 export class Project {
@@ -38,14 +40,21 @@ export class Project {
   })
   repositories: Repository[];
 
-  @Column({ type: "varchar", length: 50 })
-  databaseServerName: string;
+  // @Column({ type: "varchar", length: 50 })
+  // databaseServerName: string;
 
-  @Column({ type: "varchar", length: 50 })
-  databaseUserName: string;
+  // @Column({ type: "varchar", length: 50 })
+  // databaseUserName: string;
 
-  @Column({ type: "varchar", length: 225 })
-  databasePassword: string;
+  // @Column({
+  //   type: "varchar",
+  //   length: 512,
+  //   transformer: {
+  //     to: (value: any) => JSON.stringify(encrypt(value)), // password -> encrypted object -> encrypted object string
+  //     from: (value: string) => decrypt(JSON.parse(value)), // encrypted object string -> encrypted object -> password
+  //   },
+  // })
+  // databasePassword: string;
 
   @ManyToMany(() => User, { eager: true })
   @JoinTable()
