@@ -30,6 +30,8 @@ import { envConfig } from "@/config/envConfig";
 import { Spinner, type SpinnerProps } from "@/components/ui/shadcn-io/spinner";
 import { ITechnology } from "@/interfaces/ITechnology";
 import { IProjectMember } from "@/interfaces/IProjectMember";
+import { Plus } from "lucide-react";
+import bcrypt from "bcrypt";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 
@@ -40,19 +42,18 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
   handleProjectsCache,
 }) => {
   const [name, setName] = useState<string>();
-  const [client, setClient] = useState<string>();
+  const [client, setClient] = useState<string | null | undefined>();
   const [status, setStatus] = useState<string>();
   const [description, setDescription] = useState<string>();
   const [repositories, setRepositories] = useState<IRepository[]>([]);
   const [repositoryLabel, setRepositoryLabel] = useState<string>();
   const [repositoryUrl, setRepositoryUrl] = useState<string>();
   const [selectedProjectMember, setSelectedProjectMember] =
-    useState<IProjectMember | null>();
+    useState<IProjectMember>();
   const [selectedProjectMembers, setSelectedProjectMembers] = useState<
     IProjectMember[]
   >([]);
-  const [selectedTechnology, setSelectedTechnology] =
-    useState<ITechnology | null>();
+  const [selectedTechnology, setSelectedTechnology] = useState<ITechnology>();
   const [selectedTechnologies, setSelectedTechnologies] = useState<
     ITechnology[]
   >([]);
@@ -63,6 +64,15 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
   >([]);
   const [isPerformingAction, setIsPerformingAction] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [databaseServerName, setDatabaseServerName] = useState<
+    string | null | undefined
+  >();
+  const [databaseUserName, setDatabaseUserName] = useState<
+    string | null | undefined
+  >();
+  const [databasePassword, setDatabasePassword] = useState<
+    string | null | undefined
+  >();
 
   const fetchAndSetTechnologiesDropdown = async () => {
     try {
@@ -114,12 +124,12 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
       }, 1200);
       if (project) {
         setName(project.name);
-        setRepositories(project.repositories);
+        setRepositories(project.repositories ?? []);
         setClient(project.client);
         setStatus(project.status);
         setDescription(project.description);
-        setSelectedProjectMembers(project.projectMembers);
-        setSelectedTechnologies(project.technologies);
+        setSelectedProjectMembers(project.projectMembers ?? []);
+        setSelectedTechnologies(project.technologies ?? []);
       }
     }
   }, [isProjectFormOpen, project]);
@@ -202,15 +212,7 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
 
   const addProject = async () => {
     try {
-      if (
-        name &&
-        client &&
-        status &&
-        description &&
-        repositories &&
-        selectedProjectMembers &&
-        selectedTechnologies
-      ) {
+      if (name && status && description) {
         const selectedTechnologyIds = selectedTechnologies.map(
           (selectedTechnology) => selectedTechnology.id
         );
@@ -230,6 +232,9 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
             technologyIds: selectedTechnologyIds,
             projectMemberBadgeNumbers: selectedProjectMemberIds,
             repositories: repositories,
+            // databaseServerName: databaseServerName,
+            // databaseUserName: databaseUserName,
+            // databasePassword: databasePassword,
             client: client,
           }),
         });
@@ -251,16 +256,7 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
 
   const updateProject = async () => {
     try {
-      if (
-        project?.id &&
-        name &&
-        client &&
-        status &&
-        description &&
-        repositories &&
-        selectedProjectMembers &&
-        selectedTechnologies
-      ) {
+      if (project?.id && name && status && description) {
         const selectedTechnologyIds = selectedTechnologies.map(
           (selectedTechnology) => selectedTechnology.id
         );
@@ -280,6 +276,8 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
             technologyIds: selectedTechnologyIds,
             projectMemberBadgeNumbers: selectedProjectMemberIds,
             repositories: repositories,
+            // databaseServerName: databaseServerName,
+            // databaseUserName: databaseUserName,
             client: client,
           }),
         });
@@ -291,6 +289,9 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
           status: status,
           technologies: selectedTechnologies,
           projectMembers: selectedProjectMembers,
+          // databaseServerName: databaseServerName,
+          // databaseUserName: databaseUserName,
+          // databasePassword: databasePassword,
           repositories: repositories,
           client: client,
         };
@@ -375,7 +376,7 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
               {project ? "Edit Project" : "Add Project"}
             </DialogTitle>
           </DialogHeader>
-          <div className="flex flex-row gap-10 justify-between">
+          <div className="flex flex-row gap-5 justify-between">
             <div className="">
               <Label htmlFor="name-1">Project Name</Label>
               <Input
@@ -386,11 +387,9 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
               />
             </div>
             <div className="">
-              <Label htmlFor="username-1">Client</Label>
+              <Label>Client</Label>
               <Input
-                id="username-1"
-                name="username"
-                value={client}
+                value={client ?? ""}
                 onChange={(e) => setClient(e.target.value)}
               />
             </div>
@@ -411,14 +410,16 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
               </Select>
             </div>
           </div>
-          <div>
-            <Label htmlFor="username-1">Description</Label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            ></Textarea>
+          <div className="mt-2">
+            <div>
+              <Label htmlFor="username-1">Description</Label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              ></Textarea>
+            </div>
           </div>
-          <div>
+          <div className="mt-2">
             <Label htmlFor="username-1">Repositories</Label>
             <div className="flex gap-3">
               <Input
@@ -439,12 +440,12 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
                 disabled={!repositoryLabel || !repositoryUrl}
                 className="w-[10%]"
               >
-                Add
+                <Plus />
               </Button>
             </div>
           </div>
           {repositories.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mt-2">
               {repositories.map((repository: IRepository, index: number) => {
                 return (
                   <Button variant="outline" size="sm">
@@ -468,45 +469,69 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
               })}
             </div>
           )}
-          <div>
+          {/* <div className="mt-2">
+            <Label>Database Information</Label>
+            <div className="flex flex-row gap-5 justify-between">
+              <Input
+                placeholder="Database Server Name"
+                value={databaseServerName ?? ""}
+                onChange={(e) => setDatabaseServerName(e.target.value)}
+              />
+              <Input
+                placeholder="Database User Name"
+                value={databaseUserName ?? ""}
+                onChange={(e) => setDatabaseUserName(e.target.value)}
+              />
+              <Input
+                placeholder="Database Password"
+                value={databasePassword ?? ""}
+                onChange={(e) => setDatabasePassword(e.target.value)}
+              />
+            </div>
+          </div> */}
+          <div className="mt-2">
             <Label htmlFor="username-1">Project Members</Label>
-            <div className="flex gap-2">
-              <Select
-                value={selectedProjectMember?.badge}
-                onValueChange={(value) => {
-                  const projectMemberObject = projectMembersDropdownValues.find(
-                    (projectMembersDropdownValue) =>
-                      projectMembersDropdownValue.badge === value
-                  );
-                  setSelectedProjectMember(() => {
-                    if (projectMemberObject) {
-                      return projectMemberObject;
-                    } else {
-                      return undefined;
-                    }
-                  });
-                }}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Select Project Members" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projectMembersDropdownValues.map((projectMember) => (
-                    <SelectItem
-                      value={projectMember.badge}
-                      key={projectMember.badge}
-                    >
-                      {`${projectMember.firstName} ${projectMember.lastName} (${projectMember.badge})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex gap-3">
+              <div className="w-[90%]">
+                <Select
+                  value={selectedProjectMember?.badge}
+                  onValueChange={(value) => {
+                    const projectMemberObject =
+                      projectMembersDropdownValues.find(
+                        (projectMembersDropdownValue) =>
+                          projectMembersDropdownValue.badge === value
+                      );
+                    setSelectedProjectMember(() => {
+                      if (projectMemberObject) {
+                        return projectMemberObject;
+                      } else {
+                        return undefined;
+                      }
+                    });
+                  }}
+                >
+                  <SelectTrigger className="flex-1 w-[100%]">
+                    <SelectValue placeholder="Select Project Members" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projectMembersDropdownValues.map((projectMember) => (
+                      <SelectItem
+                        value={projectMember.badge}
+                        key={projectMember.badge}
+                      >
+                        {`${projectMember.firstName} ${projectMember.lastName} (${projectMember.badge})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Button
                 type="button"
                 onClick={addProjectMember}
                 disabled={!selectedProjectMember}
+                className="w-[10%]"
               >
-                Add
+                <Plus />
               </Button>
             </div>
             {selectedProjectMembers.length > 0 && (
@@ -532,40 +557,43 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
               </div>
             )}
           </div>
-          <div>
-            <Label htmlFor="username-1">Technologies</Label>
-            <div className="flex gap-2">
-              <Select
-                value={selectedTechnology?.id}
-                onValueChange={(value) =>
-                  setSelectedTechnology({
-                    id: value,
-                    name:
-                      technologiesDropdownValues.find(
-                        (technologiesDropdownValue) =>
-                          technologiesDropdownValue.id === value
-                      )?.name ?? "",
-                  })
-                }
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Select Technologies" />
-                </SelectTrigger>
-                <SelectContent>
-                  {technologiesDropdownValues &&
-                    technologiesDropdownValues.map((technology) => (
-                      <SelectItem key={technology.id} value={technology.id}>
-                        {technology.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+          <div className="mt-2">
+            <Label>Technologies</Label>
+            <div className="flex gap-3">
+              <div className="w-[90%]">
+                <Select
+                  value={selectedTechnology?.id}
+                  onValueChange={(value) =>
+                    setSelectedTechnology({
+                      id: value,
+                      name:
+                        technologiesDropdownValues.find(
+                          (technologiesDropdownValue) =>
+                            technologiesDropdownValue.id === value
+                        )?.name ?? "",
+                    })
+                  }
+                >
+                  <SelectTrigger className="flex-1 w-[100%]">
+                    <SelectValue placeholder="Select Technologies" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {technologiesDropdownValues &&
+                      technologiesDropdownValues.map((technology) => (
+                        <SelectItem key={technology.id} value={technology.id}>
+                          {technology.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Button
                 type="button"
                 onClick={addTechnology}
                 disabled={!selectedTechnology}
+                className="w-[10%]"
               >
-                Add
+                <Plus />
               </Button>
             </div>
             {selectedTechnologies && selectedTechnologies.length > 0 && (

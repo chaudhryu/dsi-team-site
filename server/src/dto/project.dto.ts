@@ -22,6 +22,7 @@ export class CreateProjectDto {
   status: string; // 'YYYY-MM-DD'
 
   @IsString()
+  @IsOptional()
   client: string; // 'YYYY-MM-DD'
 
   @IsArray()
@@ -30,20 +31,25 @@ export class CreateProjectDto {
   @Type(() => Repository)
   repositories: Repository[];
 
-  @IsString()
-  databaseServerName: string;
+  // @IsString()
+  // @IsOptional()
+  // databaseServerName: string;
 
-  @IsString()
-  databaseUserName: string;
+  // @IsString()
+  // @IsOptional()
+  // databaseUserName: string;
 
-  @IsString()
-  databasePassword: string;
+  // @IsString()
+  // @IsOptional()
+  // databasePassword: string;
 
   @IsArray()
+  @IsOptional()
   @IsOptional()
   projectMemberBadgeNumbers: number[];
 
   @IsArray()
+  @IsOptional()
   @IsOptional()
   technologyIds: number[];
 }
@@ -59,6 +65,7 @@ export class UpdateProjectDto {
   status: string; // 'YYYY-MM-DD'
 
   @IsString()
+  @IsOptional()
   client: string; // 'YYYY-MM-DD'
 
   @IsArray()
@@ -67,14 +74,17 @@ export class UpdateProjectDto {
   @Type(() => Repository)
   repositories: Repository[];
 
-  @IsString()
-  databaseServerName: string;
+  // @IsString()
+  // @IsOptional()
+  // databaseServerName: string;
 
-  @IsString()
-  databaseUserName: string;
+  // @IsString()
+  // @IsOptional()
+  // databaseUserName: string;
 
-  @IsString()
-  databasePassword: string;
+  // @IsString()
+  // @IsOptional()
+  // databasePassword: string;
 
   @IsArray()
   @IsOptional()
