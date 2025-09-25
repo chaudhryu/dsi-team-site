@@ -1,4 +1,3 @@
-import { IProject } from "./IProject"
 
 export interface IDialogProps{
     isDialogOpen: boolean

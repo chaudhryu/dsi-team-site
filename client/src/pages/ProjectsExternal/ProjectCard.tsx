@@ -1,6 +1,4 @@
-import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import Button from "@/components/ui/button/Button";
 import {
   Card,
   CardContent,
@@ -9,7 +7,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { IProject } from "@/interfaces/IProject";
-import { CalendarDays, Github } from "lucide-react";
 import React from "react";
 
 const getStatusColor = (status: string) => {
@@ -27,8 +24,6 @@ const ProjectCard: React.FC<IProject> = ({
   name,
   description,
   status,
-  technologies,
-  teamMembers,
   client,
 }) => {
   return (
@@ -54,11 +49,7 @@ const ProjectCard: React.FC<IProject> = ({
         <div className="mb-4">
           <p className="text-sm font-medium text-gray-700 mb-2">Technologies</p>
           <div className="flex flex-wrap gap-1">
-            {technologies.map((tech) => (
-              <Badge key={tech} variant="secondary" className="text-xs">
-                {tech}
-              </Badge>
-            ))}
+
           </div>
         </div>
 
@@ -66,14 +57,7 @@ const ProjectCard: React.FC<IProject> = ({
         <div className="mb-4">
           <p className="text-sm font-medium text-gray-700 mb-2">Team</p>
           <div className="flex -space-x-2">
-            {teamMembers.map((teamMember) => (
-              <Avatar
-                key={teamMember.name}
-                className="h-8 w-8 border-2 border-white"
-              >
-                <AvatarImage src={teamMember.avatar} alt={name} />
-              </Avatar>
-            ))}
+           
           </div>
         </div>
 
