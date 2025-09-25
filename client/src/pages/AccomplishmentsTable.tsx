@@ -17,6 +17,9 @@ import "react-quill-new/dist/quill.snow.css";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 
+/* Hide these badges everywhere in this table */
+const HIDDEN_BADGES = new Set<string>(["93467"]);
+
 /* -------------------- Types -------------------- */
 type User = {
   badge: number;
@@ -168,7 +171,11 @@ export default function AccomplishmentsTable() {
     (async () => {
       try {
         const ures = await fetch(`${API_BASE}/users`, { credentials: "include" });
-        const udata: User[] = ures.ok ? await ures.json() : [];
+        const raw: User[] = ures.ok ? await ures.json() : [];
+
+        // ⬇️ Filter out hidden badges (e.g., 93467) BEFORE sorting/setting state
+        const udata = raw.filter((u) => !HIDDEN_BADGES.has(String(u.badge)));
+
         udata.sort((a, b) => {
           const al = (a.lastName || "").toLowerCase();
           const bl = (b.lastName || "").toLowerCase();
@@ -383,57 +390,59 @@ export default function AccomplishmentsTable() {
             )}
 
             {!loading &&
-              rows.map(({ user, wa }) => (
-                <TableRow key={user.badge}>
-                  {/* User */}
-                  <TableCell className="px-5 py-4 text-start">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-semibold text-gray-700 dark:text-gray-200">
-                        {`${(user.firstName || "?")[0] ?? "?"}${(user.lastName || "?")[0] ?? "?"}`}
+              rows
+                .filter(({ user }) => !HIDDEN_BADGES.has(String(user.badge))) // extra guard
+                .map(({ user, wa }) => (
+                  <TableRow key={user.badge}>
+                    {/* User */}
+                    <TableCell className="px-5 py-4 text-start">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-semibold text-gray-700 dark:text-gray-200">
+                          {`${(user.firstName || "?")[0] ?? "?"}${(user.lastName || "?")[0] ?? "?"}`}
+                        </div>
+                        <div>
+                          <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
+                            {user.firstName} {user.lastName}
+                          </span>
+                          <span className="block text-gray-500 text-theme-xs dark:text-gray-400">
+                            {String(user.position ?? "")} · #{user.badge}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                          {user.firstName} {user.lastName}
-                        </span>
-                        <span className="block text-gray-500 text-theme-xs dark:text-gray-400">
-                          {String(user.position ?? "")} · #{user.badge}
-                        </span>
-                      </div>
-                    </div>
-                  </TableCell>
+                    </TableCell>
 
-                  {/* Accomplishment for selected week */}
-                  <TableCell className="px-5 py-4 align-top">
-                    {hasContent(wa?.accomplishments) ? (
-                      <div className="ql-snow">
-                        <div
-                          className="ql-editor max-w-none text-theme-sm text-gray-700 dark:text-gray-300"
-                          dangerouslySetInnerHTML={{ __html: sanitizeHtml(wa!.accomplishments!) }}
-                        />
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">—</span>
-                    )}
-                  </TableCell>
+                    {/* Accomplishment for selected week */}
+                    <TableCell className="px-5 py-4 align-top">
+                      {hasContent(wa?.accomplishments) ? (
+                        <div className="ql-snow">
+                          <div
+                            className="ql-editor max-w-none text-theme-sm text-gray-700 dark:text-gray-300"
+                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(wa!.accomplishments!) }}
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </TableCell>
 
-                  {/* Status */}
-                  <TableCell className="px-5 py-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                        (wa?.taskStatus ?? "Missing") === "Submitted"
-                          ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
-                          : wa
-                          ? "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
-                          : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                      }`}
-                    >
-                      {wa ? wa.taskStatus ?? "Submitted" : "Missing"}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    {/* Status */}
+                    <TableCell className="px-5 py-4">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                          (wa?.taskStatus ?? "Missing") === "Submitted"
+                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                            : wa
+                            ? "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                            : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                        }`}
+                      >
+                        {wa ? wa.taskStatus ?? "Submitted" : "Missing"}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
 
-            {!loading && rows.length === 0 && (
+            {!loading && rows.filter(({ user }) => !HIDDEN_BADGES.has(String(user.badge))).length === 0 && (
               <tr>
                 <td className="px-5 py-8 text-center text-gray-500 dark:text-gray-400" colSpan={3}>
                   No users found.
@@ -519,7 +528,7 @@ export default function AccomplishmentsTable() {
               </div>
 
               {sumError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
+                <div className="rounded-lg border border-red-2 00 bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
                   {sumError}
                 </div>
               )}

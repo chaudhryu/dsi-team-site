@@ -18,8 +18,8 @@ switch (currentHostname) {
         determinedRedirectUri = 'https://dsi.metro.net/auth-response'; 
         break;
 
-    case 'webappprodtest.metro.net':
-        determinedRedirectUri = 'https://webappprodtest.metro.net/auth-response';
+    case 'dsiwebapp.metro.net':
+        determinedRedirectUri = 'https://dsiwebapp.metro.net/auth-response';
         break;
         
     // --- Development Environment ---
