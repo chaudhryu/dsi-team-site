@@ -57,7 +57,7 @@ export class ProjectsController {
     );
   }
 
-  @Put(":id")
+  @Delete(":id")
   removeProject(@Param("id") id: string) {
     return this.projectsService.delete(+id);
   }

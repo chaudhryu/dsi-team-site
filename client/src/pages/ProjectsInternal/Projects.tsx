@@ -1,13 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IProject } from "@/interfaces/IProject";
 import { PlusIcon, Search } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -25,15 +19,13 @@ export const Projects: React.FC<IProjectProps> = ({ isInternal }) => {
   const [filteredProjects, setFilteredProjects] = useState<IProject[]>([]);
   const [searchFilterValue, setSearchFilterValue] = useState<string>("");
   const [statusFilterValue, setStatusFilterValue] = useState<string>("all");
-  const [isAddProjectFormOpen, setIsAddProjectFormOpen] =
-    useState<boolean>(false);
-  const [isEditProjectFormOpen, setIsEditProjectFormOpen] =
-    useState<boolean>(false);
+  const [isAddProjectFormOpen, setIsAddProjectFormOpen] = useState<boolean>(false);
+  const [isEditProjectFormOpen, setIsEditProjectFormOpen] = useState<boolean>(false);
   const [project, setProject] = useState<IProject | null | undefined>();
   const [totalCount, setTotalCount] = useState<number>();
-  const [completedCount, setCompletedCount] = useState<number>();
+  const [inProductionCount, setInProductionCount] = useState<number>();
   const [planningCount, setPlanningCount] = useState<number>();
-  const [inProgressCount, setInProgressCount] = useState<number>();
+  const [inDevelopmentCount, setInDevelopmentCount] = useState<number>();
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [projectToDelete, setProjectToDelete] = useState<IProject | null>();
   const [isLoading, setIsLoading] = useState(true);
@@ -110,31 +102,27 @@ export const Projects: React.FC<IProjectProps> = ({ isInternal }) => {
   }, []);
 
   const setStats = (projects: IProject[]) => {
-    let inProgressCount = 0;
-    let completedCount = 0;
+    let inDevelopmentCount = 0;
+    let inProductionCount = 0;
     let planningCount = 0;
 
     projects.forEach((project) => {
-      if (project.status === "completed") {
-        completedCount += 1;
+      if (project.status === "in production") {
+        inProductionCount += 1;
       } else if (project.status === "planning") {
         planningCount += 1;
-      } else if (project.status === "in progress") {
-        inProgressCount += 1;
+      } else if (project.status === "in development") {
+        inDevelopmentCount += 1;
       }
     });
 
     setTotalCount(projects.length);
-    setCompletedCount(completedCount);
+    setInProductionCount(inProductionCount);
     setPlanningCount(planningCount);
-    setInProgressCount(inProgressCount);
+    setInDevelopmentCount(inDevelopmentCount);
   };
 
-  const filterProjects = (
-    searchFilterValue: string,
-    statusFilterValue: string,
-    projects: IProject[]
-  ) => {
+  const filterProjects = (searchFilterValue: string, statusFilterValue: string, projects: IProject[]) => {
     console.log(statusFilterValue);
     setSearchFilterValue(searchFilterValue);
     setStatusFilterValue(statusFilterValue);
@@ -142,16 +130,10 @@ export const Projects: React.FC<IProjectProps> = ({ isInternal }) => {
       const searchFilteredProjects = searchFilterValue
         ? projects.filter((project) => {
             return (
-              project.name
-                .toLowerCase()
-                .includes(searchFilterValue.toLowerCase()) ||
-              project.description
-                .toLowerCase()
-                .includes(searchFilterValue.toLowerCase()) ||
+              project.name.toLowerCase().includes(searchFilterValue.toLowerCase()) ||
+              project.description.toLowerCase().includes(searchFilterValue.toLowerCase()) ||
               project.technologies?.some((technology) =>
-                technology.name
-                  .toLowerCase()
-                  .includes(searchFilterValue.toLowerCase())
+                technology.name.toLowerCase().includes(searchFilterValue.toLowerCase())
               )
             );
           })
@@ -163,10 +145,7 @@ export const Projects: React.FC<IProjectProps> = ({ isInternal }) => {
               console.log(prevFilteredProject.status);
               console.log(statusFilterValue);
 
-              return (
-                prevFilteredProject.status.toLowerCase() ===
-                statusFilterValue.toLowerCase()
-              );
+              return prevFilteredProject.status.toLowerCase() === statusFilterValue.toLowerCase();
             })
           : searchFilteredProjects;
 
@@ -176,11 +155,7 @@ export const Projects: React.FC<IProjectProps> = ({ isInternal }) => {
     });
   };
 
-  const handleProjectsCache = (
-    action: string,
-    projectId: number | null | undefined,
-    project: IProject | null
-  ) => {
+  const handleProjectsCache = (action: string, projectId: number | null | undefined, project: IProject | null) => {
     setProjects((prevProjects: IProject[]) => {
       if (action === "add" && project) {
         const newProjects = [...prevProjects, project];
@@ -195,9 +170,7 @@ export const Projects: React.FC<IProjectProps> = ({ isInternal }) => {
         filterProjects(searchFilterValue, statusFilterValue, newProjects);
         return newProjects;
       } else if (action === "delete") {
-        const newProjects = prevProjects.filter(
-          (prevProject) => prevProject.id !== projectId
-        );
+        const newProjects = prevProjects.filter((prevProject) => prevProject.id !== projectId);
         setStats(newProjects);
         filterProjects(searchFilterValue, statusFilterValue, newProjects);
         return newProjects;
@@ -227,16 +200,12 @@ export const Projects: React.FC<IProjectProps> = ({ isInternal }) => {
         title={"Confirm Deletion"}
         description={`Are you sure you would like to delete this project: ${projectToDelete?.name}?`}
         close={closeProjectsDialog}
-        clickAction={deleteProject}
+        clickDialogAction={deleteProject}
       />
       {isInternal && (
         <div className="flex justify-between items-center">
           <div className="font-bold text-2xl">Projects</div>
-          <Button
-            size="default"
-            variant="outline"
-            onClick={() => setIsAddProjectFormOpen(true)}
-          >
+          <Button size="default" variant="outline" onClick={() => setIsAddProjectFormOpen(true)}>
             <PlusIcon className="size-3.5" color="black" />
             Add
           </Button>
@@ -244,9 +213,7 @@ export const Projects: React.FC<IProjectProps> = ({ isInternal }) => {
       )}
       {!isInternal && (
         <div className="flex flex-col items-center mt-5">
-          <h1 className="text-4xl font-bold text-gray-900 mb-6">
-            Our Projects{" "}
-          </h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-6">Our Projects </h1>
           <p className="text-xl text-gray-600 mb-8 leading-relaxed">
             Explore our complete portfolio of innovative solutions
           </p>
@@ -259,9 +226,7 @@ export const Projects: React.FC<IProjectProps> = ({ isInternal }) => {
             <Card>
               <CardContent className="p-6">
                 <div className="flex flex-col items-center justify-center gap-3">
-                  <p className="font-bold text-black text-center text-5xl">
-                    {totalCount}
-                  </p>
+                  <p className="font-bold text-black text-center text-5xl">{totalCount}</p>
                   <p className="font-medium text-gray-600 text-lg">Total</p>
                 </div>
               </CardContent>
@@ -269,10 +234,8 @@ export const Projects: React.FC<IProjectProps> = ({ isInternal }) => {
             <Card>
               <CardContent className="p-6">
                 <div className="flex flex-col items-center justify-center gap-3">
-                  <p className="font-bold text-green-600 text-center text-5xl">
-                    {completedCount}
-                  </p>
-                  <p className="font-medium text-gray-600 text-lg">Completed</p>
+                  <p className="font-bold text-green-600 text-center text-5xl">{inProductionCount}</p>
+                  <p className="font-medium text-gray-600 text-lg">In&nbsp;&nbsp;Production</p>
                 </div>
               </CardContent>
             </Card>
@@ -280,12 +243,8 @@ export const Projects: React.FC<IProjectProps> = ({ isInternal }) => {
             <Card>
               <CardContent className="p-6">
                 <div className="flex flex-col items-center justify-center gap-3">
-                  <p className="font-bold text-yellow-600 text-center text-5xl">
-                    {inProgressCount}
-                  </p>
-                  <p className="font-medium text-gray-600 text-lg">
-                    In Progress
-                  </p>
+                  <p className="font-bold text-yellow-600 text-center text-5xl">{inDevelopmentCount}</p>
+                  <p className="font-medium text-gray-600 text-lg">In&nbsp;&nbsp;Development</p>
                 </div>
               </CardContent>
             </Card>
@@ -293,9 +252,7 @@ export const Projects: React.FC<IProjectProps> = ({ isInternal }) => {
             <Card>
               <CardContent className="p-6">
                 <div className="flex flex-col items-center justify-center gap-3">
-                  <p className="font-bold text-blue-600 text-center text-5xl">
-                    {planningCount}
-                  </p>
+                  <p className="font-bold text-blue-600 text-center text-5xl">{planningCount}</p>
                   <p className="font-medium text-gray-600 text-lg">Planning</p>
                 </div>
               </CardContent>
@@ -308,25 +265,21 @@ export const Projects: React.FC<IProjectProps> = ({ isInternal }) => {
                 <Input
                   placeholder="Search projects, technologies, or descriptions..."
                   value={searchFilterValue}
-                  onChange={(e) =>
-                    filterProjects(e.target.value, statusFilterValue, projects)
-                  }
+                  onChange={(e) => filterProjects(e.target.value, statusFilterValue, projects)}
                   className="pl-10"
                 />
               </div>
               <Select
                 value={statusFilterValue}
-                onValueChange={(value) =>
-                  filterProjects(searchFilterValue, value, projects)
-                }
+                onValueChange={(value) => filterProjects(searchFilterValue, value, projects)}
               >
                 <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="in progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="in development">In Development</SelectItem>
+                  <SelectItem value="in production">In Production</SelectItem>
                   <SelectItem value="planning">Planning</SelectItem>
                 </SelectContent>
               </Select>
@@ -339,9 +292,7 @@ export const Projects: React.FC<IProjectProps> = ({ isInternal }) => {
                       key={index}
                       project={project}
                       openEditProjectForm={openEditProjectForm}
-                      openDeleteProjectConfirmationDialog={
-                        openDeleteProjectConfirmationDialog
-                      }
+                      openDeleteProjectConfirmationDialog={openDeleteProjectConfirmationDialog}
                       isInternal={isInternal}
                     />
                   );

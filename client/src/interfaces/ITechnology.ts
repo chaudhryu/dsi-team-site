@@ -1,4 +1,4 @@
 export interface ITechnology {
-  id: string;
+  id: number;
   name: string;
 }
