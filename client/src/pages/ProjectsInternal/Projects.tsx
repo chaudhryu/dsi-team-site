@@ -2,15 +2,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/shadcn-io/spinner";
+import { envConfig } from "@/config/envConfig";
 import { IProject } from "@/interfaces/IProject";
+import { IProjectProps } from "@/interfaces/IProjectProps";
 import { PlusIcon, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import ProjectCard from "./ProjectCard";
 import { ProjectForm } from "./ProjectForm";
 import ProjectsDialog from "./ProjectsDialog";
-import { envConfig } from "@/config/envConfig";
-import { Spinner } from "@/components/ui/shadcn-io/spinner";
-import { IProjectProps } from "@/interfaces/IProjectProps";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3005/api";
 
@@ -181,7 +181,7 @@ export const Projects: React.FC<IProjectProps> = ({ isInternal }) => {
   };
 
   return !isLoading ? (
-    <div className="h-full">
+    <div className={`h-full ${!isInternal && "mr-16 ml-16"}`}>
       <ProjectForm
         isProjectFormOpen={isAddProjectFormOpen || isEditProjectFormOpen}
         closeProjectForm={() => {

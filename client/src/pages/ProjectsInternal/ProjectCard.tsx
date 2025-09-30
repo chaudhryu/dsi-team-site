@@ -8,12 +8,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { IProjectCardProps } from "@/interfaces/IProjectCardProps";
+import { IRepository } from "@/interfaces/IRepository";
 import { EllipsisVertical, Github, Pencil, Trash } from "lucide-react";
 import React from "react";
-import { IRepository } from "@/interfaces/IRepository";
 import { getUserImage } from "./UserImageUtil";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const getStatusColor = (status: string) => {
   if (status === "in development") {
