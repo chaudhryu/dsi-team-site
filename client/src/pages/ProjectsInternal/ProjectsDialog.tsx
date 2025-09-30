@@ -18,7 +18,7 @@ const ProjectsDialog: React.FC<IDialogProps> = ({
   title,
   description,
   close,
-  clickAction,
+  clickDialogAction,
 }) => {
   const [isPerformingAction, setIsPerformingAction] = useState(false);
 
@@ -36,14 +36,11 @@ const ProjectsDialog: React.FC<IDialogProps> = ({
 
   const onClick = () => {
     setIsPerformingAction(true);
-    setTimeout(() => {
-      try {
-        clickAction();
-      } catch (err) {
-        console.log(err);
-      } finally {
+    setTimeout(async () => {
+      await clickDialogAction();
+      setTimeout(() => {
         setIsPerformingAction(false);
-      }
+      }, 200);
     }, 1200);
   };
 
@@ -51,8 +48,8 @@ const ProjectsDialog: React.FC<IDialogProps> = ({
     <Dialog open={isDialogOpen} onOpenChange={close}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle className="text-lg">{title}</DialogTitle>
+          <DialogDescription className="text-md">{description}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           {!isPerformingAction ? (

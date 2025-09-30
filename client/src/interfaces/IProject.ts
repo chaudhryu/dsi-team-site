@@ -7,8 +7,11 @@ export interface IProject {
   name: string;
   description: string;
   status: string;
-  technologies: ITechnology[];
-  projectMembers: IProjectMember[];
-  repositories: IRepository[];
-  client: string;
+  technologies: ITechnology[] | null | undefined;
+  projectMembers: IProjectMember[] | null | undefined;
+  repositories: IRepository[] | null | undefined;
+  // databaseUserName: string | null | undefined;
+  // databaseServerName: string | null | undefined;
+  // databasePassword: string | null | undefined;
+  client: string | null | undefined;
 }
