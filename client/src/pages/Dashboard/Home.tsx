@@ -45,17 +45,15 @@ export default function Home() {
                           : "opacity-0 translate-y-6"
                       }`}
         >
-          {/* Image (smaller, above text) */}
-          <img
-            src="/images/stockTeam.jpg"
-            alt="Team collaborating at their desks"
-            className="mb-12 w-full max-w-md rounded-xl shadow-lg ring-1 ring-gray-900/10
-                       dark:ring-gray-100/10 md:max-w-lg"
-          />
+<img
+  src="/images/LAMetroLogo.svg.png"
+  alt="LA Metro logo"
+  className="mb-12 w-full max-w-md md:max-w-lg block"
+/>
 
           {/* Headline & Copy */}
           <h1 className="text-center text-5xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-7xl">
-            Building better transit apps for LA
+            DSI Web Apps Team
           </h1>
           <p className="mt-8 text-center text-lg leading-8 text-gray-600 dark:text-gray-300">
             Welcome to the DSI WebApps team hub. Explore our projects, read
@@ -71,12 +69,7 @@ export default function Home() {
             >
               View projects
             </Link>
-            <Link
-              to="/about"
-              className="text-sm font-semibold text-gray-900 dark:text-gray-100"
-            >
-              Learn more <span aria-hidden="true">→</span>
-            </Link>
+
           </div>
         </div>
 

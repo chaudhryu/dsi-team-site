@@ -14,7 +14,10 @@ import DOMPurify from "dompurify";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 const LOGIN_KEY = envConfig.loginEmpKey || "loginEmployee";
+/** If your backend exposes a different path for Gemini summaries, change this: */
+const AI_SUMMARY_ENDPOINT = `${API_BASE}/ai/summarize-accomplishments`;
 
+/* -------------------- Types -------------------- */
 type Accomplishment = {
   id: number;
   accomplishments: string; // sanitized HTML string
@@ -23,6 +26,16 @@ type Accomplishment = {
   endWeekDate: string;   // 'YYYY-MM-DD'
   taskStatus?: string | null;
 };
+
+type PersonalSummaryUser = {
+  badge: number;
+  name: string;
+  summary_md: string;
+  highlights?: string[];
+  blockers?: string[];
+  next_focus?: string[];
+};
+type PersonalSummaryResp = { users: PersonalSummaryUser[] };
 
 /* -------------------- date helpers (local-time safe) -------------------- */
 function ymdLocal(d: Date) {
@@ -180,6 +193,14 @@ export default function Accomplishments() {
     [rows, weekStart, weekEnd]
   );
 
+  // 🔹 Gemini summary (personal)
+  const [from, setFrom] = useState<string>(() => ymdLocal(addDays(mondayStart(new Date()), -21))); // last 3 weeks
+  const [to, setTo] = useState<string>(() => ymdLocal(sundayEnd(mondayStart(new Date()))));
+  const [summarizing, setSummarizing] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryData, setSummaryData] = useState<PersonalSummaryResp | null>(null);
+  const [sumError, setSumError] = useState<string | null>(null);
+
   // load when we know the badge
   useEffect(() => {
     if (!badge) return;
@@ -332,6 +353,100 @@ export default function Accomplishments() {
     return all;
   }, [rows, weekOptions]);
 
+  /* -------------------- Personal Gemini summary -------------------- */
+  async function onSummarizeRange() {
+    if (!badge) return;
+  
+    try {
+      setSummarizing(true);
+      setSumError(null);
+  
+      // Build the single-user payload (no `model` field)
+      const inRange = rows.filter((d) => d.endWeekDate >= from && d.startWeekDate <= to);
+  
+      // Optional guard: avoid empty submissions
+      if (inRange.length === 0) {
+        setSumError("No entries found in the selected date range.");
+        setSummarizing(false);
+        return;
+      }
+  
+      const payload = {
+        from,
+        to,
+        includeTeamSummary: false, // personal only
+        users: [
+          {
+            badge,
+            name: lsUser ? `${lsUser.firstName ?? ""} ${lsUser.lastName ?? ""}`.trim() : `User #${badge}`,
+            entries: inRange.map((d) => ({
+              startWeekDate: d.startWeekDate,
+              endWeekDate: d.endWeekDate,
+              text: plainTextFromHtml(d.accomplishments || ""),
+            })),
+          },
+        ],
+      };
+  
+      const resp = await fetch(AI_SUMMARY_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+  
+      if (!resp.ok) {
+        // Surface backend validation message in the UI
+        const errText = await resp.text();
+        try {
+          const errJson = JSON.parse(errText);
+          throw new Error(errJson.message ? JSON.stringify(errJson.message) : errText);
+        } catch {
+          throw new Error(errText);
+        }
+      }
+  
+      const json = (await resp.json()) as PersonalSummaryResp;
+      setSummaryData(json);
+      setSummaryOpen(true);
+    } catch (e: any) {
+      console.error(e);
+      setSumError(e?.message || "Summarization failed. Please try again or adjust the date range.");
+    } finally {
+      setSummarizing(false);
+    }
+  }
+  
+
+  function downloadMarkdown() {
+    if (!summaryData?.users?.length) return;
+    const u = summaryData.users[0];
+    const lines: string[] = [];
+    lines.push(`# Weekly summary (${from} → ${to}) — ${u.name} (#${u.badge})\n`);
+    lines.push(u.summary_md || "_(no generated summary)_");
+
+    if (u.highlights?.length) {
+      lines.push(`\n\n## Highlights`);
+      u.highlights.forEach((h) => lines.push(`- ${h}`));
+    }
+    if (u.blockers?.length) {
+      lines.push(`\n\n## Blockers`);
+      u.blockers.forEach((b) => lines.push(`- ${b}`));
+    }
+    if (u.next_focus?.length) {
+      lines.push(`\n\n## Next focus`);
+      u.next_focus.forEach((n) => lines.push(`- ${n}`));
+    }
+
+    const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `summary_${u.badge}_${from}_${to}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   if (!badge) {
     return (
       <div className="p-8">
@@ -348,26 +463,49 @@ export default function Accomplishments() {
 
       <div className="grid gap-6">
         <ComponentCard title={`Your Weekly Accomplishments (Badge ${badge})`}>
-          {/* Actions (refresh only) */}
-          <div className="mb-4 flex justify-end">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                if (badge) {
-                  setLoading(true);
-                  fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, {
-                    credentials: "include",
-                  })
-                    .then((r) => (r.ok ? r.json() : []))
-                    .then((d) => setRows(Array.isArray(d) ? d : []))
-                    .catch(() => {})
-                    .finally(() => setLoading(false));
-                }
-              }}
-            >
-              {loading ? "Refreshing…" : "Refresh"}
-            </Button>
+          {/* Actions: Refresh + Gemini summary range */}
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (badge) {
+                    setLoading(true);
+                    fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, {
+                      credentials: "include",
+                    })
+                      .then((r) => (r.ok ? r.json() : []))
+                      .then((d) => setRows(Array.isArray(d) ? d : []))
+                      .catch(() => {})
+                      .finally(() => setLoading(false));
+                  }
+                }}
+              >
+                {loading ? "Refreshing…" : "Refresh"}
+              </Button>
+            </div>
+
+            {/* Personal Gemini summary controls */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-gray-600 dark:text-gray-400">Gemini summary range</span>
+              <input
+                type="date"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+                className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-2.5 py-1.5 text-xs text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+              />
+              <span className="text-gray-500 text-xs">→</span>
+              <input
+                type="date"
+                value={to}
+                onChange={(e) => setTo(e.target.value)}
+                className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-2.5 py-1.5 text-xs text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+              />
+              <Button size="sm" variant="primary" onClick={onSummarizeRange} disabled={summarizing}>
+                {summarizing ? "Summarizing…" : "Summarize (Gemini)"}
+              </Button>
+            </div>
           </div>
 
           {/* Table */}
@@ -449,7 +587,7 @@ export default function Accomplishments() {
         </ComponentCard>
       </div>
 
-      {/* Modal */}
+      {/* Editor Modal */}
       {open && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
@@ -492,6 +630,80 @@ export default function Accomplishments() {
               <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
                 {saving ? "Saving…" : currentRecord ? "Update" : "Save"}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Gemini Summary Modal */}
+      {summaryOpen && summaryData && summaryData.users?.[0] && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          role="dialog"
+          aria-modal="true"
+          onKeyDown={(e) => e.key === "Escape" && setSummaryOpen(false)}
+        >
+          <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+              <div>
+                <h3 className="text-lg font-semibold">Your Gemini summary</h3>
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  {from} → {to}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={downloadMarkdown}>
+                  Export .md
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setSummaryOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+
+            <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+              {sumError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
+                  {sumError}
+                </div>
+              )}
+              {/* Render Markdown as plain text for safety */}
+              <pre className="whitespace-pre-wrap break-words text-sm text-gray-800 dark:text-gray-200">
+{summaryData.users[0].summary_md}
+              </pre>
+
+              {summaryData.users[0].highlights?.length ? (
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Highlights</div>
+                  <ul className="list-disc pl-5 text-sm">
+                    {summaryData.users[0].highlights.map((h, i) => (
+                      <li key={i}>{h}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {summaryData.users[0].blockers?.length ? (
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mt-3">Blockers</div>
+                  <ul className="list-disc pl-5 text-sm">
+                    {summaryData.users[0].blockers.map((b, i) => (
+                      <li key={i}>{b}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+
+              {summaryData.users[0].next_focus?.length ? (
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mt-3">Next focus</div>
+                  <ul className="list-disc pl-5 text-sm">
+                    {summaryData.users[0].next_focus.map((n, i) => (
+                      <li key={i}>{n}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

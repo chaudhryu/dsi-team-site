@@ -1,20 +1,20 @@
-import { useEffect, useRef, useState } from "react";
+// src/layout/AppHeader.tsx
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useSidebar } from "../context/SidebarContext";
 import { ThemeToggleButton } from "../components/common/ThemeToggleButton";
-
 import { useIsAuthenticated, useMsal } from "@azure/msal-react";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
-  const authenticated = useIsAuthenticated();
+  const isAuthenticated = useIsAuthenticated();
   const { instance } = useMsal();
 
   const handleLogout = () => instance.logoutRedirect();
 
-  const handleToggle = () => {
+  const handleToggleSidebar = () => {
     if (window.innerWidth >= 1024) {
       toggleSidebar();
     } else {
@@ -23,36 +23,24 @@ const AppHeader: React.FC = () => {
   };
 
   const toggleApplicationMenu = () => {
-    setApplicationMenuOpen(!isApplicationMenuOpen);
+    setApplicationMenuOpen((v) => !v);
   };
 
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === "k") {
-        event.preventDefault();
-        inputRef.current?.focus();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
   return (
-    <header className="sticky top-0 flex w-full bg-white border-gray-200 dark:border-gray-800 dark:bg-gray-900 lg:border-b">
-      <div className="flex flex-col items-center justify-between grow lg:flex-row lg:px-6">
+    <header className="sticky top-0 z-40 flex w-full bg-neutral-900 border-b border-neutral-800">
+      <div className="flex grow flex-col items-center justify-between lg:flex-row lg:px-6 text-neutral-100">
         {/* ─────────── Left section ─────────── */}
-        <div className="flex items-center justify-between w-full gap-2 px-3 py-3 border-b border-gray-200 dark:border-gray-800 sm:gap-4 lg:justify-normal lg:border-b-0 lg:px-0 lg:py-4">
-          {authenticated ? (
+        <div className="flex w-full items-center justify-between gap-2 px-3 py-3 border-b border-neutral-800 sm:gap-4 lg:justify-normal lg:border-b-0 lg:px-0 lg:py-4">
+          {/* Sidebar toggle (only when authenticated) */}
+          {isAuthenticated ? (
             <button
-              className="items-center justify-center w-10 h-10 text-gray-500 border-gray-200 rounded-lg z-99999 dark:border-gray-800 lg:flex dark:text-gray-400 lg:h-11 lg:w-11 lg:border"
-              onClick={handleToggle}
+              onClick={handleToggleSidebar}
               aria-label="Toggle Sidebar"
+              className="items-center justify-center w-10 h-10 text-neutral-300 border border-neutral-800 rounded-lg z-99999 lg:flex lg:h-11 lg:w-11 hover:bg-neutral-800"
             >
+              {/* X icon when open; hamburger otherwise */}
               {isMobileOpen ? (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path
                     fillRule="evenodd"
                     clipRule="evenodd"
@@ -61,7 +49,7 @@ const AppHeader: React.FC = () => {
                   />
                 </svg>
               ) : (
-                <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+                <svg width="16" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
                   <path
                     fillRule="evenodd"
                     clipRule="evenodd"
@@ -72,30 +60,34 @@ const AppHeader: React.FC = () => {
               )}
             </button>
           ) : (
-            <span className="text-lg font-semibold text-gray-700 dark:text-gray-200">
-              DSI&nbsp;WebApps&nbsp;Team
-            </span>
+            <span />
           )}
 
-          {/* mobile logo */}
-          <Link to="/" className="lg:hidden">
+          {/* Brand: ALWAYS links home */}
+          <Link
+            to="/"
+            className="text-lg font-semibold text-neutral-100 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            aria-label="Go to home"
+          >
+            DSI&nbsp;WebApps&nbsp;Team
+          </Link>
+
+          {/* Mobile logo (also links home) */}
+          <Link to="/" className="lg:hidden ml-auto">
             <img
-              className="h-12 w-auto dark:hidden"
+              className="h-12 w-auto"
               src="./images/logo/metroLogoSmall.webp"
-              alt="Logo"
-            />
-            <img
-              className="hidden h-12 w-auto dark:block"
-              src="./images/logo/metroLogoSmall.webp"
-              alt="Logo"
+              alt="Metro logo"
             />
           </Link>
 
+          {/* Mobile app menu toggle */}
           <button
             onClick={toggleApplicationMenu}
-            className="flex items-center justify-center w-10 h-10 text-gray-700 rounded-lg z-99999 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 lg:hidden"
+            className="flex items-center justify-center w-10 h-10 text-neutral-300 rounded-lg hover:bg-neutral-800 lg:hidden"
+            aria-label="Open application menu"
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none">
               <path
                 fillRule="evenodd"
                 clipRule="evenodd"
@@ -108,45 +100,40 @@ const AppHeader: React.FC = () => {
 
         {/* ─────────── Right section ─────────── */}
         <div
-          className={`${
-            isApplicationMenuOpen ? "flex" : "hidden"
-          } items-center justify-between w-full gap-4 px-5 py-4 lg:flex shadow-theme-md lg:justify-end lg:px-0 lg:shadow-none`}
+          className={`${isApplicationMenuOpen ? "flex" : "hidden"} w-full items-center justify-between gap-4 px-5 py-4 lg:flex lg:justify-end lg:px-0`}
         >
-          {!authenticated && (
+          {!isAuthenticated && (
             <Link
               to="/projects-external"
-              className="
-      inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold
-      text-gray-700 hover:text-gray-900 hover:bg-gray-100
-      dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800
-      focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600
-      transition-colors
-    "
+              className="inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold
+                         text-neutral-200 hover:text-white hover:bg-neutral-800
+                         focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors"
             >
               Projects
             </Link>
           )}
+
           <div className="flex items-center gap-2 2xsm:gap-3">
             <ThemeToggleButton />
-            {authenticated}
           </div>
 
-          {authenticated ? (
-            <>
-              <button
-                onClick={handleLogout}
-                className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-              >
-                Sign&nbsp;out
-              </button>
-            </>
+          {isAuthenticated ? (
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+            >
+              Sign&nbsp;out
+            </button>
           ) : (
             <Link
-              to="/signin"
-              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600"
-            >
-              Sign&nbsp;in
-            </Link>
+            to="/signin"
+            className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium
+                       text-white border border-white/60 rounded-lg hover:bg-white/10
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+          >
+            Sign&nbsp;in
+          </Link>
+          
           )}
         </div>
       </div>
