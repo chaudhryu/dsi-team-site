@@ -48,8 +48,11 @@ export default function Home() {
 <img
   src="/images/LAMetroLogo.svg.png"
   alt="LA Metro logo"
-  className="mb-12 w-full max-w-md md:max-w-lg block"
+  className="mb-8 mx-auto block h-16 w-auto sm:h-[72px] md:h-[88px]"
+  loading="eager"
 />
+
+
 
           {/* Headline & Copy */}
           <h1 className="text-center text-5xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-7xl">
