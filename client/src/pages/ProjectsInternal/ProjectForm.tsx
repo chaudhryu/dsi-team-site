@@ -1,57 +1,58 @@
-import React, { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import Label from "@/components/form/Label";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Github, X } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/shadcn-io/spinner";
+import { Textarea } from "@/components/ui/textarea";
+import { envConfig } from "@/config/envConfig";
 import { IMyProjectFormProps } from "@/interfaces/IMyProjectFormProps";
 import { IProject } from "@/interfaces/IProject";
-import { IRepository } from "@/interfaces/IRepository";
-import { envConfig } from "@/config/envConfig";
-import { Spinner } from "@/components/ui/shadcn-io/spinner";
-import { ITechnology } from "@/interfaces/ITechnology";
 import { IProjectMember } from "@/interfaces/IProjectMember";
-import { Plus } from "lucide-react";
-import { Controller, SubmitHandler, useForm } from "react-hook-form";
-import { IProjectForm } from "@/interfaces/IProjectForm";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import z from "zod";
+import { IRepository } from "@/interfaces/IRepository";
+import { ITechnology } from "@/interfaces/ITechnology";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { data } from "react-router";
+import { Github, Plus, X } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import z from "zod";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 
 const projectFormSchema = z
   .object({
-    name: z.string().min(1, "Name is required"),
-    status: z.string().min(1, "Status is required"),
+    name: z.string().min(1, "Project Name is required"),
+    status: z.string().min(1, "Project Status is required"),
     description: z.string().min(1, "Description is required"),
     client: z.string().optional(),
     repositoryLabel: z.string().optional(),
     repositoryUrl: z.string().optional(),
     selectedProjectMemberBadgeNumber: z.string().optional(),
     selectedTechnologyId: z.string().optional(),
+    autoFocusRepository: z.boolean(),
+    autoFocusSelectedProjectMemberBadgeNumber: z.boolean(),
+    autoFocusSelectedTechnologyId: z.boolean(),
   })
   .refine(
     (data) =>
+      data.autoFocusRepository === false ||
       (!data.repositoryLabel && !data.repositoryUrl) ||
       (!data.repositoryLabel && data.repositoryUrl) ||
       (data.repositoryLabel && !data.repositoryUrl),
     {
-      message: "",
+      message: " ",
       path: ["repositoryLabel"],
     }
   )
   .refine(
     (data) =>
+      data.autoFocusRepository === false ||
       (!data.repositoryLabel && !data.repositoryUrl) ||
       (!data.repositoryLabel && data.repositoryUrl) ||
       (data.repositoryLabel && !data.repositoryUrl),
     {
-      message: "",
+      message: " ",
       path: ["repositoryUrl"],
     }
   )
@@ -63,11 +64,15 @@ const projectFormSchema = z
     message: "Repository label Is required",
     path: ["repositoryLabel"],
   })
-  .refine((data) => data.selectedProjectMemberBadgeNumber == undefined, {
-    message: "Click + to add your selected project member",
-    path: ["selectedProjectMemberBadgeNumber"],
-  })
-  .refine((data) => data.selectedTechnologyId == undefined, {
+  .refine(
+    (data) =>
+      data.autoFocusSelectedProjectMemberBadgeNumber === false || data.selectedProjectMemberBadgeNumber === undefined,
+    {
+      message: "Click + to add your selected project member",
+      path: ["selectedProjectMemberBadgeNumber"],
+    }
+  )
+  .refine((data) => data.autoFocusSelectedTechnologyId === false || data.selectedTechnologyId === undefined, {
     message: "Click + to add your selected technology",
     path: ["selectedTechnologyId"],
   });
@@ -90,6 +95,9 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
       repositoryUrl: "",
       selectedProjectMemberBadgeNumber: undefined,
       selectedTechnologyId: undefined,
+      autoFocusRepository: false,
+      autoFocusSelectedProjectMemberBadgeNumber: false,
+      autoFocusSelectedTechnologyId: false,
     },
   });
 
@@ -184,6 +192,7 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
         });
 
         form.resetField("selectedProjectMemberBadgeNumber");
+        form.setValue("autoFocusSelectedProjectMemberBadgeNumber", false);
       }
     }
   };
@@ -191,6 +200,7 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
   const addTechnology = () => {
     const selectedTechnologyId = form.watch("selectedTechnologyId");
     if (selectedTechnologyId) {
+      form.clearErrors("selectedTechnologyId");
       const selectedTechnology: ITechnology | undefined = technologiesDropdownValues.find(
         (technologiesDropdownValue) => technologiesDropdownValue.id === +selectedTechnologyId
       );
@@ -207,6 +217,7 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
         });
 
         form.resetField("selectedTechnologyId");
+        form.setValue("autoFocusSelectedTechnologyId", false);
       }
     }
   };
@@ -215,14 +226,17 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
     const repositoryLabel = form.watch("repositoryLabel");
     const repositoryUrl = form.watch("repositoryUrl");
 
-    setRepositories((prevRepositories) =>
-      repositoryLabel && repositoryUrl
-        ? [...prevRepositories, { label: repositoryLabel, url: repositoryUrl }]
-        : prevRepositories
-    );
+    if (repositoryLabel && repositoryUrl) {
+      setRepositories((prevRepositories) =>
+        repositoryLabel && repositoryUrl
+          ? [...prevRepositories, { label: repositoryLabel, url: repositoryUrl }]
+          : prevRepositories
+      );
 
-    form.resetField("repositoryLabel");
-    form.resetField("repositoryUrl");
+      form.resetField("repositoryLabel");
+      form.resetField("repositoryUrl");
+      form.setValue("autoFocusRepository", false);
+    }
   };
 
   const clearAllFieldsAndCloseProjectForm = () => {
@@ -381,7 +395,18 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
             <DialogTitle className="text-2xl">{project ? "Update Project" : "Add Project"}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
+            <form
+              onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
+                e.preventDefault();
+                form.watch("selectedProjectMemberBadgeNumber") &&
+                  form.setValue("autoFocusSelectedProjectMemberBadgeNumber", true);
+                form.watch("selectedTechnologyId") && form.setValue("autoFocusSelectedTechnologyId", true);
+                form.watch("repositoryUrl") &&
+                  form.watch("repositoryLabel") &&
+                  form.setValue("autoFocusRepository", true);
+                form.handleSubmit(onSubmit)();
+              }}
+            >
               <div className="flex flex-row gap-5 justify-between">
                 <FormField
                   control={form.control}
@@ -392,7 +417,7 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
                         Project Name <span className="text-red-600">*</span>
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter Project Name" {...field} />
+                        <Input maxLength={125} placeholder="Enter Project Name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -436,7 +461,7 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
                     <FormItem>
                       <FormLabel>Client</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Enter Client" />
+                        <Input maxLength={125} {...field} placeholder="Enter Client" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -453,7 +478,7 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Textarea {...field} placeholder="Enter Description" />
+                        <Textarea maxLength={5000} {...field} placeholder="Enter Description" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -470,7 +495,15 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
                       render={({ field }) => (
                         <FormItem>
                           <FormControl>
-                            <Input {...field} placeholder="Enter Repository Label" />
+                            <Input
+                              maxLength={125}
+                              {...field}
+                              placeholder="Enter Repository Label"
+                              onChange={(e) => {
+                                field.onChange(e);
+                                form.trigger(["repositoryLabel", "repositoryUrl"]);
+                              }}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -484,7 +517,15 @@ export const ProjectForm: React.FC<IMyProjectFormProps> = ({
                       render={({ field }) => (
                         <FormItem>
                           <FormControl>
-                            <Input {...field} placeholder="Enter Repository Url" />
+                            <Input
+                              maxLength={250}
+                              {...field}
+                              placeholder="Enter Repository Url"
+                              onChange={(e) => {
+                                field.onChange(e);
+                                form.trigger(["repositoryLabel", "repositoryUrl"]);
+                              }}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
