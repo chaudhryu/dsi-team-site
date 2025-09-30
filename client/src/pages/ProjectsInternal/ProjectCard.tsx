@@ -1,35 +1,24 @@
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { IProjectCardProps } from "@/interfaces/IProjectCardProps";
-import {
-
-  EllipsisVertical,
-  Github,
-  Pencil,
-  Trash,
-} from "lucide-react";
-import React from "react";
 import { IRepository } from "@/interfaces/IRepository";
+import { EllipsisVertical, Github, Pencil, Trash } from "lucide-react";
+import React from "react";
 import { getUserImage } from "./UserImageUtil";
 
 const getStatusColor = (status: string) => {
-  if (status === "in progress") {
+  if (status === "in development") {
     return "bg-yellow-100 text-yellow-800 border-yellow-200";
-  } else if (status === "completed") {
+  } else if (status === "in production") {
     return "bg-green-100 text-green-800 border-green-200";
   } else if (status === "planning") {
     return "bg-blue-100 text-blue-800 border-blue-200";
@@ -44,17 +33,12 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
 }) => {
   return (
     // <div>
-    <Card
-      key={project.id}
-      className="hover:shadow-lg transition-shadow duration-200"
-    >
+    <Card key={project.id} className="hover:shadow-lg transition-shadow duration-200">
       <CardHeader className="pb-4">
         <div className="flex items-start">
           <div className="flex-1">
             <div className="flex justify-between">
-              <CardTitle className="text-xl mb-2 flex justify-between">
-                {project.name}
-              </CardTitle>
+              <CardTitle className="text-xl mb-2 flex justify-between">{project.name}</CardTitle>
               {isInternal && (
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
@@ -63,17 +47,13 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => openEditProjectForm(project)}
-                    >
+                    <DropdownMenuItem onClick={() => openEditProjectForm(project)}>
                       <Pencil className="mr-3 h-4 w-4" />
                       Edit
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       className="text-red-600"
-                      onClick={() =>
-                        openDeleteProjectConfirmationDialog(project)
-                      }
+                      onClick={() => openDeleteProjectConfirmationDialog(project)}
                     >
                       <Trash className="mr-3 h-4 w-4" />
                       Delete
@@ -83,19 +63,13 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
               )}
             </div>
             <div className="flex gap-2 mb-3">
-              <Badge
-                variant="outline"
-                className={getStatusColor(project.status)}
-              >
-                {project.status.charAt(0).toUpperCase() +
-                  project.status.slice(1)}
+              <Badge variant="outline" className={`text-sm ${getStatusColor(project.status)}`}>
+                {project.status.charAt(0).toUpperCase() + project.status.slice(1)}
               </Badge>
             </div>
           </div>
         </div>
-        <CardDescription className="text-sm leading-relaxed">
-          {project.description}
-        </CardDescription>
+        <CardDescription className="text-md leading-relaxed">{project.description}</CardDescription>
       </CardHeader>
 
       <CardContent className="pt-0">
@@ -103,12 +77,8 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
         <div className="mb-4">
           <p className="text-sm font-medium text-gray-700 mb-2">Technologies</p>
           <div className="flex flex-wrap gap-1">
-            {project.technologies.map((technology) => (
-              <Badge
-                key={technology?.id}
-                variant="secondary"
-                className="text-xs"
-              >
+            {project.technologies?.map((technology) => (
+              <Badge key={technology?.id} variant="secondary" className="text-md">
                 {technology.name}
               </Badge>
             ))}
@@ -117,41 +87,35 @@ const ProjectCard: React.FC<IProjectCardProps> = ({
 
         {/* Team */}
         <div className="mb-4">
-          <p className="text-sm font-medium text-gray-700 mb-2">Team</p>
+          <p className="text-md font-medium text-gray-700 mb-2">Team</p>
           <div className="flex -space-x-2">
-            {project.projectMembers.map((projectMember) => (
-              <Avatar
-                key={projectMember.badge}
-                className="h-8 w-8 border-2 border-white"
-              >
-                <AvatarImage
-                  src={getUserImage(projectMember.badge)}
-                  alt={project.name}
-                />
-              </Avatar>
+            {project.projectMembers?.map((projectMember) => (
+              <Tooltip>
+                <TooltipTrigger>
+                  <Avatar key={projectMember.badge} className="h-12 w-12 border-2 border-white">
+                    <AvatarImage src={getUserImage(projectMember.badge.toString())} alt={project.name} />
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent className="text-md">
+                  {`${projectMember.firstName} ${projectMember.lastName} (${projectMember.badge})`}
+                </TooltipContent>
+              </Tooltip>
             ))}
           </div>
         </div>
 
         {/* Client */}
         <div className="mb-4">
-          <p className="text-sm font-medium text-gray-700 ">Client</p>
-          <CardDescription className="text-sm leading-relaxed">
-            {project.client}
-          </CardDescription>
+          <p className="text-md font-medium text-gray-700 ">Client</p>
+          <CardDescription className="text-md leading-relaxed">{project.client}</CardDescription>
         </div>
 
         {isInternal && (
           <div className="flex flex-wrap gap-2">
-            {project.repositories.map((repository: IRepository, index) => {
+            {project.repositories?.map((repository: IRepository, index) => {
               return (
                 <Button variant="outline" size="sm" key={index}>
-                  <a
-                    href={repository.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex"
-                  >
+                  <a href={repository.url} target="_blank" rel="noopener noreferrer" className="flex">
                     <Github className="h-4 w-4 mr-2" />
                     {repository.label}
                   </a>
