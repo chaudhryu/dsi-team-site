@@ -213,18 +213,25 @@ const AppSidebar: React.FC = () => {
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className={`py-8 flex border-b border-neutral-800 ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"}`}>
-        <Link to="/">
-          {isExpanded || isHovered || isMobileOpen ? (
-            <>
-              <img src="/images/logo/theMetroLogo.webp" alt="Logo" width={150} height={40} className="opacity-95" />
-              <img src="/images/logo/theMetroLogo.webp" alt="Logo" width={150} height={40} className="hidden" />
-            </>
-          ) : (
-            <img src="/images/logo/metroLogoSmall.webp" alt="Logo" width={32} height={32} />
-          )}
-        </Link>
-      </div>
+      {/* Logo block — dead center */}
+<div className="py-8 flex border-b border-neutral-800 justify-center">
+  <Link to="/" className="block">
+    {isExpanded || isHovered || isMobileOpen ? (
+      <img
+        src="/images/LAMetroLogo.svg.png"
+        alt="Logo"
+        className="mx-auto h-12 w-auto"  // center + consistent height
+      />
+    ) : (
+      <img
+        src="/images/logo/metroLogoSmall.webp"
+        alt="Logo"
+        className="mx-auto h-8 w-auto"   // center + smaller when collapsed
+      />
+    )}
+  </Link>
+</div>
+
 
       <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">

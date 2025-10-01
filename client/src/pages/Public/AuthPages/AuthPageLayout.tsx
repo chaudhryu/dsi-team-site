@@ -9,30 +9,34 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative p-6 bg-white z-1 dark:bg-gray-900 sm:p-0">
-      <div className="relative flex flex-col justify-center w-full h-screen lg:flex-row dark:bg-gray-900 sm:p-0">
-        {children}
-        <div className="items-center hidden w-full h-full lg:w-1/2 bg-brand-950 dark:bg-white/5 lg:grid">
-          <div className="relative flex items-center justify-center z-1">
-            {/* <!-- ===== Common Grid Shape Start ===== --> */}
+    <div className="relative min-h-screen w-full bg-neutral-900 text-neutral-100">
+      <div className="relative flex h-screen w-full flex-col lg:flex-row">
+        {/* LEFT: Sign-in content — keep this white */}
+        <div className="flex w-full items-center justify-center bg-white text-neutral-900 px-6 py-10 lg:w-1/2">
+          {children}
+        </div>
+
+        {/* RIGHT: Brand panel — dark */}
+        <div className="hidden h-full w-full items-center justify-center bg-neutral-900 lg:grid lg:w-1/2 border-t border-neutral-800 lg:border-t-0 lg:border-l">
+          <div className="relative z-10 flex items-center justify-center">
             <GridShape />
-            <div className="flex flex-col items-center max-w-xs">
-              <Link to="/" className="block mb-4">
+            <div className="flex max-w-xs flex-col items-center">
+              <Link to="/" className="mb-4 block">
                 <img
                   width={231}
                   height={48}
-                  src="/images/logo/theMetroLogo.webp"
+                  src="/images/LAMetroLogo.svg.png"
                   alt="Logo"
+                  className="opacity-95"
                 />
               </Link>
-              <p className="text-center text-gray-400 dark:text-white/60">
-                DSI Teams Website
-              </p>
+              <p className="text-center text-neutral-300">DSI Teams Website</p>
             </div>
           </div>
         </div>
-        <div className="fixed z-50 hidden bottom-6 right-6 sm:block">
-          <ThemeTogglerTwo />
+
+        {/* Theme toggle floater */}
+        <div className="fixed bottom-6 right-6 z-50 hidden sm:block">
         </div>
       </div>
     </div>

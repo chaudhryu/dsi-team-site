@@ -39,18 +39,17 @@ export default function Home() {
         <div
           className={`mx-auto flex max-w-2xl flex-col items-center px-6
                       transition-all duration-700
-                      ${
-                        visible
-                          ? "opacity-100 translate-y-0"
-                          : "opacity-0 translate-y-6"
-                      }`}
+                      ${visible
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-6"
+            }`}
         >
-<img
-  src="/images/LAMetroLogo.svg.png"
-  alt="LA Metro logo"
-  className="mb-8 mx-auto block h-16 w-auto sm:h-[72px] md:h-[88px]"
-  loading="eager"
-/>
+          <img
+            src="/images/LAMetroLogo.svg.png"
+            alt="LA Metro logo"
+            className="mb-8 mx-auto block h-16 w-auto sm:h-[72px] md:h-[88px]"
+            loading="eager"
+          />
 
 
 
@@ -66,12 +65,22 @@ export default function Home() {
 
           {/* CTA buttons */}
           <div className="mt-10 flex items-center justify-center gap-x-6">
-            <Link
-              to="/projects-external"
-              className="rounded-md bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
-            >
-              View projects
-            </Link>
+          <Link
+  to="/projects-external"
+  className="rounded-lg px-4 py-2.5 text-sm font-semibold
+             bg-neutral-900 text-white shadow transition
+             duration-200 ease-out
+             hover:bg-neutral-800 hover:shadow-lg hover:-translate-y-0.5 hover:scale-[1.02]
+             active:translate-y-0 active:scale-100
+             focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/60
+
+             dark:bg-white dark:text-neutral-900
+             dark:hover:bg-neutral-200 dark:focus-visible:ring-white/70"
+>
+  View projects
+</Link>
+
+
 
           </div>
         </div>
