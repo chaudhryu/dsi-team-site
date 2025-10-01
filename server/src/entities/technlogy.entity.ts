@@ -13,6 +13,6 @@ export class Technology {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: "varchar", length: 50 })
+  @Column({ type: "varchar", length: 50, nullable: true })
   name: string;
 }

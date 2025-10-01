@@ -18,21 +18,22 @@ export class Project {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: "varchar", length: 125 })
+  @Column({ type: "varchar", length: 125, nullable: true })
   name: string;
 
-  @Column({ type: "varchar", length: "MAX" })
+  @Column({ type: "varchar", length: "MAX", nullable: true })
   description: string;
 
-  @Column({ type: "varchar", length: 50 })
+  @Column({ type: "varchar", length: 50, nullable: true })
   status: string;
 
-  @Column({ type: "varchar", length: 125 })
+  @Column({ type: "varchar", length: 125, nullable: true })
   client: string;
 
   @Column({
     type: "varchar",
     length: "MAX",
+    nullable: true,
     transformer: {
       to: (value: any) => JSON.stringify(value), // array -> string
       from: (value: string) => JSON.parse(value), // string -> array
@@ -56,11 +57,11 @@ export class Project {
   // })
   // databasePassword: string;
 
-  @ManyToMany(() => User, { eager: true })
+  @ManyToMany(() => User, { eager: true, nullable: true })
   @JoinTable()
   projectMembers: User[];
 
-  @ManyToMany(() => Technology, { cascade: true })
+  @ManyToMany(() => Technology, { cascade: true, nullable: true })
   @JoinTable()
   technologies: Technology[];
 }
