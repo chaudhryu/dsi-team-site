@@ -39,23 +39,23 @@ export default function Home() {
         <div
           className={`mx-auto flex max-w-2xl flex-col items-center px-6
                       transition-all duration-700
-                      ${
-                        visible
-                          ? "opacity-100 translate-y-0"
-                          : "opacity-0 translate-y-6"
-                      }`}
+                      ${visible
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-6"
+            }`}
         >
-          {/* Image (smaller, above text) */}
           <img
-            src="/images/stockTeam.jpg"
-            alt="Team collaborating at their desks"
-            className="mb-12 w-full max-w-md rounded-xl shadow-lg ring-1 ring-gray-900/10
-                       dark:ring-gray-100/10 md:max-w-lg"
+            src="/images/LAMetroLogo.svg.png"
+            alt="LA Metro logo"
+            className="mb-8 mx-auto block h-16 w-auto sm:h-[72px] md:h-[88px]"
+            loading="eager"
           />
+
+
 
           {/* Headline & Copy */}
           <h1 className="text-center text-5xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-7xl">
-            Building better transit apps for LA
+            DSI Web Apps Team
           </h1>
           <p className="mt-8 text-center text-lg leading-8 text-gray-600 dark:text-gray-300">
             Welcome to the DSI WebApps team hub. Explore our projects, read
@@ -65,18 +65,23 @@ export default function Home() {
 
           {/* CTA buttons */}
           <div className="mt-10 flex items-center justify-center gap-x-6">
-            <Link
-              to="/projects-external"
-              className="rounded-md bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
-            >
-              View projects
-            </Link>
-            <Link
-              to="/about"
-              className="text-sm font-semibold text-gray-900 dark:text-gray-100"
-            >
-              Learn more <span aria-hidden="true">→</span>
-            </Link>
+          <Link
+  to="/projects-external"
+  className="rounded-lg px-4 py-2.5 text-sm font-semibold
+             bg-neutral-900 text-white shadow transition
+             duration-200 ease-out
+             hover:bg-neutral-800 hover:shadow-lg hover:-translate-y-0.5 hover:scale-[1.02]
+             active:translate-y-0 active:scale-100
+             focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/60
+
+             dark:bg-white dark:text-neutral-900
+             dark:hover:bg-neutral-200 dark:focus-visible:ring-white/70"
+>
+  View projects
+</Link>
+
+
+
           </div>
         </div>
 
