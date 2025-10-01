@@ -10,7 +10,7 @@ const AppFooter: React.FC = () => (
         {/* logo (small) */}
         <Link to="/" className="flex items-center space-x-2">
           <img
-            src="/images/logo/theMetroLogo.webp"
+            src="/images/LAMetroLogo.svg.png"
             alt="Metro logo"
             className="h-8 w-auto dark:hidden"
           />
