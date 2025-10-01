@@ -76,7 +76,7 @@ const AppHeader: React.FC = () => {
           <Link to="/" className="lg:hidden ml-auto">
             <img
               className="h-12 w-auto"
-              src="./images/logo/metroLogoSmall.webp"
+              src="./images/LAMetroLogo.svg.png"
               alt="Metro logo"
             />
           </Link>
