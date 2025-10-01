@@ -20,6 +20,23 @@ const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 /* Hide these badges everywhere in this table */
 const HIDDEN_BADGES = new Set<string>(["93467"]);
 
+/* -------------------- Full-screen Spinner -------------------- */
+function FullscreenSpinner({ label = "Loading…" }: { label?: string }) {
+  return (
+    <div
+      className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white" />
+        <span className="text-white text-sm font-medium">{label}</span>
+      </div>
+    </div>
+  );
+}
+
 /* -------------------- Types -------------------- */
 type User = {
   badge: number;
@@ -312,7 +329,7 @@ export default function AccomplishmentsTable() {
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+    <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       {/* Week filter */}
       <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-100 dark:border-white/[0.05]">
         <Label className="text-gray-700 text-theme-sm">Filter by Week</Label>
@@ -536,6 +553,9 @@ export default function AccomplishmentsTable() {
           </div>
         </div>
       )}
+
+      {/* 🔄 Full-screen spinner while loading */}
+      {loading && <FullscreenSpinner label="Loading team accomplishments…" />}
     </div>
   );
 }
