@@ -17,6 +17,23 @@ const LOGIN_KEY = envConfig.loginEmpKey || "loginEmployee";
 /** If your backend exposes a different path for Gemini summaries, change this: */
 const AI_SUMMARY_ENDPOINT = `${API_BASE}/ai/summarize-accomplishments`;
 
+/* -------------------- Full-screen Spinner -------------------- */
+function FullscreenSpinner({ label = "Loading…" }: { label?: string }) {
+  return (
+    <div
+      className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/30 border-t-white" />
+        <span className="text-white text-sm font-medium">{label}</span>
+      </div>
+    </div>
+  );
+}
+
 /* -------------------- Types -------------------- */
 type Accomplishment = {
   id: number;
@@ -356,21 +373,21 @@ export default function Accomplishments() {
   /* -------------------- Personal Gemini summary -------------------- */
   async function onSummarizeRange() {
     if (!badge) return;
-  
+
     try {
       setSummarizing(true);
       setSumError(null);
-  
+
       // Build the single-user payload (no `model` field)
       const inRange = rows.filter((d) => d.endWeekDate >= from && d.startWeekDate <= to);
-  
+
       // Optional guard: avoid empty submissions
       if (inRange.length === 0) {
         setSumError("No entries found in the selected date range.");
         setSummarizing(false);
         return;
       }
-  
+
       const payload = {
         from,
         to,
@@ -387,14 +404,14 @@ export default function Accomplishments() {
           },
         ],
       };
-  
+
       const resp = await fetch(AI_SUMMARY_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(payload),
       });
-  
+
       if (!resp.ok) {
         // Surface backend validation message in the UI
         const errText = await resp.text();
@@ -405,7 +422,7 @@ export default function Accomplishments() {
           throw new Error(errText);
         }
       }
-  
+
       const json = (await resp.json()) as PersonalSummaryResp;
       setSummaryData(json);
       setSummaryOpen(true);
@@ -416,7 +433,6 @@ export default function Accomplishments() {
       setSummarizing(false);
     }
   }
-  
 
   function downloadMarkdown() {
     if (!summaryData?.users?.length) return;
@@ -708,6 +724,9 @@ export default function Accomplishments() {
           </div>
         </div>
       )}
+
+      {/* 🔄 Full-screen spinner while fetching accomplishments */}
+      {loading && <FullscreenSpinner label="Loading your accomplishments…" />}
     </div>
   );
 }
