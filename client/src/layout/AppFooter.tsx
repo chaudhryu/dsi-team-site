@@ -10,7 +10,7 @@ const AppFooter: React.FC = () => (
         {/* logo (small) */}
         <Link to="/" className="flex items-center space-x-2">
           <img
-            src="/images/logo/theMetroLogo.webp"
+            src="/images/LAMetroLogo.svg.png"
             alt="Metro logo"
             className="h-8 w-auto dark:hidden"
           />
@@ -22,13 +22,7 @@ const AppFooter: React.FC = () => (
           <span className="sr-only">DSI WebApps</span>
         </Link>
 
-        {/* simple nav links */}
-        <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm font-medium text-gray-600 dark:text-gray-300">
-          <Link to="/projects"  className="hover:text-gray-900 dark:hover:text-white">Projects</Link>
-          <Link to="/about"     className="hover:text-gray-900 dark:hover:text-white">About&nbsp;us</Link>
-          <Link to="/calendar"  className="hover:text-gray-900 dark:hover:text-white">Calendar</Link>
-          <Link to="/contact"   className="hover:text-gray-900 dark:hover:text-white">Contact</Link>
-        </nav>
+       
       </div>
 
       {/* bottom row ------------------------------------------------- */}
