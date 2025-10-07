@@ -5,11 +5,9 @@ import PageMeta from "../components/common/PageMeta";
 import ComponentCard from "../components/common/ComponentCard";
 import Button from "../components/ui/button/Button";
 import { BoxIcon } from "../icons";
+import ReactQuillEditor from "../components/TextEditor/ReactQuillEditor";
 import { envConfig } from "../config/envConfig";
 
-// 🚨 Requires: npm i react-quill-new dompurify quill
-import ReactQuill from "react-quill-new";
-import "quill/dist/quill.snow.css";
 import DOMPurify from "dompurify";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
@@ -40,7 +38,7 @@ type Accomplishment = {
   accomplishments: string; // sanitized HTML string
   dateSubmitted: string | null;
   startWeekDate: string; // 'YYYY-MM-DD'
-  endWeekDate: string;   // 'YYYY-MM-DD'
+  endWeekDate: string; // 'YYYY-MM-DD'
   taskStatus?: string | null;
 };
 
@@ -114,30 +112,6 @@ function buildWeekOptions(center = new Date(), past = 26, future = 0): WeekOpt[]
   return weeks.sort((a, b) => (a.start < b.start ? 1 : -1));
 }
 
-/* -------------------- editor config + sanitizers -------------------- */
-const quillModules = {
-  toolbar: [
-    [{ header: [1, 2, 3, false] }],
-    ["bold", "italic", "underline", "strike"],
-    [{ list: "ordered" }, { list: "bullet" }],
-    ["blockquote", "code-block", "link"],
-    ["clean"],
-  ],
-};
-
-// ⚠️ Keep "list" only; "bullet" is a value for list, not a separate format.
-const quillFormats: string[] = [
-  "header",
-  "bold",
-  "italic",
-  "underline",
-  "strike",
-  "list",
-  "blockquote",
-  "code-block",
-  "link",
-];
-
 // Keep Quill's data-* attributes (used for lists/checkboxes) and common safe attrs.
 const sanitizeHtml = (html: string) =>
   DOMPurify.sanitize(html, {
@@ -153,12 +127,9 @@ const plainTextFromHtml = (html: string) =>
 /* -------------------- status badge helper -------------------- */
 function statusBadgeClasses(status?: string | null) {
   const s = (status ?? "").toLowerCase();
-  if (s === "submitted")
-    return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300";
-  if (s === "missing")
-    return "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300";
-  if (s === "draft")
-    return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300";
+  if (s === "submitted") return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300";
+  if (s === "missing") return "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300";
+  if (s === "draft") return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300";
   return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
 }
 
@@ -539,7 +510,10 @@ export default function Accomplishments() {
                   const status = r.taskStatus ?? (r.accomplishments ? "Submitted" : "Missing");
                   const isSubmitted = status === "Submitted";
                   return (
-                    <tr key={`${r.startWeekDate}-${r.endWeekDate}`} className="hover:bg-gray-50/70 dark:hover:bg-gray-800/40">
+                    <tr
+                      key={`${r.startWeekDate}-${r.endWeekDate}`}
+                      className="hover:bg-gray-50/70 dark:hover:bg-gray-800/40"
+                    >
                       <td className="px-5 py-4 text-gray-600 dark:text-gray-400">
                         {r.startWeekDate} → {r.endWeekDate}
                       </td>
@@ -575,7 +549,11 @@ export default function Accomplishments() {
 
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusBadgeClasses(status)}`}>
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusBadgeClasses(
+                              status
+                            )}`}
+                          >
                             {status}
                           </span>
                           {isSubmitted && (
@@ -627,13 +605,9 @@ export default function Accomplishments() {
               )}
 
               <div>
-                <ReactQuill
-                  theme="snow"
+                <ReactQuillEditor
                   value={text}
                   onChange={(value) => setText(value)}
-                  modules={quillModules}
-                  formats={quillFormats}
-                  style={{ height: 240 }}
                   className="text-sm text-gray-900 dark:text-gray-100 pb-6"
                 />
               </div>
@@ -685,7 +659,7 @@ export default function Accomplishments() {
               )}
               {/* Render Markdown as plain text for safety */}
               <pre className="whitespace-pre-wrap break-words text-sm text-gray-800 dark:text-gray-200">
-{summaryData.users[0].summary_md}
+                {summaryData.users[0].summary_md}
               </pre>
 
               {summaryData.users[0].highlights?.length ? (
