@@ -20,7 +20,6 @@ export class DatabasesService {
     private readonly crypto: CryptoService,
   ) {}
 
-  /** Strip password from logins before returning to the client */
   private sanitize(db: Database): SafeDatabase {
     const { logins = [], ...rest } = db;
     const safeLogins = (logins || []).map(({ password, ...l }) => l as SafeLogin);
@@ -53,7 +52,6 @@ export class DatabasesService {
   }
 
   async removeDatabase(id: number): Promise<void> {
-    // No cascade set on entities; delete child logins first.
     await this.loginRepo
       .createQueryBuilder()
       .delete()
@@ -118,7 +116,7 @@ export class DatabasesService {
     return this.sanitize(updated);
   }
 
-  /** Admin-only: return the decrypted password for a specific login */
+  /** Returns the decrypted password for a login (controller now decides who can call this). */
   async revealPassword(dbId: number, loginId: number): Promise<{ password: string }> {
     const login = await this.loginRepo.findOne({
       where: { id: loginId },

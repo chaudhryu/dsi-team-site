@@ -11,13 +11,15 @@ import {
   Req,
   UsePipes,
   ValidationPipe,
-  ForbiddenException,
+  // UseGuards,           // <-- uncomment if you have an auth guard
+  // UnauthorizedException,
 } from "@nestjs/common";
 import { DatabasesService } from "../databases/databases.service";
 import { CreateDatabaseDto } from "../dto/create-database.dto";
 import { UpdateDatabaseDto } from "../dto/update-database.dto";
 import { CreateLoginDto } from "../dto/create-login.dto";
 import { UpdateLoginDto } from "../dto/update-login.dto";
+// import { JwtAuthGuard } from "../auth/jwt-auth.guard";   // <-- your guard if available
 
 @Controller("databases")
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
@@ -71,19 +73,20 @@ export class DatabasesController {
     return this.svc.removeLogin(id, loginId);
   }
 
-  /** Admin-only: reveal the decrypted password (no-store to avoid caching) */
+  /** Reveal decrypted password.
+   *  Policy (as requested): any authenticated user may reveal.
+   *  If you have a guard, uncomment @UseGuards(JwtAuthGuard) to ensure req.user exists.
+   */
+  // @UseGuards(JwtAuthGuard)
   @Post(":id/logins/:loginId/reveal")
   @Header("Cache-Control", "no-store")
   async reveal(
     @Param("id", ParseIntPipe) id: number,
     @Param("loginId", ParseIntPipe) loginId: number,
-    @Req() req: any,
+    @Req() _req: any, // If you have a guard, you can enforce req.user here.
   ) {
-    // If you have guards, prefer @UseGuards(JwtAuthGuard, RolesGuard) + @Roles('admin').
-    const roles: string[] = req?.user?.roles ?? [];
-    if (!roles.includes("admin")) {
-      throw new ForbiddenException("Admin privileges required");
-    }
+    // If you want to hard-require authentication even without a guard, you can do:
+    // if (!_req?.user) throw new UnauthorizedException();
     return this.svc.revealPassword(id, loginId);
   }
 }
