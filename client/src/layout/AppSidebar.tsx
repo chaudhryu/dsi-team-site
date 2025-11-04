@@ -7,6 +7,7 @@ import {
   HorizontaLDots,
   ListIcon,
   UserCircleIcon,
+  TableIcon
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 
@@ -29,6 +30,8 @@ const navItems: NavItem[] = [
   },
   { icon: <UserCircleIcon />, name: "User Management", path: "/users" },
   { name: "Projects", icon: <ListIcon />, path: "/projects-internal" },
+  { name: "Databases", icon: <TableIcon />, path: "/databases" },
+
 ];
 
 const othersItems: NavItem[] = []; // (kept for structure)
