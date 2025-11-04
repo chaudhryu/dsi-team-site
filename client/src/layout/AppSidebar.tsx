@@ -29,6 +29,8 @@ const navItems: NavItem[] = [
   },
   { icon: <UserCircleIcon />, name: "User Management", path: "/users" },
   { name: "Projects", icon: <ListIcon />, path: "/projects-internal" },
+  { name: "Databases", icon: <ListIcon />, path: "/databases" },
+
 ];
 
 const othersItems: NavItem[] = []; // (kept for structure)
