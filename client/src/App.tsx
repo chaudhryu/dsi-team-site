@@ -14,6 +14,7 @@ import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
 import AuthCallback from "./pages/Private/Auth/AuthCallback";
 import Users from "./pages/Users";
+import Databases from "./pages/Databases";
 import { Projects } from "./pages/ProjectsInternal/Projects";
 
 export default function App() {
@@ -50,6 +51,8 @@ export default function App() {
                 element={<AccomplishmentsTable />}
               />
               <Route path="/users" element={<Users />} />
+              <Route path="/databases" element={<Databases />} />
+
 
               {/* add other private routes here */}
             </Route>

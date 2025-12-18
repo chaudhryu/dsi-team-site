@@ -1,28 +1,31 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
-import * as Joi from "joi"; //for environment variable validation
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { UsersService } from "./services/users.service";
+
 import {
   Application,
   Database,
-  Server,
   DatabaseLogin,
+  Server,
   User,
   WeeklyAccomplishment,
 } from "./entities";
-import { WeeklyAccomplishmentService } from "./services/weekly-accomplishment.service";
+import { Project } from "./entities/project.entity";
+import { Technology } from "./entities/technlogy.entity";
+
 import { UsersController } from "./controllers/users.controller";
 import { WeeklyAccomplishmentsController } from "./controllers/weekly-accomplishments.controller";
 import { ProjectsController } from "./controllers/projects.controller";
-import { Project } from "./entities/project.entity";
-import { ProjectsService } from "./services/projects.service";
-
-/* ⬇️ ADD THIS import */
-import { AiModule } from "./ai/ai.module";
-import { Technology } from "./entities/technlogy.entity";
 import { TechnologiesController } from "./controllers/technologies.controller";
+
+import { UsersService } from "./services/users.service";
+import { WeeklyAccomplishmentService } from "./services/weekly-accomplishment.service";
+import { ProjectsService } from "./services/projects.service";
 import { TechnologiesService } from "./services/technologies.service";
+
+/* Feature modules */
+import { AiModule } from "./ai/ai.module";
+import { DatabasesModule } from "./databases/databases.module";
 
 @Module({
   imports: [
@@ -57,13 +60,13 @@ import { TechnologiesService } from "./services/technologies.service";
 
         if (dbType === "mssql") {
           return {
-            type: "mssql",
+            type: "mssql" as const,
             host: cfg.get<string>("DB_HOST"),
             port: Number(cfg.get<number>("DB_PORT") ?? 1433),
             username: cfg.get<string>("DB_USER"),
             password: cfg.get<string>("DB_PASS"),
             database: cfg.get<string>("DB_NAME"),
-            //For TypeORM >=0.3.x with tedious:
+            // For TypeORM >= 0.3.x with tedious:
             options: {
               encrypt: parseBool(cfg.get("DB_ENCRYPT"), true),
               trustServerCertificate: parseBool(
@@ -71,20 +74,23 @@ import { TechnologiesService } from "./services/technologies.service";
                 false
               ),
             },
-            entities: entities,
+            entities,
             synchronize: syncFlag, // ⚠️ keep true only in dev
             logging: isDev ? ["error", "warn"] : ["error"],
           };
-        } else
+        } else {
           return {
-            type: "sqlite",
+            type: "sqlite" as const,
             database: cfg.get<string>("SQLITE_DB"),
-            entities: entities,
+            entities,
             synchronize: syncFlag, // ⚠️ keep true only in dev
             logging: isDev ? ["error", "warn"] : ["error"],
           };
+        }
       },
     }),
+
+    // Repositories exposed at the app level (optional; you can keep them in feature modules too)
     TypeOrmModule.forFeature([
       User,
       Application,
@@ -94,9 +100,10 @@ import { TechnologiesService } from "./services/technologies.service";
       Database,
       DatabaseLogin,
       WeeklyAccomplishment,
-      Project,
-    ]) /* ⬇️ ADD THIS so /api/ai/* routes are mounted */,
+    ]),
+
     AiModule,
+    DatabasesModule, // 👈 mounts the /api/databases routes
   ],
   controllers: [
     UsersController,
