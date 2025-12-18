@@ -34,11 +34,16 @@ import { TechnologiesService } from "./services/technologies.service";
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => {
-        const isDev = cfg.get("NODE_ENV") !== "production";
+        const isDev =
+          (cfg.get<string>("NODE_ENV") ?? "development") !== "production";
+
+        const parseBool = (v: unknown, defaultVal: boolean) => {
+          if (v === undefined || v === null) return defaultVal;
+          if (typeof v === "boolean") return v;
+          return String(v).toLowerCase() === "true";
+        };
+        const syncFlag = isDev && parseBool(cfg.get("DB_SYNC"), true); // dev default true, prod default false
         const dbType = (cfg.get<string>("DB_TYPE") || "sqlite").toLowerCase();
-        const syncFlag =
-          (cfg.get<boolean>("DB_SYNC") as boolean | undefined) ??
-          (isDev ? true : false);
         const entities = [
           User,
           Application,
@@ -60,9 +65,11 @@ import { TechnologiesService } from "./services/technologies.service";
             database: cfg.get<string>("DB_NAME"),
             //For TypeORM >=0.3.x with tedious:
             options: {
-              encrypt: (cfg.get<boolean>("DB_ENCRYPT") ?? true) === true,
-              trustServerCertificate:
-                (cfg.get<boolean>("DB_TRUST_SERVER_CERT") ?? false) === true,
+              encrypt: parseBool(cfg.get("DB_ENCRYPT"), true),
+              trustServerCertificate: parseBool(
+                cfg.get("DB_TRUST_SERVER_CERT"),
+                false
+              ),
             },
             entities: entities,
             synchronize: syncFlag, // ⚠️ keep true only in dev

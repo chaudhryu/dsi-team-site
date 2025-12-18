@@ -1,5 +1,5 @@
 // BulletEditorRQ3.tsx
-import React, { useMemo, useRef, type ComponentProps } from "react";
+import { useMemo, useRef, type ComponentProps } from "react";
 import ReactQuill from "react-quill-new";
 import "quill/dist/quill.snow.css";
 
