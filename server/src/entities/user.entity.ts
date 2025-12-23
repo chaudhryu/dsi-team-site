@@ -25,7 +25,19 @@ export class User {
   lastName: string;
 
   @Column({ nullable: true })
-  position: number;
+  position: string;
+
+  @Column({ nullable: true })
+  role: string;
+
+  @Column({ nullable: true })
+  costCenter: number;
+
+  @Column({ nullable: true })
+  reportToLevelOne: number;
+
+  @Column({ nullable: true })
+  reportToLevelTwo: number;
 
   @Column({ default: 0 })
   readOnly: number;

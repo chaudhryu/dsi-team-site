@@ -47,6 +47,20 @@ import { DatabasesModule } from "./databases/databases.module";
         };
         const syncFlag = isDev && parseBool(cfg.get("DB_SYNC"), true); // dev default true, prod default false
         const dbType = (cfg.get<string>("DB_TYPE") || "sqlite").toLowerCase();
+        console.log(
+          "NODE_ENV =",
+          cfg.get("NODE_ENV"),
+          "process.env.NODE_ENV =",
+          process.env.NODE_ENV
+        );
+        console.log("DB_SYNC raw =", cfg.get("DB_SYNC"));
+        console.log("syncFlag =", syncFlag);
+        console.log(
+          "DB_HOST =",
+          cfg.get("DB_HOST"),
+          "DB_TYPE =",
+          cfg.get("DB_TYPE")
+        );
         const entities = [
           User,
           Application,
