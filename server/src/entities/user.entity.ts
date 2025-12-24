@@ -8,7 +8,6 @@ import {
   JoinTable,
 } from "typeorm";
 import { WeeklyAccomplishment } from "./WeeklyAccomplishment.entity";
-import { Project } from "./project.entity";
 
 @Entity()
 export class User {
