@@ -8,7 +8,6 @@ import {
   JoinTable,
 } from "typeorm";
 import { WeeklyAccomplishment } from "./WeeklyAccomplishment.entity";
-import { Project } from "./project.entity";
 
 @Entity()
 export class User {
@@ -25,10 +24,19 @@ export class User {
   lastName: string;
 
   @Column({ nullable: true })
-  position: number;
+  position: string;
 
   @Column({ default: 0 })
   readOnly: number;
+
+  @Column({ nullable: true })
+  role: string;
+
+  @Column({ nullable: true })
+  reportToLevelOne: string;
+
+  @Column({ nullable: true })
+  reportToLevelTwo: string;
 
   @OneToMany(() => WeeklyAccomplishment, (wa) => wa.user)
   weeklyAccomplishments: WeeklyAccomplishment[];
