@@ -1,53 +1,66 @@
 // src/dto/weekly-accomplishment.dto.ts
-import { IsDateString, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsNumber, IsOptional, IsString } from "class-validator";
 
 export class CreateWeeklyAccomplishmentDto {
   @IsNumber()
-  userBadge: number;                    // relate by badge
+  userBadge: number; // relate by badge
 
   @IsDateString()
-  startWeekDate: string;                // 'YYYY-MM-DD'
+  startWeekDate: string; // 'YYYY-MM-DD'
 
   @IsDateString()
-  endWeekDate: string;                  // 'YYYY-MM-DD'
+  endWeekDate: string; // 'YYYY-MM-DD'
 
   @IsString()
   accomplishments: string;
 
   @IsOptional()
   @IsString()
-  dateSubmitted?: string;               // 'YYYY-MM-DD' (optional)
+  dateSubmitted?: string; // 'YYYY-MM-DD' (optional)
 
   @IsOptional()
   @IsString()
-  taskStatus?: string;                  // e.g., 'Submitted'
+  taskStatus?: string; // e.g., 'Submitted'
 
   @IsOptional()
   @IsNumber()
-  applicationId?: number;               // optional link to Application
+  applicationId?: number; // optional link to Application
+
+  @IsString()
+  costCenter: string;
 }
 
 export class UpdateWeeklyAccomplishmentDto {
-  @IsOptional() @IsNumber()
+  @IsOptional()
+  @IsNumber()
   userBadge?: number;
 
-  @IsOptional() @IsDateString()
+  @IsOptional()
+  @IsDateString()
   startWeekDate?: string;
 
-  @IsOptional() @IsDateString()
+  @IsOptional()
+  @IsDateString()
   endWeekDate?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   accomplishments?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   dateSubmitted?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   taskStatus?: string;
 
-  @IsOptional() @IsNumber()
+  @IsOptional()
+  @IsNumber()
   applicationId?: number;
+
+  @IsString()
+  costCenter: string;
 }
 
 export class WeeklyAccomplishmentResponseDto {
