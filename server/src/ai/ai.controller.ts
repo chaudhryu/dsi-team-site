@@ -1,13 +1,31 @@
 // src/ai/ai.controller.ts
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
-import { AiService } from './ai.service';
-import { SummarizeRequestDto, SummarizeResponseDto } from './dto/summarize-accomplishments.dto';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  UsePipes,
+  ValidationPipe,
+} from "@nestjs/common";
+import { AiService } from "./ai.service";
+import {
+  SummarizeRequestDto,
+  SummarizeResponseDto,
+} from "./dto/summarize-accomplishments.dto";
 
-@Controller('ai')
+@Controller("ai")
+@UsePipes(
+  new ValidationPipe({
+    transform: true,
+    whitelist: true,
+    forbidNonWhitelisted: true,
+  })
+)
 export class AiController {
   constructor(private readonly ai: AiService) {}
 
-  @Post('summarize-accomplishments')
+  @Post("summarize-accomplishments")
   @HttpCode(HttpStatus.OK)
   summarize(@Body() dto: SummarizeRequestDto): Promise<SummarizeResponseDto> {
     return this.ai.summarize(dto);
