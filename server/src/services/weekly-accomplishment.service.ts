@@ -3,14 +3,15 @@ import {
   Injectable,
   NotFoundException,
   OnApplicationBootstrap,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, FindOptionsWhere } from 'typeorm';
-import { WeeklyAccomplishment, Application, User } from '../entities';
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, FindOptionsWhere } from "typeorm";
+import { WeeklyAccomplishment, Application, User } from "../entities";
 import {
   CreateWeeklyAccomplishmentDto,
   UpdateWeeklyAccomplishmentDto,
-} from '../dto/weekly-accomplishment.dto';
+} from "../dto/weekly-accomplishment.dto";
+import { start } from "repl";
 
 @Injectable()
 export class WeeklyAccomplishmentService implements OnApplicationBootstrap {
@@ -20,7 +21,7 @@ export class WeeklyAccomplishmentService implements OnApplicationBootstrap {
     @InjectRepository(Application)
     private readonly appRepo: Repository<Application>,
     @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
+    private readonly userRepo: Repository<User>
   ) {}
 
   // optional: seed or leave empty
@@ -28,18 +29,32 @@ export class WeeklyAccomplishmentService implements OnApplicationBootstrap {
     // no-op
   }
 
+  async getByCostCenterAndDateRange(
+    costCenter: number,
+    startWeekDate: string,
+    endWeekDate: string
+  ): Promise<WeeklyAccomplishment[]> {
+    return this.waRepo.find({
+      where: {
+        costCenter: costCenter,
+        startWeekDate: startWeekDate,
+        endWeekDate: endWeekDate,
+      },
+    });
+  }
+
   // used by GET /weekly-accomplishments/user/:badge
   async getAllByUser(badge: number): Promise<WeeklyAccomplishment[]> {
     return this.waRepo.find({
       where: { user: { badge } as any },
       relations: [
-        'application',
-        'application.devServer',
-        'application.prodServer',
-        'application.devDatabase',
-        'application.prodDatabase',
-        'application.devDatabase.logins',
-        'application.prodDatabase.logins',
+        "application",
+        "application.devServer",
+        "application.prodServer",
+        "application.devDatabase",
+        "application.prodDatabase",
+        "application.devDatabase.logins",
+        "application.prodDatabase.logins",
       ],
       // you can add order if you like
       // order: { startWeekDate: 'DESC' },
@@ -49,17 +64,23 @@ export class WeeklyAccomplishmentService implements OnApplicationBootstrap {
   // used by POST /weekly-accomplishments
   async createOrUpdate(dto: CreateWeeklyAccomplishmentDto) {
     // Ensure user exists (we do NOT auto-create because firstName/lastName are required)
-    const user = await this.userRepo.findOne({ where: { badge: dto.userBadge } });
+    const user = await this.userRepo.findOne({
+      where: { badge: dto.userBadge },
+    });
     if (!user) {
       throw new NotFoundException(`User with badge ${dto.userBadge} not found`);
     }
 
     // Optional application
     let application: Application | null = null;
-    if (typeof dto.applicationId === 'number') {
-      application = await this.appRepo.findOne({ where: { id: dto.applicationId } });
+    if (typeof dto.applicationId === "number") {
+      application = await this.appRepo.findOne({
+        where: { id: dto.applicationId },
+      });
       if (!application) {
-        throw new NotFoundException(`Application ${dto.applicationId} not found`);
+        throw new NotFoundException(
+          `Application ${dto.applicationId} not found`
+        );
       }
     }
 
@@ -73,8 +94,11 @@ export class WeeklyAccomplishmentService implements OnApplicationBootstrap {
 
     if (rec) {
       rec.accomplishments = dto.accomplishments ?? rec.accomplishments;
-      rec.dateSubmitted = dto.dateSubmitted ?? rec.dateSubmitted ?? new Date().toISOString().slice(0, 10);
-      rec.taskStatus = dto.taskStatus ?? rec.taskStatus ?? 'Submitted';
+      rec.dateSubmitted =
+        dto.dateSubmitted ??
+        rec.dateSubmitted ??
+        new Date().toISOString().slice(0, 10);
+      rec.taskStatus = dto.taskStatus ?? rec.taskStatus ?? "Submitted";
       if (dto.applicationId !== undefined) rec.application = application; // allow set/clear
       return this.waRepo.save(rec);
     }
@@ -86,7 +110,8 @@ export class WeeklyAccomplishmentService implements OnApplicationBootstrap {
       startWeekDate: dto.startWeekDate,
       endWeekDate: dto.endWeekDate,
       dateSubmitted: dto.dateSubmitted ?? new Date().toISOString().slice(0, 10),
-      taskStatus: dto.taskStatus ?? 'Submitted',
+      taskStatus: dto.taskStatus ?? "Submitted",
+      costCenter: dto.costCenter,
     });
 
     return this.waRepo.save(rec);
@@ -95,12 +120,17 @@ export class WeeklyAccomplishmentService implements OnApplicationBootstrap {
   // used by PUT /weekly-accomplishments/:id
   async update(id: number, dto: UpdateWeeklyAccomplishmentDto) {
     const rec = await this.waRepo.findOne({ where: { id } });
-    if (!rec) throw new NotFoundException('Weekly accomplishment not found');
+    if (!rec) throw new NotFoundException("Weekly accomplishment not found");
 
     // (optional) switch which user it belongs to
     if (dto.userBadge !== undefined) {
-      const user = await this.userRepo.findOne({ where: { badge: dto.userBadge } });
-      if (!user) throw new NotFoundException(`User with badge ${dto.userBadge} not found`);
+      const user = await this.userRepo.findOne({
+        where: { badge: dto.userBadge },
+      });
+      if (!user)
+        throw new NotFoundException(
+          `User with badge ${dto.userBadge} not found`
+        );
       rec.user = user;
     }
 
@@ -116,6 +146,7 @@ export class WeeklyAccomplishmentService implements OnApplicationBootstrap {
     rec.endWeekDate = dto.endWeekDate ?? rec.endWeekDate;
     rec.dateSubmitted = dto.dateSubmitted ?? rec.dateSubmitted;
     rec.taskStatus = dto.taskStatus ?? rec.taskStatus;
+    rec.costCenter = dto.costCenter ?? rec.costCenter;
 
     return this.waRepo.save(rec);
   }
