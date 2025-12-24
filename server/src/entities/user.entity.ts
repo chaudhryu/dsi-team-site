@@ -26,17 +26,20 @@ export class User {
   @Column({ nullable: true })
   position: string;
 
-  @Column({ default: 0 })
-  readOnly: number;
-
   @Column({ nullable: true })
   role: string;
 
   @Column({ nullable: true })
-  reportToLevelOne: string;
+  costCenter: number;
 
   @Column({ nullable: true })
-  reportToLevelTwo: string;
+  reportToLevelOne: number;
+
+  @Column({ nullable: true })
+  reportToLevelTwo: number;
+
+  @Column({ default: 0 })
+  readOnly: number;
 
   @OneToMany(() => WeeklyAccomplishment, (wa) => wa.user)
   weeklyAccomplishments: WeeklyAccomplishment[];
