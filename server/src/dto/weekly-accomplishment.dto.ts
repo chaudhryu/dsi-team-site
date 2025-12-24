@@ -26,8 +26,8 @@ export class CreateWeeklyAccomplishmentDto {
   @IsNumber()
   applicationId?: number; // optional link to Application
 
-  @IsString()
-  costCenter: string;
+  @IsNumber()
+  costCenter: number;
 }
 
 export class UpdateWeeklyAccomplishmentDto {
@@ -59,8 +59,8 @@ export class UpdateWeeklyAccomplishmentDto {
   @IsNumber()
   applicationId?: number;
 
-  @IsString()
-  costCenter: string;
+  @IsNumber()
+  costCenter: number;
 }
 
 export class WeeklyAccomplishmentResponseDto {
