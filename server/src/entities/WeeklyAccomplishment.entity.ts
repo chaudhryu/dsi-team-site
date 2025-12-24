@@ -51,4 +51,7 @@ export class WeeklyAccomplishment {
 
   @Column({ nullable: true, name: "taskStatus" })
   taskStatus: string | null;
+
+  @Column({ nullable: true, name: "costCenter" })
+  costCenter: string | null;
 }
