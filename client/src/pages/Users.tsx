@@ -14,6 +14,7 @@ import { fetchEmployeeDetails, fetchEmployeeHierarchy } from "@/Data/actions/Emp
 import { IReportTo } from "@/interfaces/IReportTo";
 import { Spinner } from "@/components/ui/shadcn-io/spinner";
 import { UserRow } from "@/interfaces/IUser";
+import { report } from "process";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 
@@ -41,11 +42,11 @@ export default function Users() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [position, setPosition] = useState("");
+  const [costCenter, setCostCenter] = useState<number>();
   const [readOnly, setReadOnly] = useState(false);
   const [reportToLevelOne, setReportToLevelOne] = useState<IReportTo>();
   const [reportToLevelTwo, setReportToLevelTwo] = useState<IReportTo>();
   const [roleDropdownValues, setRoleDropdownValues] = useState<IRole[]>([
-    { id: 0, name: "User" },
     { id: 1, name: "Manager" },
     { id: 2, name: "Higher Manager" },
   ]);
@@ -71,6 +72,7 @@ export default function Users() {
     setLastName("");
     setEmail("");
     setPosition("");
+    setCostCenter(undefined);
     setReadOnly(false);
     setReportToLevelOne(undefined);
     setReportToLevelTwo(undefined);
@@ -175,6 +177,7 @@ export default function Users() {
             lastName: lastName.trim(),
             email: email.trim(),
             position: position.trim() || null,
+            costCenter: costCenter,
             readOnly,
             role: data.role?.name,
             reportToLevelOne: reportToLevelOne?.badge,
@@ -211,13 +214,25 @@ export default function Users() {
   const getUserDetails = async (badgeNumber: string) => {
     if (badgeNumber.length === 5) {
       const employeeDetails = (await fetchEmployeeDetails(badgeNumber))?.data;
-      const employeeInfo = (await fetchEmployeeHierarchy(badgeNumber))?.data;
+      const employeeHierarchy = (await fetchEmployeeHierarchy(badgeNumber))?.data;
+      console.log(employeeDetails);
       setFirstName(employeeDetails.employeeFirstName);
       setLastName(employeeDetails.employeeLastName);
+      setCostCenter(employeeDetails.costCenter);
       setPosition(employeeDetails.jobClassTitle);
       setEmail(employeeDetails.employeeEmailAddress);
-      setReportToLevelOne({ badge: employeeInfo[1].employeeBadgeNumber, name: employeeInfo[1].employeeName });
-      setReportToLevelTwo({ badge: employeeInfo[2].employeeBadgeNumber, name: employeeInfo[2].employeeName });
+      setReportToLevelOne({ badge: employeeHierarchy[1].employeeBadgeNumber, name: employeeHierarchy[1].employeeName });
+      setReportToLevelTwo({ badge: employeeHierarchy[2].employeeBadgeNumber, name: employeeHierarchy[2].employeeName });
+    } else {
+      setFirstName("");
+      setLastName("");
+      setEmail("");
+      setPosition("");
+      setCostCenter(undefined);
+      setReadOnly(false);
+      setReportToLevelOne({ badge: undefined, name: undefined });
+      setReportToLevelTwo({ badge: undefined, name: undefined });
+      console.log(reportToLevelOne);
     }
   };
 
@@ -286,6 +301,7 @@ export default function Users() {
                 <th className="px-6 py-3 font-medium">Last Name</th>
                 <th className="px-6 py-3 font-medium">Email</th>
                 <th className="px-6 py-3 font-medium">Position</th>
+                <th className="px-6 py-3 font-medium">Cost Center</th>
                 <th className="px-6 py-3 font-medium">Role</th>
                 <th className="px-6 py-3 font-medium">Report To Level One</th>
                 <th className="px-6 py-3 font-medium">Report To Level Two</th>
@@ -300,6 +316,7 @@ export default function Users() {
                   <td className="px-6 py-3">{u.lastName ?? ""}</td>
                   <td className="px-6 py-3">{u.email ?? ""}</td>
                   <td className="px-6 py-3">{u.position ?? ""}</td>
+                  <td className="px-6 py-3">{u.costCenter ?? ""}</td>
                   <td className="px-6 py-3">{u.role ?? ""}</td>
                   <td className="px-6 py-3">{u.reportToLevelOne ?? ""}</td>
                   <td className="px-6 py-3">{u.reportToLevelTwo ?? ""}</td>
@@ -339,11 +356,7 @@ export default function Users() {
                 className="px-6 py-5 space-y-4"
                 onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
                   e.preventDefault();
-                  console.log(form.watch("role"));
-                  form.watch("badge") &&
-                    form.watch("role") !== null &&
-                    form.watch("role") !== undefined &&
-                    form.handleSubmit(handleSubmit)();
+                  form.handleSubmit(handleSubmit)();
                 }}
               >
                 {errMsg ? (
@@ -365,7 +378,6 @@ export default function Users() {
                             </FormLabel>
                             <FormControl>
                               <Input
-                                maxLength={5}
                                 type="number"
                                 {...field}
                                 onChange={(e) => {
@@ -473,9 +485,9 @@ export default function Users() {
                       <Input
                         disabled
                         value={
-                          reportToLevelOne &&
-                          reportToLevelOne &&
-                          `${reportToLevelOne?.name} (${reportToLevelOne?.badge})`
+                          reportToLevelOne && reportToLevelOne?.name && reportToLevelOne?.badge
+                            ? `${reportToLevelOne?.name} (${reportToLevelOne?.badge})`
+                            : ""
                         }
                         className="mt-1 block w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                       />
@@ -487,26 +499,39 @@ export default function Users() {
                       <Input
                         disabled
                         value={
-                          reportToLevelTwo &&
-                          reportToLevelTwo &&
-                          `${reportToLevelTwo?.name} (${reportToLevelTwo?.badge})`
+                          reportToLevelTwo && reportToLevelTwo.name && reportToLevelTwo.badge
+                            ? `${reportToLevelTwo?.name} (${reportToLevelTwo?.badge})`
+                            : ""
                         }
                         className="mt-1 block w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                       />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 md:col-span-2">
-                    <Input
-                      disabled
-                      id="readonly"
-                      type="checkbox"
-                      checked={readOnly}
-                      onChange={(e) => setReadOnly(e.target.checked)}
-                      className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <label htmlFor="readonly" className="text-sm text-gray-700 dark:text-gray-300">
-                      Read-only user
-                    </label>
+                  <div className="flex gap-4">
+                    <div className="flex items-center w-1/2">
+                      <Input
+                        disabled
+                        id="readonly"
+                        type="checkbox"
+                        checked={readOnly}
+                        onChange={(e) => setReadOnly(e.target.checked)}
+                        className="flex justify-center items-center h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <label htmlFor="readonly" className="text-sm text-gray-700 dark:text-gray-300 ml-2">
+                        Read-only user
+                      </label>
+                    </div>
+                    <div className="w-1/2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Cost Center *
+                      </label>
+                      <Input
+                        disabled
+                        type="number"
+                        value={costCenter}
+                        className="mt-1 block w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -524,7 +549,7 @@ export default function Users() {
                     disabled={saving}
                     className="inline-flex items-center rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-brand-700 disabled:opacity-60"
                   >
-                    {saving ? "Saving…" : openUserForm ? "Save user" : "Save manager"}
+                    {saving ? "Saving…" : openUserForm ? "Add user" : "Add manager"}
                   </button>
                 </div>
               </form>
