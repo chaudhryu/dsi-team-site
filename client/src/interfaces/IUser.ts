@@ -4,6 +4,7 @@ export interface UserRow {
   lastName: string;
   email: string;
   position?: string | null;
+  costCenter: number;
   readOnly?: boolean | null;
   role: string;
   reportToLevelOne: string;
