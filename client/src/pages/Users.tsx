@@ -26,6 +26,12 @@ const userFormSchema = z.object({
   }),
 });
 
+const roles = [
+  { id: 0, name: "user" },
+  { id: 1, name: "manager" },
+  { id: 2, name: "high_manager" },
+];
+
 export default function Users() {
   const [rows, setRows] = useState<UserRow[]>([]);
   const [q, setQ] = useState("");
@@ -46,10 +52,7 @@ export default function Users() {
   const [readOnly, setReadOnly] = useState(false);
   const [reportToLevelOne, setReportToLevelOne] = useState<IReportTo>();
   const [reportToLevelTwo, setReportToLevelTwo] = useState<IReportTo>();
-  const [roleDropdownValues, setRoleDropdownValues] = useState<IRole[]>([
-    { id: 1, name: "Manager" },
-    { id: 2, name: "Higher Manager" },
-  ]);
+  const [roleDropdownValues, setRoleDropdownValues] = useState<IRole[]>();
   const [isPerformingAction, setIsPerformingAction] = useState<boolean>();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -123,12 +126,14 @@ export default function Users() {
 
   const handleOpenManagerForm = () => {
     resetForm();
+    const managerRoleDropdownValues = roles.filter((role) => role.name !== "user");
+    setRoleDropdownValues(managerRoleDropdownValues);
     setOpenManagerForm(true);
   };
 
   const handleOpenUserForm = () => {
     resetForm();
-    const roleDropdownValue = roleDropdownValues.find((roleDropdownValue) => roleDropdownValue.name === "User");
+    const roleDropdownValue = roles.find((roleDropdownValue) => roleDropdownValue.name === "user");
     console.log(roleDropdownValue);
     if (
       roleDropdownValue &&
@@ -400,7 +405,9 @@ export default function Users() {
                           name="role"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Role</FormLabel>
+                              <FormLabel>
+                                Role <span className="text-red-600">*</span>
+                              </FormLabel>
                               <div className="flex gap-3">
                                 <Select
                                   key={field.name || ""}
@@ -408,7 +415,7 @@ export default function Users() {
                                   onValueChange={(value) => {
                                     if (value) {
                                       console.log(value);
-                                      const role = roleDropdownValues.find(
+                                      const role = roleDropdownValues?.find(
                                         (roleDropdownValue) => roleDropdownValue?.id?.toString() === value
                                       );
                                       console.log(role);
@@ -422,7 +429,8 @@ export default function Users() {
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {roleDropdownValues?.length > 0 &&
+                                    {roleDropdownValues &&
+                                      roleDropdownValues.length > 0 &&
                                       roleDropdownValues.map((managerTypeDropdownValue: IRole) => (
                                         <SelectItem
                                           key={managerTypeDropdownValue.id}
@@ -443,7 +451,9 @@ export default function Users() {
                   </div>
                   <div className="flex flex-row gap-4">
                     <div className="w-1/2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">First name *</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        First name <span className="text-red-600">*</span>
+                      </label>
                       <Input
                         disabled
                         value={firstName}
@@ -451,7 +461,9 @@ export default function Users() {
                       />
                     </div>
                     <div className="w-1/2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Last name *</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Last name <span className="text-red-600">*</span>
+                      </label>
                       <Input
                         disabled
                         value={lastName}
@@ -461,7 +473,9 @@ export default function Users() {
                   </div>
                   <div className="flex flex-row gap-4">
                     <div className="w-1/2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Email <span className="text-red-600">*</span>
+                      </label>
                       <Input
                         disabled
                         value={email}
@@ -469,7 +483,9 @@ export default function Users() {
                       />
                     </div>
                     <div className="w-1/2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Position</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Position <span className="text-red-600">*</span>
+                      </label>
                       <Input
                         disabled
                         value={position}
@@ -480,7 +496,7 @@ export default function Users() {
                   <div className="flex flex-row gap-4">
                     <div className="w-1/2">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Report To Level One *
+                        Report To Level One <span className="text-red-600">*</span>
                       </label>
                       <Input
                         disabled
@@ -494,7 +510,7 @@ export default function Users() {
                     </div>
                     <div className="w-1/2">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Report To Level Two *
+                        Report To Level Two <span className="text-red-600">*</span>
                       </label>
                       <Input
                         disabled
@@ -508,6 +524,17 @@ export default function Users() {
                     </div>
                   </div>
                   <div className="flex gap-4">
+                    <div className="w-1/2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Cost Center <span className="text-red-600">*</span>
+                      </label>
+                      <Input
+                        disabled
+                        type="number"
+                        value={costCenter}
+                        className="mt-1 block w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                    </div>
                     <div className="flex items-center w-1/2">
                       <Input
                         disabled
@@ -520,17 +547,6 @@ export default function Users() {
                       <label htmlFor="readonly" className="text-sm text-gray-700 dark:text-gray-300 ml-2">
                         Read-only user
                       </label>
-                    </div>
-                    <div className="w-1/2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Cost Center *
-                      </label>
-                      <Input
-                        disabled
-                        type="number"
-                        value={costCenter}
-                        className="mt-1 block w-full border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                      />
                     </div>
                   </div>
                 </div>
