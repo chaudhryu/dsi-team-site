@@ -16,6 +16,7 @@ import AuthCallback from "./pages/Private/Auth/AuthCallback";
 import Users from "./pages/Users";
 import Databases from "./pages/Databases";
 import { Projects } from "./pages/ProjectsInternal/Projects";
+import HighManagerDashboard from "./pages/HighManagerDashboard";
 
 export default function App() {
   return (
@@ -52,6 +53,7 @@ export default function App() {
               />
               <Route path="/users" element={<Users />} />
               <Route path="/databases" element={<Databases />} />
+              <Route path="/high-manager-dashboard" element={<HighManagerDashboard />} />
 
 
               {/* add other private routes here */}
