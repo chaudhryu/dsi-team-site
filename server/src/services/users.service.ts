@@ -58,6 +58,15 @@ export class UsersService implements OnApplicationBootstrap {
     return this.userRepo.find();
   }
 
+  findByCostCenter(costCenter: number): Promise<User[]> {
+    this.logger.log("Fetching users by cost center");
+    return this.userRepo.find({
+      where: {
+        costCenter: costCenter,
+      },
+    });
+  }
+
   findOneByBadge(badge: number): Promise<User | null> {
     return this.userRepo.findOne({ where: { badge } });
   }
