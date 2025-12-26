@@ -1,214 +1,232 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
-import { z } from 'zod';
-import { zodResponseFormat } from 'openai/helpers/zod';
-import { SummarizeRequestDto, SummarizeResponseDto } from './dto/summarize-accomplishments.dto';
+// src/ai/ai.service.ts
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+  HttpException,
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import OpenAI from "openai";
+import { z } from "zod";
+import { zodResponseFormat } from "openai/helpers/zod";
+import {
+  SummarizeRequestDto,
+  SummarizeResponseDto,
+} from "./dto/summarize-accomplishments.dto";
 
 /* -------------------- Schema (single source of truth) -------------------- */
+/**
+ * badge is coerced so model output like "87100" still validates.
+ * team_themes is optional (matches your DTO).
+ */
 const SummaryZ = z.object({
   users: z.array(
     z.object({
-      badge: z.number(),
+      badge: z.coerce.number().int().nonnegative(),
       name: z.string(),
-      summary_md: z.string().describe('Extremely concise Markdown bullets (2–5) of key work & impact.'),
+      summary_md: z.string(),
       highlights: z.array(z.string()).optional(),
       blockers: z.array(z.string()).optional(),
       next_focus: z.array(z.string()).optional(),
-    }),
+    })
   ),
+  team_themes: z.array(z.string()).optional(),
 });
+
 type SummaryZType = z.infer<typeof SummaryZ>;
 
-/* -------------------- Service -------------------- */
 @Injectable()
 export class AiService {
+  private readonly logger = new Logger(AiService.name);
+
   private readonly model: string;
   private readonly baseURL: string;
 
   constructor(private readonly client: OpenAI, cfg: ConfigService) {
-    this.model = cfg.get<string>('SUMMARY_MODEL') || 'gemini-1.5-flash';
-    this.baseURL = cfg.get<string>('OPENAI_BASE_URL') || '';
+    this.model = (cfg.get<string>("SUMMARY_MODEL") || "gemini-2.5-flash").trim();
+    this.baseURL = (cfg.get<string>("OPENAI_BASE_URL") || "").trim();
+
+    this.logger.log(
+      `Config: model=${this.model}, baseURL=${this.baseURL || "(empty)"}, isGemini=${this.isGemini}`
+    );
   }
 
   private get isGemini(): boolean {
-    return this.baseURL.includes('generativelanguage.googleapis.com');
+    return this.baseURL.includes("generativelanguage.googleapis.com");
   }
 
   /** Extra safety in case HTML sneaks in */
   private toPlain(input: string): string {
-    if (!input) return '';
+    if (!input) return "";
     return input
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\u00a0/g, ' ')
-      .replace(/[ \t]+\n/g, '\n')
-      .replace(/\s+/g, ' ')
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\u00a0/g, " ")
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\s+/g, " ")
       .trim();
   }
 
   private buildCorpus(dto: SummarizeRequestDto): string {
     const { from, to, users } = dto;
-    return users
+
+    return (users ?? [])
       .map((u) => {
-        const lines = (u.entries || [])
+        const lines = (u.entries ?? [])
           .filter((e) => e?.text && e.text.trim())
           .map(
             (e) =>
-              `- (${e.startWeekDate}→${e.endWeekDate}) ${this.toPlain(e.text).slice(0, 2000)}`,
+              `- (${e.startWeekDate}→${e.endWeekDate}) ${this.toPlain(e.text).slice(0, 2000)}`
           );
-        return `User: ${u.name} (#${u.badge})\nWindow: ${from} → ${to}\nAccomplishments:\n${
-          lines.length ? lines.join('\n') : '- (none)'
-        }\n`;
+
+        return [
+          `User: ${u.name} (#${u.badge})`,
+          `Window: ${from} → ${to}`,
+          `Accomplishments:`,
+          lines.length ? lines.join("\n") : "- (none)",
+          "",
+        ].join("\n");
       })
-      .join('\n');
+      .join("\n");
   }
 
   /** Find the first top-level JSON object in a string (fallback path). */
   private extractFirstJson(s: string): string {
-    const start = s.indexOf('{');
-    const end = s.lastIndexOf('}');
+    const start = s.indexOf("{");
+    const end = s.lastIndexOf("}");
     if (start >= 0 && end > start) return s.slice(start, end + 1);
-    throw new Error('No JSON object found in model output');
+    throw new Error("No JSON object found in model output");
   }
 
-  /** Try to coerce "creative" provider JSON into our schema before failing */
-  private normalizeToSchema(raw: any): SummaryZType {
-    // If already correct, accept
+  private parseAndNormalizeModelOutput(text: string): SummarizeResponseDto {
+    // Try direct JSON
     try {
-      return SummaryZ.parse(raw);
+      const obj = JSON.parse(text);
+      return SummaryZ.parse(obj) as SummarizeResponseDto;
     } catch {
-      /* fall through */
+      // Try extracting JSON from surrounding text
+      const jsonText = this.extractFirstJson(text);
+      const obj2 = JSON.parse(jsonText);
+      return SummaryZ.parse(obj2) as SummarizeResponseDto;
+    }
+  }
+
+  private buildSystemPrompt(includeTeamSummary: boolean): string {
+    const base = [
+      "You are an expert at creating concise executive summaries of weekly accomplishments.",
+      "For each person, produce 2–5 Markdown bullet points focusing on outcomes and impact.",
+      "Merge duplicates and ignore trivial tasks.",
+      "Do NOT invent facts or numbers.",
+      "Return ONLY valid JSON (no code fences, no prose).",
+      'Top-level JSON must be: {"users":[...]}',
+      'Each user must include: badge (number), name (string), summary_md (string).',
+    ];
+
+    if (includeTeamSummary) {
+      base.push(
+        'Also include optional key "team_themes": string[] (3–8 bullets) capturing cross-team themes.'
+      );
     }
 
-    // 1) Alternate: { team_roll_up: { individual_summaries: [...] } }
-    if (
-      raw?.team_roll_up?.individual_summaries &&
-      Array.isArray(raw.team_roll_up.individual_summaries)
-    ) {
-      const users = raw.team_roll_up.individual_summaries.map((u: any) => ({
-        badge: Number(String(u.employee_id ?? u.badge ?? '').replace(/[^\d]/g, '')) || 0,
-        name: u.name ?? u.employee_name ?? 'Unknown',
-        summary_md: u.summary ?? u.summary_md ?? '',
-      }));
-      return SummaryZ.parse({ users });
-    }
-
-    // 2) Alternate: { individuals: [{ id/name/summary }] }
-    if (Array.isArray(raw?.individuals)) {
-      const users = raw.individuals.map((u: any) => ({
-        badge: Number(String(u.id ?? u.badge ?? '').replace(/[^\d]/g, '')) || 0,
-        name: u.name ?? 'Unknown',
-        summary_md: u.summary ?? u.summary_md ?? '',
-      }));
-      return SummaryZ.parse({ users });
-    }
-
-    // 3) Alternate: array of { name, summary } at the top
-    if (Array.isArray(raw) && raw.length && (raw[0].name || raw[0].summary || raw[0].summary_md)) {
-      const users = raw.map((u: any, idx: number) => ({
-        badge: Number(String(u.badge ?? idx + 1).toString().replace(/[^\d]/g, '')) || idx + 1,
-        name: u.name ?? 'Unknown',
-        summary_md: u.summary ?? u.summary_md ?? '',
-      }));
-      return SummaryZ.parse({ users });
-    }
-
-    // Give up: throw with a helpful preview
-    const preview = typeof raw === 'string' ? raw.slice(0, 400) : JSON.stringify(raw).slice(0, 400);
-    throw new Error(`Provider returned unexpected JSON shape; preview: ${preview}`);
+    return base.join(" ");
   }
 
   async summarize(dto: SummarizeRequestDto): Promise<SummarizeResponseDto> {
-    const system = [
-      'You are an expert at creating concise executive summaries of weekly accomplishments.',
-      'For each person, create a very brief summary (2-5 bullet points). Focus strictly on key outcomes and their impact.',
-      'Merge duplicate entries and ignore trivial tasks. Use short, direct sentences.',
-      'Return ONLY a JSON object with a single top-level key: "users".',
-      'Each users[i] must have: badge (number), name (string), summary_md (string).',
-      'Do not invent numbers or facts.',
-    ].join(' ');
+    const includeTeamSummary = dto.includeTeamSummary ?? true;
+
+    const system = this.buildSystemPrompt(includeTeamSummary);
 
     const input = [
       `Date window: ${dto.from} → ${dto.to}`,
-      'DATA START',
+      `includeTeamSummary: ${includeTeamSummary}`,
+      "DATA START",
       this.buildCorpus(dto),
-      'DATA END',
-    ].join('\n');
+      "DATA END",
+      "",
+      'Return ONLY JSON matching: {"users":[{"badge":87100,"name":"...","summary_md":"- ..."}], "team_themes":["..."]}',
+    ].join("\n");
 
     try {
       if (this.isGemini) {
-        /* ---------- Gemini (OpenAI-compatible) path ---------- */
+        // ✅ Gemini OpenAI-compat path:
+        // IMPORTANT: do NOT send response_format for Gemini. We prompt for JSON and parse it ourselves.
         try {
-          // Primary attempt: ask for JSON object
           const completion = await this.client.chat.completions.create({
             model: this.model,
             messages: [
-              { role: 'system', content: system },
-              { role: 'user', content: input },
+              { role: "system", content: system },
+              { role: "user", content: input },
             ],
-            response_format: { type: 'json_object' },
             temperature: 0,
           });
 
-          const content: any = completion.choices?.[0]?.message?.content ?? '';
-          const text =
-            Array.isArray(content)
-              ? content.map((c: any) => (typeof c === 'string' ? c : c?.text ?? '')).join('')
-              : String(content);
+          const content: any = completion.choices?.[0]?.message?.content ?? "";
+          const text = Array.isArray(content)
+            ? content.map((c: any) => (typeof c === "string" ? c : c?.text ?? "")).join("")
+            : String(content);
 
-          const obj = JSON.parse(text);
-          const normalized = this.normalizeToSchema(obj);
-          return normalized as SummarizeResponseDto;
+          return this.parseAndNormalizeModelOutput(text);
         } catch (e1: any) {
           const status = e1?.status || e1?.response?.status;
           const data = e1?.response?.data || e1?.message;
-          console.error('[AI summarize][Gemini primary] FAILED', { status, data });
+          this.logger.error("[Gemini primary] failed", JSON.stringify({ status, data }));
 
-          // Fallback: no response_format; extract JSON from text
+          // Fallback: stricter JSON-only instruction
           const fallback = await this.client.chat.completions.create({
             model: this.model,
             messages: [
-              { role: 'system', content: system },
+              { role: "system", content: system },
               {
-                role: 'user',
-                content: input + '\nReturn ONLY a valid JSON object for { "users": [...] }.',
+                role: "user",
+                content:
+                  input +
+                  "\n\nSTRICT OUTPUT RULES:\n- Output ONLY JSON\n- No markdown fences\n- No explanations\n",
               },
             ],
             temperature: 0,
           });
 
-          const content2: any = fallback.choices?.[0]?.message?.content ?? '';
-          const text2 =
-            Array.isArray(content2)
-              ? content2.map((c: any) => (typeof c === 'string' ? c : c?.text ?? '')).join('')
-              : String(content2);
+          const content2: any = fallback.choices?.[0]?.message?.content ?? "";
+          const text2 = Array.isArray(content2)
+            ? content2.map((c: any) => (typeof c === "string" ? c : c?.text ?? "")).join("")
+            : String(content2);
 
-          const jsonText = this.extractFirstJson(text2);
-          const obj2 = JSON.parse(jsonText);
-          const normalized2 = this.normalizeToSchema(obj2);
-          return normalized2 as SummarizeResponseDto;
+          return this.parseAndNormalizeModelOutput(text2);
         }
       }
 
-      /* ---------- OpenAI/Groq/etc. path (supports parse + json_schema) ---------- */
+      // OpenAI / other providers path (structured output supported)
       const completion = await this.client.chat.completions.parse({
         model: this.model,
         messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: input },
+          { role: "system", content: system },
+          { role: "user", content: input },
         ],
-        response_format: zodResponseFormat(SummaryZ, 'AccomplishmentSummaries'),
+        response_format: zodResponseFormat(SummaryZ, "AccomplishmentSummaries"),
         temperature: 0,
       });
 
       const parsed = completion.choices?.[0]?.message?.parsed as SummaryZType;
       return parsed as SummarizeResponseDto;
     } catch (err: any) {
-      const provider = this.isGemini ? 'Gemini(OpenAI-compat)' : 'OpenAI-like';
+      const provider = this.isGemini ? "Gemini(OpenAI-compat)" : "OpenAI-like";
       const status = err?.status || err?.response?.status;
       const data = err?.response?.data || err?.error || err?.message || err;
-      console.error(`[AI summarize][${provider}] FAILED`, { status, data });
-      throw new InternalServerErrorException('Summarization failed');
+
+      this.logger.error(`[AI summarize][${provider}] FAILED`, JSON.stringify({ status, data }));
+
+      if (status === 400) throw new BadRequestException("AI request rejected (400).");
+      if (status === 401 || status === 403)
+        throw new ForbiddenException("AI request rejected (auth/permission).");
+      if (status === 404)
+        throw new NotFoundException("AI resource not found (check model/baseURL).");
+
+      // ✅ portable 429 handling for older Nest versions
+      if (status === 429) throw new HttpException("AI rate-limited (429).", 429);
+
+      throw new InternalServerErrorException("Summarization failed");
     }
   }
 }

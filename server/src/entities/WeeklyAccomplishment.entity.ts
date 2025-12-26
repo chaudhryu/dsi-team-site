@@ -53,5 +53,5 @@ export class WeeklyAccomplishment {
   taskStatus: string | null;
 
   @Column({ nullable: true, name: "costCenter" })
-  costCenter: string | null;
+  costCenter: number | null;
 }

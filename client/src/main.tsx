@@ -15,8 +15,6 @@ const msalInstance = new PublicClientApplication(msalConfig);
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <MsalProvider instance={msalInstance}>
-      {" "}
-      {/* NEW */}
       <LoginProvider>
         <ThemeProvider>
           <AppWrapper>

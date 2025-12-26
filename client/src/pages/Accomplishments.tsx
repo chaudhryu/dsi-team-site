@@ -9,6 +9,7 @@ import ReactQuillEditor from "../components/TextEditor/ReactQuillEditor";
 import { envConfig } from "../config/envConfig";
 
 import DOMPurify from "dompurify";
+import { useLogin } from "@/context/LoginContext";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 const LOGIN_KEY = envConfig.loginEmpKey || "loginEmployee";
@@ -40,6 +41,7 @@ type Accomplishment = {
   startWeekDate: string; // 'YYYY-MM-DD'
   endWeekDate: string; // 'YYYY-MM-DD'
   taskStatus?: string | null;
+  costCenter: number | null;
 };
 
 type PersonalSummaryUser = {
@@ -175,6 +177,8 @@ export default function Accomplishments() {
   // form (HTML from editor)
   const [text, setText] = useState("");
 
+  const loginContext = useLogin();
+
   // current record for selected week (only considers REAL API rows)
   const currentRecord = useMemo(
     () => rows.find((r) => r.startWeekDate === weekStart && r.endWeekDate === weekEnd) || null,
@@ -253,6 +257,7 @@ export default function Accomplishments() {
             startWeekDate: currentRecord.startWeekDate,
             endWeekDate: currentRecord.endWeekDate,
             taskStatus: "Submitted",
+            costCenter: currentRecord.costCenter,
           }),
         });
         if (!res.ok) {
@@ -269,6 +274,7 @@ export default function Accomplishments() {
           credentials: "include",
           body: JSON.stringify({
             userBadge: badge,
+            costCenter: loginContext?.loginEmployee.costCenter,
             accomplishments: cleanHtml,
             dateSubmitted: today,
             startWeekDate: weekStart,
@@ -329,6 +335,7 @@ export default function Accomplishments() {
         startWeekDate: w.start,
         endWeekDate: w.end,
         taskStatus: "Missing",
+        costCenter: null,
       };
     });
 
