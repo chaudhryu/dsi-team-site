@@ -62,6 +62,10 @@ export class UsersService implements OnApplicationBootstrap {
     return this.userRepo.findOne({ where: { badge } });
   }
 
+  findByCostCenter(costCenter: number): Promise<User[]> {
+    return this.userRepo.find({ where: { costCenter } });
+  }
+
   create(data: Partial<User>): Promise<User> {
     const user = this.userRepo.create(data);
     return this.userRepo.save(user);

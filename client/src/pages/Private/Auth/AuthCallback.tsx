@@ -10,6 +10,7 @@ import { getMsGraphMe } from "../../../Data/api/graphApi";
 import { useLogin } from "../../../context/LoginContext";
 import { envConfig } from "../../../config/envConfig";
 import { ErrorModal } from "@/components/modal/ErrorModal";
+import { Card, CardContent } from "@/components/ui/card";
 type MinimalUser = {
   badge: number;
   firstName: string;
@@ -164,10 +165,13 @@ export default function AuthCallback() {
       requestUserProfileData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inProgress]);
+  }, [instance, navigate, inProgress]);
 
   return (
     <>
+      <Card>
+        <CardContent className="p-6"> Authenticating User...</CardContent>
+      </Card>
       <ErrorModal
         open={!!error}
         title={error?.title ?? ""}
