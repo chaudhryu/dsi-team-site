@@ -26,6 +26,8 @@ import { TechnologiesService } from "./services/technologies.service";
 /* Feature modules */
 import { AiModule } from "./ai/ai.module";
 import { DatabasesModule } from "./databases/databases.module";
+import { MailModule } from "./email/mail.module";
+import { MailController } from "./controllers/mail.controller";
 
 @Module({
   imports: [
@@ -116,7 +118,8 @@ import { DatabasesModule } from "./databases/databases.module";
       WeeklyAccomplishment,
     ]),
 
-    AiModule,
+    AiModule, // 👈 AI feature module
+    MailModule, // 👈 Mail feature module
     DatabasesModule, // 👈 mounts the /api/databases routes
   ],
   controllers: [
@@ -124,6 +127,7 @@ import { DatabasesModule } from "./databases/databases.module";
     WeeklyAccomplishmentsController,
     ProjectsController,
     TechnologiesController,
+    MailController,
   ],
   providers: [
     UsersService,
