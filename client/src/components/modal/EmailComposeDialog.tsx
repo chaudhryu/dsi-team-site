@@ -8,21 +8,18 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import ReactQuillEditor from "../TextEditor/ReactQuillEditor";
 
-type EmailDraft = {
+export type EmailDraft = {
   to: string;
   subject: string;
-  body: string; // plain text body (you can convert to html in API if you want)
+  body: string; // plain text
 };
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-
-  // pre-fill values
   initialDraft: Partial<EmailDraft>;
-
-  // called when user hits Send
   onSend: (draft: EmailDraft) => Promise<void>;
 
   title?: string;
@@ -30,7 +27,6 @@ type Props = {
 };
 
 function isValidEmail(email: string) {
-  // simple validation (good enough for UI)
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
@@ -49,7 +45,6 @@ export function EmailComposeDialog({
   const [sending, setSending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Re-sync draft each time dialog opens (so it always loads fresh content)
   React.useEffect(() => {
     if (!open) return;
     setTo(initialDraft.to ?? "");
@@ -59,23 +54,14 @@ export function EmailComposeDialog({
     setSending(false);
   }, [open, initialDraft.to, initialDraft.subject, initialDraft.body]);
 
-  const canSend = isValidEmail(to) && subject.trim().length > 0 && body.trim().length > 0;
+  const canSend = isValidEmail(to) && subject.trim() && body.trim();
 
   const handleSend = async () => {
     setError(null);
 
-    if (!isValidEmail(to)) {
-      setError("Please enter a valid email address in To.");
-      return;
-    }
-    if (!subject.trim()) {
-      setError("Subject is required.");
-      return;
-    }
-    if (!body.trim()) {
-      setError("Body is required.");
-      return;
-    }
+    if (!isValidEmail(to)) return setError("Please enter a valid email address in To.");
+    if (!subject.trim()) return setError("Subject is required.");
+    if (!body.trim()) return setError("Body is required.");
 
     try {
       setSending(true);
@@ -97,7 +83,6 @@ export function EmailComposeDialog({
         </DialogHeader>
 
         <div className="grid gap-4">
-          {/* To */}
           <div className="grid gap-2">
             <label className="text-sm font-medium">To</label>
             <input
@@ -106,10 +91,8 @@ export function EmailComposeDialog({
               placeholder="name@metro.net"
               className="w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2"
             />
-            {!isValidEmail(to) && to.trim().length > 0 && <p className="text-xs text-red-600">Invalid email format.</p>}
           </div>
 
-          {/* Subject */}
           <div className="grid gap-2">
             <label className="text-sm font-medium">Subject</label>
             <input
@@ -120,21 +103,25 @@ export function EmailComposeDialog({
             />
           </div>
 
-          {/* Body */}
           <div className="grid gap-2">
             <label className="text-sm font-medium">Message</label>
-            <textarea
+            {/* <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              rows={10}
+              rows={12}
               className="w-full resize-y rounded-md border px-3 py-2 text-sm outline-none focus:ring-2"
-              placeholder="Write your message..."
+            /> */}
+            <ReactQuillEditor
+              value={body}
+              onChange={(value) => setBody(value)}
+              className="text-sm text-gray-900 dark:text-gray-100 pb-6"
             />
-            <p className="text-xs text-muted-foreground">Tip: Keep it simple for Outlook compatibility.</p>
           </div>
 
           {error && (
-            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
+              {error}
+            </div>
           )}
         </div>
 
