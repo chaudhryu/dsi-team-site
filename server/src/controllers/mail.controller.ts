@@ -1,7 +1,12 @@
 // mail.controller.ts
-import { Controller, Get, Query } from "@nestjs/common";
+import { Body, Controller, Get, Post, Query } from "@nestjs/common";
 import { MailService } from "../services/mail.service";
-
+import { IsEmail, IsNotEmpty, IsString, MaxLength } from "class-validator";
+class SendMailDto {
+  @IsEmail() to: string;
+  @IsString() @IsNotEmpty() subject: string;
+  @IsString() @IsNotEmpty() body: string;
+}
 @Controller("mail")
 export class MailController {
   constructor(private readonly mail: MailService) {}
@@ -9,6 +14,17 @@ export class MailController {
   @Get("test")
   async test(@Query("to") to: string) {
     await this.mail.sendTestEmail(to);
+    return { ok: true };
+  }
+  @Post("send")
+  async sendHtmlEmail(@Body() dto: SendMailDto): Promise<{ ok: true }> {
+    console.log("MailController.sendHtmlEmail", dto);
+    await this.mail.sendHtmlEmail({
+      to: dto.to,
+      subject: dto.subject,
+      html: dto.body,
+      // optionally also generate html on server
+    });
     return { ok: true };
   }
 }
