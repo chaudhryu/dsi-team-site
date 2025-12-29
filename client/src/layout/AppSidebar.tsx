@@ -22,9 +22,6 @@ type NavItem = {
 type DbUser = {
   badge: number;
   role?: string | null;
-  costCenter?: number | null;
-  firstName?: string | null;
-  lastName?: string | null;
 };
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3005/api";
@@ -91,27 +88,27 @@ const AppSidebar: React.FC = () => {
   const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>({});
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  // ✅ DB-driven flag
   const [isHighManager, setIsHighManager] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadRole() {
+    async function loadRoleFromDb() {
       const badge = readBadgeFromStorage();
       if (!badge) {
         if (!cancelled) setIsHighManager(false);
         return;
       }
+
       const role = await fetchDbRoleForBadge(badge);
       if (!cancelled) setIsHighManager(role === "high_manager");
     }
 
-    loadRole();
+    loadRoleFromDb();
 
-    // In case loginEmployee changes in another tab/window
+    // If loginEmployee changes (logout/login) in another tab, re-check
     const onStorage = (e: StorageEvent) => {
-      if (e.key === LOGIN_KEY) loadRole();
+      if (e.key === LOGIN_KEY) loadRoleFromDb();
     };
     window.addEventListener("storage", onStorage);
 
@@ -237,7 +234,9 @@ const AppSidebar: React.FC = () => {
                 {(isExpanded || isHovered || isMobileOpen) && (
                   <span
                     className={`menu-item-text tracking-wide ${
-                      isActive(nav.path) ? "text-white font-semibold" : "text-neutral-200 font-medium group-hover:text-white"
+                      isActive(nav.path)
+                        ? "text-white font-semibold"
+                        : "text-neutral-200 font-medium group-hover:text-white"
                     }`}
                   >
                     {nav.name}
@@ -334,7 +333,11 @@ const AppSidebar: React.FC = () => {
                             font-semibold tracking-wider text-neutral-300/90
                             ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"}`}
               >
-                {isExpanded || isHovered || isMobileOpen ? "Menu" : <HorizontaLDots className="size-6 text-neutral-400" />}
+                {isExpanded || isHovered || isMobileOpen ? (
+                  "Menu"
+                ) : (
+                  <HorizontaLDots className="size-6 text-neutral-400" />
+                )}
               </h2>
               {renderMenuItems(navItems, "main")}
             </div>
