@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 import {
   CalenderIcon,
@@ -10,7 +10,6 @@ import {
   TableIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
-import { envConfig } from "../config/envConfig";
 
 type NavItem = {
   name: string;
@@ -19,44 +18,10 @@ type NavItem = {
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
-type DbUser = {
-  badge: number;
-  role?: string | null;
-};
+const navItems: NavItem[] = [
+  // ✅ Home tab is now your dashboard
+  { icon: <GridIcon />, name: "Dashboard", path: "/" },
 
-const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3005/api";
-const LOGIN_KEY = envConfig.loginEmpKey || "loginEmployee";
-
-function normalizeRole(role: unknown): string {
-  return String(role ?? "").trim().toLowerCase();
-}
-
-function readBadgeFromStorage(): number | null {
-  try {
-    const raw = localStorage.getItem(LOGIN_KEY);
-    if (!raw) return null;
-    const u = JSON.parse(raw);
-    const badge = Number(u?.badge);
-    return Number.isFinite(badge) ? badge : null;
-  } catch {
-    return null;
-  }
-}
-
-async function fetchDbRoleForBadge(badge: number): Promise<string> {
-  try {
-    const res = await fetch(`${API_BASE}/users`, { credentials: "include" });
-    if (!res.ok) return "";
-    const users = (await res.json()) as DbUser[];
-    const me = users.find((u) => Number(u?.badge) === badge);
-    return normalizeRole(me?.role);
-  } catch {
-    return "";
-  }
-}
-
-const BASE_NAV_ITEMS: NavItem[] = [
-  { icon: <GridIcon />, name: "Home", path: "/" },
   {
     icon: <CalenderIcon />,
     name: "Accomplishments",
@@ -65,18 +30,15 @@ const BASE_NAV_ITEMS: NavItem[] = [
       { name: "Team Accomplishments", path: "/view-accomplishments", pro: false },
     ],
   },
+
   { icon: <UserCircleIcon />, name: "User Management", path: "/users" },
   { name: "Projects", icon: <ListIcon />, path: "/projects-internal" },
   { name: "Databases", icon: <TableIcon />, path: "/databases" },
+
+  // ✅ Removed: High Manager Dashboard tab
 ];
 
-const HIGH_MANAGER_ITEM: NavItem = {
-  name: "High Manager Dashboard",
-  icon: <TableIcon />,
-  path: "/high-manager-dashboard",
-};
-
-const othersItems: NavItem[] = [];
+const othersItems: NavItem[] = []; // kept for structure
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
@@ -87,42 +49,6 @@ const AppSidebar: React.FC = () => {
   );
   const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>({});
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  const [isHighManager, setIsHighManager] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadRoleFromDb() {
-      const badge = readBadgeFromStorage();
-      if (!badge) {
-        if (!cancelled) setIsHighManager(false);
-        return;
-      }
-
-      const role = await fetchDbRoleForBadge(badge);
-      if (!cancelled) setIsHighManager(role === "high_manager");
-    }
-
-    loadRoleFromDb();
-
-    // If loginEmployee changes (logout/login) in another tab, re-check
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === LOGIN_KEY) loadRoleFromDb();
-    };
-    window.addEventListener("storage", onStorage);
-
-    return () => {
-      cancelled = true;
-      window.removeEventListener("storage", onStorage);
-    };
-  }, []);
-
-  const navItems: NavItem[] = useMemo(() => {
-    const items = [...BASE_NAV_ITEMS];
-    if (isHighManager) items.push(HIGH_MANAGER_ITEM);
-    return items;
-  }, [isHighManager]);
 
   const isActive = useCallback((path: string) => location.pathname === path, [location.pathname]);
 
@@ -145,7 +71,7 @@ const AppSidebar: React.FC = () => {
     });
 
     if (!submenuMatched) setOpenSubmenu(null);
-  }, [location, isActive, navItems]);
+  }, [location, isActive]);
 
   useEffect(() => {
     if (openSubmenu !== null) {
@@ -223,14 +149,21 @@ const AppSidebar: React.FC = () => {
                 to={nav.path}
                 className={`menu-item group ${isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"}
                             rounded-lg hover:bg-neutral-800
-                            ${isActive(nav.path) ? "!bg-neutral-800 !text-white font-semibold" : "text-neutral-200 hover:text-white"}`}
+                            ${
+                              isActive(nav.path)
+                                ? "!bg-neutral-800 !text-white font-semibold"
+                                : "text-neutral-200 hover:text-white"
+                            }`}
               >
                 <span
-                  className={`menu-item-icon-size ${isActive(nav.path) ? "menu-item-icon-active" : "menu-item-icon-inactive"}
+                  className={`menu-item-icon-size ${
+                    isActive(nav.path) ? "menu-item-icon-active" : "menu-item-icon-inactive"
+                  }
                               ${isActive(nav.path) ? "text-white" : "text-neutral-300 group-hover:text-white"}`}
                 >
                   {nav.icon}
                 </span>
+
                 {(isExpanded || isHovered || isMobileOpen) && (
                   <span
                     className={`menu-item-text tracking-wide ${
@@ -339,6 +272,7 @@ const AppSidebar: React.FC = () => {
                   <HorizontaLDots className="size-6 text-neutral-400" />
                 )}
               </h2>
+
               {renderMenuItems(navItems, "main")}
             </div>
           </div>
