@@ -109,6 +109,7 @@ export class UsersService implements OnApplicationBootstrap {
           allowed: true,
           user: existingUser,
           isFirstLogin: false,
+          role: existingUser.role,
         };
       }
       // STEP A.2: is cost center allowed?
@@ -172,6 +173,7 @@ export class UsersService implements OnApplicationBootstrap {
         user: newUser,
         isFirstLogin: true,
         manager,
+        role: newUser.role,
       };
     } catch (error) {
       this.logger.error(

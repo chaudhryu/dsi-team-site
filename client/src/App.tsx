@@ -32,7 +32,9 @@ const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3005/api";
 const LOGIN_KEY = envConfig.loginEmpKey || "loginEmployee";
 
 function normalizeRole(role: unknown): string {
-  return String(role ?? "").trim().toLowerCase();
+  return String(role ?? "")
+    .trim()
+    .toLowerCase();
 }
 
 function readBadgeFromStorage(): number | null {
@@ -98,7 +100,7 @@ function HighManagerOnlyRoute() {
   }
 
   if (status === "denied") {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;
@@ -114,15 +116,17 @@ export default function App() {
           {/* App chrome */}
           <Route element={<AppLayout />}>
             {/*  Public landing */}
-            <Route index element={<PublicHome />} />
-			  // <Route index element={<IndexGate />} />
+            {/* 🚫 Logged-in users cannot see "/" */}
+            <Route element={<PublicOnlyRoute />}>
+              <Route index element={<PublicHome />} />
+              <Route path="/signin" element={<SignIn />} />
+              <Route path="/signup" element={<SignUp />} />
+            </Route>
+            // <Route index element={<IndexGate />} />
             <Route path="/images" element={<Images />} />
             <Route path="/projects-external" element={<Projects isInternal={false} />} />
-
             {/*  Private area */}
-
             {/* ---------- Auth‑only pages ---------- */}
-
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Home />} /> {/*  Home moved here */}
               <Route path="/profile" element={<UserProfiles />} />
@@ -140,8 +144,6 @@ export default function App() {
             </Route>
           </Route>
 
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<SignUp />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>

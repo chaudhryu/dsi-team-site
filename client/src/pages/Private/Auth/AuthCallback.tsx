@@ -104,32 +104,35 @@ export default function AuthCallback() {
           }
         }
         const checkResponse = await checkUserLoginAndSettingProfile(minimalUser);
-        if (checkResponse.status !== 200) {
+        if (checkResponse.status !== 200 && checkResponse.status !== 201) {
           // alert and sign user our of SSO
           var errorMessage = "";
-          switch (checkResponse.data.reason) {
-            case "COSTCENTER_NOT_ALLOWED":
-              errorMessage = "Your cost center is not enabled ";
-              break;
-            case "NO_MANAGER_FOR_COST_CENTER":
-              errorMessage = "No manager assigned to your cost center.";
-              break;
-            case "USER_NOT_IN_MANAGER_TEAM":
-              errorMessage = "You are not reporting to any assigned manager.";
-              break;
-            case "INTERNAL_ERROR":
-              errorMessage = "An internal error occurred.";
-              break;
-            default:
-              errorMessage = "You are not authorized to access this system.";
-              break;
+          if (checkResponse.data.reason) {
+            switch (checkResponse.data.reason) {
+              case "COSTCENTER_NOT_ALLOWED":
+                errorMessage = "Your cost center is not enabled ";
+                break;
+              case "NO_MANAGER_FOR_COST_CENTER":
+                errorMessage = "No manager assigned to your cost center.";
+                break;
+              case "USER_NOT_IN_MANAGER_TEAM":
+                errorMessage = "You are not reporting to any assigned manager.";
+                break;
+              case "INTERNAL_ERROR":
+                errorMessage = "An internal error occurred.";
+                break;
+              default:
+                errorMessage = "You are not authorized to access this system.";
+                break;
+            }
+            setError({
+              title: "Access denied",
+              message: errorMessage + " Please contact your manager or DSI admin for assistance.",
+            });
+            return;
           }
-          setError({
-            title: "Access denied",
-            message: errorMessage + " Please contact your manager or DSI admin for assistance.",
-          });
-          return;
         }
+        minimalUser.role = checkResponse.data.role || minimalUser.role; //assign role from server
       }
     } catch {
       // fallback minimal user if EMP lookup fails
@@ -156,7 +159,9 @@ export default function AuthCallback() {
       } else {
         console.warn("No valid badge found; cannot initialize session.");
       }
-      navigate("/dashboard", { replace: true });
+      minimalUser && minimalUser.role == "high_manager"
+        ? navigate("/high-manager-dashboard", { replace: true })
+        : navigate("/dashboard", { replace: true });
     }
   };
 
