@@ -10,6 +10,7 @@ import {
   Res,
   InternalServerErrorException,
   ForbiddenException,
+  Query,
 } from "@nestjs/common";
 import { UsersService } from "../services/users.service";
 import { User } from "../entities/user.entity";
@@ -24,10 +25,23 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  @Get("by-cost-center")
+  findByCostCenter(@Query("costCenter") costCenter: string): Promise<User[]> {
+    return this.usersService.findByCostCenter(parseInt(costCenter));
+  }
+
   // GET /api/users/badge/96880
   @Get("badge/:badge")
   findOneByBadge(@Param("badge") badge: string): Promise<User | null> {
     return this.usersService.findOneByBadge(Number(badge));
+  }
+
+  // GET /api/users/costcenter/96880
+  @Get("costcenter/:costCenter")
+  findOneByCostCenter(
+    @Param("costCenter") costCenter: string
+  ): Promise<User[] | null> {
+    return this.usersService.findByCostCenter(Number(costCenter));
   }
 
   @Post()

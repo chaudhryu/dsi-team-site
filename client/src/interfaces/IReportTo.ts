@@ -1,4 +1,4 @@
 export interface IReportTo {
-  badge: number;
-  name: string;
+  badge: number | null | undefined;
+  name: string | null | undefined;
 }
