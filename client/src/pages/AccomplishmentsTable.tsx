@@ -1,12 +1,6 @@
 // src/pages/AccomplishmentsTable.tsx
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHeader,
-  TableRow,
-} from "../components/ui/table";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "../components/ui/table";
 import Label from "../components/form/Label";
 import Button from "../components/ui/button/Button";
 import { envConfig } from "../config/envConfig";
@@ -14,6 +8,9 @@ import { envConfig } from "../config/envConfig";
 /* ⬇️ DOMPurify + Quill viewer CSS so stored HTML renders correctly */
 import DOMPurify from "dompurify";
 import "react-quill-new/dist/quill.snow.css";
+import { useLogin } from "@/context/LoginContext";
+import { AccomplishmentSummaryDialog } from "@/components/modal/AccomplishmentSummaryDialog";
+import { sendEmail } from "@/Data/actions/MailAction";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 
@@ -49,6 +46,8 @@ type User = {
 type WA = {
   id: number;
   accomplishments: string | null;
+  user: User;
+  costCenter: number;
   startWeekDate: string; // YYYY-MM-DD
   endWeekDate: string; // YYYY-MM-DD
   taskStatus?: string | null;
@@ -182,12 +181,16 @@ export default function AccomplishmentsTable() {
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summaryData, setSummaryData] = useState<SummarizeResponse | null>(null);
   const [sumError, setSumError] = useState<string | null>(null);
+  const loginContext = useLogin();
 
   /* Load users once, then per-week accomplishments */
   useEffect(() => {
     (async () => {
       try {
-        const ures = await fetch(`${API_BASE}/users`, { credentials: "include" });
+        const ures = await fetch(
+          `${API_BASE}/users/by-cost-center?costCenter=${loginContext?.loginEmployee.costCenter}`,
+          { credentials: "include" }
+        );
         const raw: User[] = ures.ok ? await ures.json() : [];
 
         // ⬇️ Filter out hidden badges (e.g., 93467) BEFORE sorting/setting state
@@ -209,6 +212,40 @@ export default function AccomplishmentsTable() {
     })();
   }, []);
 
+  // useEffect(() => {
+  //   if (!users.length) {
+  //     setRows([]);
+  //     setLoading(false);
+  //     return;
+  //   }
+  //   setLoading(true);
+  //   (async () => {
+  //     try {
+  //       const perUser = await Promise.all(
+  //         users.map(async (u) => {
+  //           try {
+  //             const res = await fetch(`${API_BASE}/weekly-accomplishments/user/${u.badge}`, {
+  //               credentials: "include",
+  //             });
+  //             const data: WA[] = res.ok ? await res.json() : [];
+  //             const match =
+  //               data.find((d) => d.startWeekDate === weekStart && d.endWeekDate === weekEnd) || null;
+  //             return { user: u, wa: match } as Row;
+  //           } catch {
+  //             return { user: u, wa: null } as Row;
+  //           }
+  //         })
+  //       );
+  //       setRows(perUser);
+  //     } catch (e) {
+  //       console.error("Failed to load accomplishments per user", e);
+  //       setRows(users.map((u) => ({ user: u, wa: null })));
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   })();
+  // }, [users, weekStart, weekEnd]);
+
   useEffect(() => {
     if (!users.length) {
       setRows([]);
@@ -218,22 +255,46 @@ export default function AccomplishmentsTable() {
     setLoading(true);
     (async () => {
       try {
-        const perUser = await Promise.all(
-          users.map(async (u) => {
-            try {
-              const res = await fetch(`${API_BASE}/weekly-accomplishments/user/${u.badge}`, {
-                credentials: "include",
-              });
-              const data: WA[] = res.ok ? await res.json() : [];
-              const match =
-                data.find((d) => d.startWeekDate === weekStart && d.endWeekDate === weekEnd) || null;
-              return { user: u, wa: match } as Row;
-            } catch {
-              return { user: u, wa: null } as Row;
+        // const perUser = await Promise.all(
+        //   users.map(async (u) => {
+        //     try {
+        //       const res = await fetch(`${API_BASE}/weekly-accomplishments/user/${u.badge}`, {
+        //         credentials: "include",
+        //       });
+        //       const data: WA[] = res.ok ? await res.json() : [];
+        //       const match =
+        //         data.find((d) => d.startWeekDate === weekStart && d.endWeekDate === weekEnd) || null;
+        //       return { user: u, wa: match } as Row;
+        //     } catch {
+        //       return { user: u, wa: null } as Row;
+        //     }
+        //   })
+        // );
+        // setRows(perUser);
+
+        try {
+          console.log(loginContext?.loginEmployee);
+          console.log(loginContext);
+          const res = await fetch(
+            `${API_BASE}/weekly-accomplishments/by-cost-center-and-date-range?costCenter=${loginContext?.loginEmployee.costCenter}&startWeekDate=${weekStart}&endWeekDate=${weekEnd}`,
+            {
+              credentials: "include",
             }
-          })
-        );
-        setRows(perUser);
+          );
+          const weeklyAccomplishments: WA[] = res.ok ? await res.json() : [];
+          const filteredWeeklyAccomplishments =
+            weeklyAccomplishments.find((d) => d.startWeekDate === weekStart && d.endWeekDate === weekEnd) || null;
+          console.log(filteredWeeklyAccomplishments);
+
+          const usersWithWeeklyAccomplishment: Row[] = users.map((user) => {
+            const usersWeeklyAccomplishment: WA | undefined = weeklyAccomplishments.find(
+              (wa) => wa.user.badge === user.badge
+            );
+            return { user: user, wa: usersWeeklyAccomplishment } as Row;
+          });
+          console.log(usersWithWeeklyAccomplishment);
+          setRows(usersWithWeeklyAccomplishment);
+        } catch {}
       } catch (e) {
         console.error("Failed to load accomplishments per user", e);
         setRows(users.map((u) => ({ user: u, wa: null })));
@@ -516,7 +577,7 @@ export default function AccomplishmentsTable() {
                     </div>
                     {/* Render as plain text Markdown for safety (no HTML injection) */}
                     <pre className="whitespace-pre-wrap break-words text-sm text-gray-800 dark:text-gray-200 mt-1">
-{u.summary_md}
+                      {u.summary_md}
                     </pre>
 
                     {u.blockers?.length ? (
@@ -553,7 +614,25 @@ export default function AccomplishmentsTable() {
           </div>
         </div>
       )}
+      <AccomplishmentSummaryDialog
+        open={summaryOpen}
+        onClose={() => setSummaryOpen(false)}
+        from={from}
+        to={to}
+        summaryData={summaryData}
+        sumError={sumError}
+        downloadMarkdown={downloadMarkdown}
+        Button={Button}
+        onSendEmail={async (draft) => {
+          const response = await sendEmail(draft);
 
+          if (!(response.status === 200 || response.status === 201)) {
+            let msg = "Failed to send email.";
+
+            throw new Error(msg);
+          }
+        }}
+      />
       {/* 🔄 Full-screen spinner while loading */}
       {loading && <FullscreenSpinner label="Loading team accomplishments…" />}
     </div>

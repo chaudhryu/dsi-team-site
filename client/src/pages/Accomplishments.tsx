@@ -9,6 +9,9 @@ import ReactQuillEditor from "../components/TextEditor/ReactQuillEditor";
 import { envConfig } from "../config/envConfig";
 
 import DOMPurify from "dompurify";
+import { useLogin } from "@/context/LoginContext";
+import { AccomplishmentSummaryDialog } from "@/components/modal/AccomplishmentSummaryDialog";
+import { sendEmail } from "@/Data/actions/MailAction";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 const LOGIN_KEY = envConfig.loginEmpKey || "loginEmployee";
@@ -40,6 +43,7 @@ type Accomplishment = {
   startWeekDate: string; // 'YYYY-MM-DD'
   endWeekDate: string; // 'YYYY-MM-DD'
   taskStatus?: string | null;
+  costCenter: number | null;
 };
 
 type PersonalSummaryUser = {
@@ -175,6 +179,8 @@ export default function Accomplishments() {
   // form (HTML from editor)
   const [text, setText] = useState("");
 
+  const loginContext = useLogin();
+
   // current record for selected week (only considers REAL API rows)
   const currentRecord = useMemo(
     () => rows.find((r) => r.startWeekDate === weekStart && r.endWeekDate === weekEnd) || null,
@@ -253,6 +259,7 @@ export default function Accomplishments() {
             startWeekDate: currentRecord.startWeekDate,
             endWeekDate: currentRecord.endWeekDate,
             taskStatus: "Submitted",
+            costCenter: currentRecord.costCenter,
           }),
         });
         if (!res.ok) {
@@ -269,6 +276,7 @@ export default function Accomplishments() {
           credentials: "include",
           body: JSON.stringify({
             userBadge: badge,
+            costCenter: loginContext?.loginEmployee.costCenter,
             accomplishments: cleanHtml,
             dateSubmitted: today,
             startWeekDate: weekStart,
@@ -329,6 +337,7 @@ export default function Accomplishments() {
         startWeekDate: w.start,
         endWeekDate: w.end,
         taskStatus: "Missing",
+        costCenter: null,
       };
     });
 
@@ -343,6 +352,7 @@ export default function Accomplishments() {
 
   /* -------------------- Personal Gemini summary -------------------- */
   async function onSummarizeRange() {
+    debugger;
     if (!badge) return;
 
     try {
@@ -645,6 +655,9 @@ export default function Accomplishments() {
                 <Button size="sm" variant="outline" onClick={downloadMarkdown}>
                   Export .md
                 </Button>
+                <Button size="sm" variant="outline" onClick={downloadMarkdown}>
+                  Send Email
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => setSummaryOpen(false)}>
                   Close
                 </Button>
@@ -698,7 +711,25 @@ export default function Accomplishments() {
           </div>
         </div>
       )}
+      <AccomplishmentSummaryDialog
+        open={summaryOpen}
+        onClose={() => setSummaryOpen(false)}
+        from={from}
+        to={to}
+        summaryData={summaryData}
+        sumError={sumError}
+        downloadMarkdown={downloadMarkdown}
+        Button={Button}
+        onSendEmail={async (draft) => {
+          const response = await sendEmail(draft);
 
+          if (!(response.status === 200 || response.status === 201)) {
+            let msg = "Failed to send email.";
+
+            throw new Error(msg);
+          }
+        }}
+      />
       {/* 🔄 Full-screen spinner while fetching accomplishments */}
       {loading && <FullscreenSpinner label="Loading your accomplishments…" />}
     </div>
