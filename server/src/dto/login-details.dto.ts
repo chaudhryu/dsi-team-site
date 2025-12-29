@@ -5,6 +5,7 @@ export class loginDetailsDto {
   user: User | null;
   manager?: User | null;
   isFirstLogin?: boolean;
+  role?: string;
 
   /** Optional: only populated when allowed === false */
   reason?: string;
