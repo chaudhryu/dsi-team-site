@@ -36,6 +36,14 @@ export class UsersController {
     return this.usersService.findOneByBadge(Number(badge));
   }
 
+  // GET /api/users/costcenter/96880
+  @Get("costcenter/:costCenter")
+  findOneByCostCenter(
+    @Param("costCenter") costCenter: string
+  ): Promise<User[] | null> {
+    return this.usersService.findByCostCenter(Number(costCenter));
+  }
+
   @Post()
   create(@Body() data: Partial<User>): Promise<User> {
     return this.usersService.create(data);

@@ -9,6 +9,8 @@ import { envConfig } from "../config/envConfig";
 import DOMPurify from "dompurify";
 import "react-quill-new/dist/quill.snow.css";
 import { useLogin } from "@/context/LoginContext";
+import { AccomplishmentSummaryDialog } from "@/components/modal/AccomplishmentSummaryDialog";
+import { sendEmail } from "@/Data/actions/MailAction";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 
@@ -612,7 +614,25 @@ export default function AccomplishmentsTable() {
           </div>
         </div>
       )}
+      <AccomplishmentSummaryDialog
+        open={summaryOpen}
+        onClose={() => setSummaryOpen(false)}
+        from={from}
+        to={to}
+        summaryData={summaryData}
+        sumError={sumError}
+        downloadMarkdown={downloadMarkdown}
+        Button={Button}
+        onSendEmail={async (draft) => {
+          const response = await sendEmail(draft);
 
+          if (!(response.status === 200 || response.status === 201)) {
+            let msg = "Failed to send email.";
+
+            throw new Error(msg);
+          }
+        }}
+      />
       {/* 🔄 Full-screen spinner while loading */}
       {loading && <FullscreenSpinner label="Loading team accomplishments…" />}
     </div>
