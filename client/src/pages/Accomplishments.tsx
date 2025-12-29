@@ -10,6 +10,8 @@ import { envConfig } from "../config/envConfig";
 
 import DOMPurify from "dompurify";
 import { useLogin } from "@/context/LoginContext";
+import { AccomplishmentSummaryDialog } from "@/components/modal/AccomplishmentSummaryDialog";
+import { sendEmail } from "@/Data/actions/MailAction";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 const LOGIN_KEY = envConfig.loginEmpKey || "loginEmployee";
@@ -350,6 +352,7 @@ export default function Accomplishments() {
 
   /* -------------------- Personal Gemini summary -------------------- */
   async function onSummarizeRange() {
+    debugger;
     if (!badge) return;
 
     try {
@@ -652,6 +655,9 @@ export default function Accomplishments() {
                 <Button size="sm" variant="outline" onClick={downloadMarkdown}>
                   Export .md
                 </Button>
+                <Button size="sm" variant="outline" onClick={downloadMarkdown}>
+                  Send Email
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => setSummaryOpen(false)}>
                   Close
                 </Button>
@@ -705,7 +711,25 @@ export default function Accomplishments() {
           </div>
         </div>
       )}
+      <AccomplishmentSummaryDialog
+        open={summaryOpen}
+        onClose={() => setSummaryOpen(false)}
+        from={from}
+        to={to}
+        summaryData={summaryData}
+        sumError={sumError}
+        downloadMarkdown={downloadMarkdown}
+        Button={Button}
+        onSendEmail={async (draft) => {
+          const response = await sendEmail(draft);
 
+          if (!(response.status === 200 || response.status === 201)) {
+            let msg = "Failed to send email.";
+
+            throw new Error(msg);
+          }
+        }}
+      />
       {/* 🔄 Full-screen spinner while fetching accomplishments */}
       {loading && <FullscreenSpinner label="Loading your accomplishments…" />}
     </div>
