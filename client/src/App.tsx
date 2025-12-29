@@ -1,4 +1,6 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
+
 import SignIn from "./pages/Public/AuthPages/SignIn";
 import SignUp from "./pages/Public/AuthPages/SignUp";
 import NotFound from "./pages/OtherPage/NotFound";
@@ -17,6 +19,76 @@ import Users from "./pages/Users";
 import Databases from "./pages/Databases";
 import { Projects } from "./pages/ProjectsInternal/Projects";
 import HighManagerDashboard from "./pages/HighManagerDashboard";
+import { envConfig } from "./config/envConfig";
+
+const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3005/api";
+const LOGIN_KEY = envConfig.loginEmpKey || "loginEmployee";
+
+type DbUser = { badge: number; role?: string | null };
+
+function normalizeRole(role: unknown): string {
+  return String(role ?? "").trim().toLowerCase();
+}
+
+function readBadgeFromStorage(): number | null {
+  try {
+    const raw = localStorage.getItem(LOGIN_KEY);
+    if (!raw) return null;
+    const u = JSON.parse(raw);
+    const badge = Number(u?.badge);
+    return Number.isFinite(badge) ? badge : null;
+  } catch {
+    return null;
+  }
+}
+
+async function isHighManagerFromDb(badge: number): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/users`, { credentials: "include" });
+    if (!res.ok) return false;
+    const users = (await res.json()) as DbUser[];
+    const me = users.find((u) => Number(u?.badge) === badge);
+    return normalizeRole(me?.role) === "high_manager";
+  } catch {
+    return false;
+  }
+}
+
+function HighManagerOnlyRoute() {
+  const [status, setStatus] = useState<"loading" | "allowed" | "denied">("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function check() {
+      const badge = readBadgeFromStorage();
+      if (!badge) {
+        if (!cancelled) setStatus("denied");
+        return;
+      }
+
+      const ok = await isHighManagerFromDb(badge);
+      if (!cancelled) setStatus(ok ? "allowed" : "denied");
+    }
+
+    check();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (status === "loading") {
+    return (
+      <div className="p-6">
+        <div className="text-sm text-gray-600 dark:text-gray-300">Checking access…</div>
+      </div>
+    );
+  }
+
+  if (status === "denied") return <Navigate to="/" replace />;
+
+  return <Outlet />;
+}
 
 export default function App() {
   return (
@@ -26,44 +98,29 @@ export default function App() {
         <Routes>
           <Route path="/auth-response" element={<AuthCallback />} />
 
-          {/* ---------- Layout that everyone can see ---------- */}
           <Route element={<AppLayout />}>
-            <Route index element={<Home />} /> {/* Public */}
+            <Route index element={<Home />} />
             <Route path="/images" element={<Images />} />
-            {/* Public */}
-            <Route
-              path="/projects-external"
-              element={<Projects isInternal={false} />}
-            />
-            {/* ---------- Auth‑only pages ---------- */}
+            <Route path="/projects-external" element={<Projects isInternal={false} />} />
+
             <Route element={<ProtectedRoute />}>
               <Route path="/profile" element={<UserProfiles />} />
-              <Route
-                path="/projects-internal"
-                element={<Projects isInternal={true} />}
-              />
+              <Route path="/projects-internal" element={<Projects isInternal={true} />} />
               <Route path="/calendar" element={<Calendar />} />
-              <Route
-                path="/submit-accomplishment"
-                element={<Accomplishments />}
-              />
-              <Route
-                path="/view-accomplishments"
-                element={<AccomplishmentsTable />}
-              />
+              <Route path="/submit-accomplishment" element={<Accomplishments />} />
+              <Route path="/view-accomplishments" element={<AccomplishmentsTable />} />
               <Route path="/users" element={<Users />} />
               <Route path="/databases" element={<Databases />} />
-              <Route path="/high-manager-dashboard" element={<HighManagerDashboard />} />
 
-
-              {/* add other private routes here */}
+              {/* ✅ high_manager only */}
+              <Route element={<HighManagerOnlyRoute />}>
+                <Route path="/high-manager-dashboard" element={<HighManagerDashboard />} />
+              </Route>
             </Route>
           </Route>
 
-          {/* Auth screens */}
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
-
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
