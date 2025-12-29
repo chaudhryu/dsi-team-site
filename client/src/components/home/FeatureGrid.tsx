@@ -81,12 +81,12 @@ export default function FeatureGrid() {
         {/* intro */}
         <div className="max-w-xl">
           <h2 className="text-3xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
-            Meet our team
+            Team Members
           </h2>
-          <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
+          {/* <p className="mt-6 text-lg leading-8 text-gray-600 dark:text-gray-300">
             We’re a dynamic group of individuals who are passionate about what we do and dedicated to delivering the
             best results for Metro riders.
-          </p>
+          </p> */}
 
           {/* status */}
           <div className="mt-6">

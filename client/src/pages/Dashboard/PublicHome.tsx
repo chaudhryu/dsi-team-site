@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageMeta from "../../components/common/PageMeta";
-import FeatureGrid from "../../components/home/FeatureGrid";
 /**
  * Hero‑style landing page with image‑above‑text and a mount‑time fade‑in.
  */

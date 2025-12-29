@@ -69,16 +69,12 @@ const AppHeader: React.FC = () => {
             className="text-lg font-semibold text-neutral-100 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             aria-label="Go to home"
           >
-            DSI&nbsp;WebApps&nbsp;Team
+            ITS Team Hub <i>(By DSI&nbsp;WebApps&nbsp;Team)</i>
           </Link>
 
           {/* Mobile logo (also links home) */}
           <Link to="/" className="lg:hidden ml-auto">
-            <img
-              className="h-12 w-auto"
-              src="./images/LAMetroLogo.svg.png"
-              alt="Metro logo"
-            />
+            <img className="h-12 w-auto" src="./images/LAMetroLogo.svg.png" alt="Metro logo" />
           </Link>
 
           {/* Mobile app menu toggle */}
@@ -100,7 +96,9 @@ const AppHeader: React.FC = () => {
 
         {/* ─────────── Right section ─────────── */}
         <div
-          className={`${isApplicationMenuOpen ? "flex" : "hidden"} w-full items-center justify-between gap-4 px-5 py-4 lg:flex lg:justify-end lg:px-0`}
+          className={`${
+            isApplicationMenuOpen ? "flex" : "hidden"
+          } w-full items-center justify-between gap-4 px-5 py-4 lg:flex lg:justify-end lg:px-0`}
         >
           {!isAuthenticated && (
             <Link
@@ -126,14 +124,13 @@ const AppHeader: React.FC = () => {
             </button>
           ) : (
             <Link
-            to="/signin"
-            className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium
+              to="/signin"
+              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium
                        text-white border border-white/60 rounded-lg hover:bg-white/10
                        focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-          >
-            Sign&nbsp;in
-          </Link>
-          
+            >
+              Sign&nbsp;in
+            </Link>
           )}
         </div>
       </div>
