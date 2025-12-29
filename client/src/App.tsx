@@ -16,6 +16,7 @@ import AuthCallback from "./pages/Private/Auth/AuthCallback";
 import Users from "./pages/Users";
 import Databases from "./pages/Databases";
 import { Projects } from "./pages/ProjectsInternal/Projects";
+import PublicHome from "./pages/Dashboard/PublicHome";
 
 export default function App() {
   return (
@@ -27,32 +28,20 @@ export default function App() {
 
           {/* ---------- Layout that everyone can see ---------- */}
           <Route element={<AppLayout />}>
+            <Route index element={<PublicHome />} />
             <Route index element={<Home />} /> {/* Public */}
             <Route path="/images" element={<Images />} />
             {/* Public */}
-            <Route
-              path="/projects-external"
-              element={<Projects isInternal={false} />}
-            />
+            <Route path="/projects-external" element={<Projects isInternal={false} />} />
             {/* ---------- Auth‑only pages ---------- */}
             <Route element={<ProtectedRoute />}>
               <Route path="/profile" element={<UserProfiles />} />
-              <Route
-                path="/projects-internal"
-                element={<Projects isInternal={true} />}
-              />
+              <Route path="/projects-internal" element={<Projects isInternal={true} />} />
               <Route path="/calendar" element={<Calendar />} />
-              <Route
-                path="/submit-accomplishment"
-                element={<Accomplishments />}
-              />
-              <Route
-                path="/view-accomplishments"
-                element={<AccomplishmentsTable />}
-              />
+              <Route path="/submit-accomplishment" element={<Accomplishments />} />
+              <Route path="/view-accomplishments" element={<AccomplishmentsTable />} />
               <Route path="/users" element={<Users />} />
               <Route path="/databases" element={<Databases />} />
-
 
               {/* add other private routes here */}
             </Route>
