@@ -16,6 +16,7 @@ import AuthCallback from "./pages/Private/Auth/AuthCallback";
 import Users from "./pages/Users";
 import Databases from "./pages/Databases";
 import { Projects } from "./pages/ProjectsInternal/Projects";
+import PublicHome from "./pages/Dashboard/PublicHome";
 
 export default function App() {
   return (
@@ -27,12 +28,15 @@ export default function App() {
 
           {/* App chrome */}
           <Route element={<AppLayout />}>
+
             {/*  Public landing */}
             {/* <Route index element={<PublicHome />} /> */}
             <Route path="/images" element={<Images />} />
             <Route path="/projects-external" element={<Projects isInternal={false} />} />
 
             {/*  Private area */}
+            {/* ---------- Auth‑only pages ---------- */}
+
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Home />} /> {/*  Home moved here */}
               <Route path="/profile" element={<UserProfiles />} />
@@ -42,6 +46,8 @@ export default function App() {
               <Route path="/view-accomplishments" element={<AccomplishmentsTable />} />
               <Route path="/users" element={<Users />} />
               <Route path="/databases" element={<Databases />} />
+              {/* add other private routes here */}
+
             </Route>
           </Route>
 
