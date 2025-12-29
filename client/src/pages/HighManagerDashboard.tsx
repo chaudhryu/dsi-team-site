@@ -10,8 +10,13 @@ import { envConfig } from "../config/envConfig";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3005/api";
 
-/* Hide these badges everywhere in this dashboard (optional; matches your other table) */
-const HIDDEN_BADGES = new Set<string>(["93467"]);
+/**
+ * IMPORTANT:
+ * You previously had HIDDEN_BADGES = ["93467"] which is why one manager wasn't showing.
+ * For this dashboard, we want BOTH managers to show, so we do NOT hide anyone here.
+ * If you later want to hide specific service accounts, add them back carefully.
+ */
+const HIDDEN_BADGES = new Set<string>(); // ✅ show everyone (no hidden badges)
 
 /* -------------------- HTML helpers -------------------- */
 const sanitizeHtml = (html: string) =>
@@ -131,6 +136,13 @@ type UserSummary = {
 };
 type SummarizeResponse = { users: UserSummary[]; team_themes?: string[] };
 
+function isManagerUser(u: User): boolean {
+  // Only role === "manager" should show
+  return String(u.role ?? "")
+    .trim()
+    .toLowerCase() === "manager";
+}
+
 export default function HighManagerDashboard() {
   /* Week dropdown */
   const weekOptions = useMemo(() => {
@@ -159,19 +171,54 @@ export default function HighManagerDashboard() {
   /* Summaries */
   const [summarizingKey, setSummarizingKey] = useState<string | null>(null); // "ALL" or costCenterLabel
   const [summaryOpen, setSummaryOpen] = useState(false);
-  const [summaryScope, setSummaryScope] = useState<string>(""); // title context
+  const [summaryScope, setSummaryScope] = useState<string>("");
   const [summaryData, setSummaryData] = useState<SummarizeResponse | null>(null);
   const [sumError, setSumError] = useState<string | null>(null);
 
-  // 1) Load all users once
+  // 1) Load users ONCE, filter to MANAGERS, and console-log who is manager vs not
   useEffect(() => {
     (async () => {
       try {
         setError(null);
+
+        console.log("[ManagerDashboard] Fetching users:", `${API_BASE}/users`);
         const res = await fetch(`${API_BASE}/users`, { credentials: "include" });
         const raw: User[] = res.ok ? await res.json() : [];
 
-        const filtered = raw.filter((u) => !HIDDEN_BADGES.has(String(u.badge)));
+        console.groupCollapsed(`[ManagerDashboard] /users returned ${raw.length} users`);
+        raw.forEach((u) => {
+          const roleRaw = u?.role;
+          const roleNorm = String(roleRaw ?? "").trim().toLowerCase();
+          const isHidden = HIDDEN_BADGES.has(String(u?.badge));
+          const isManager = roleNorm === "manager";
+
+          console.log({
+            badge: u?.badge,
+            name: `${u?.firstName ?? ""} ${u?.lastName ?? ""}`.trim(),
+            roleRaw,
+            roleNorm,
+            costCenter: u?.costCenter,
+            isHidden,
+            isManager,
+            willShow: !isHidden && isManager,
+          });
+        });
+        console.groupEnd();
+
+        // ✅ no longer hiding 93467 (or anyone), so both managers will show
+        const filtered = raw
+          .filter((u) => !HIDDEN_BADGES.has(String(u.badge)))
+          .filter(isManagerUser);
+
+        console.log(
+          `[ManagerDashboard] Managers that WILL show up: ${filtered.length}`,
+          filtered.map((u) => ({
+            badge: u.badge,
+            name: `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim(),
+            role: u.role,
+            costCenter: u.costCenter,
+          }))
+        );
 
         filtered.sort((a, b) => {
           const al = (a.lastName || "").toLowerCase();
@@ -183,13 +230,13 @@ export default function HighManagerDashboard() {
         setUsers(filtered);
       } catch (e) {
         console.error(e);
-        setError("Failed to load users.");
+        setError("Failed to load manager users.");
         setUsers([]);
       }
     })();
   }, []);
 
-  // Helper: group users by costCenter
+  // Group MANAGERS by cost center
   const usersByCostCenter = useMemo(() => {
     const map = new Map<string, { costCenterNumber: number | null; users: User[] }>();
 
@@ -203,7 +250,7 @@ export default function HighManagerDashboard() {
     return map;
   }, [users]);
 
-  // 2) Load weekly accomplishments for selected week, per cost center
+  // Load weekly accomplishments for selected week (only managers)
   async function loadWeekByCostCenter() {
     if (!users.length) {
       setGroups([]);
@@ -295,15 +342,16 @@ export default function HighManagerDashboard() {
       return {
         badge: r.user.badge,
         name: name || `#${r.user.badge}`,
-        entries: hasContent(r.wa?.accomplishments) && text
-          ? [
-              {
-                startWeekDate: weekStart,
-                endWeekDate: weekEnd,
-                text,
-              },
-            ]
-          : [],
+        entries:
+          hasContent(r.wa?.accomplishments) && text
+            ? [
+                {
+                  startWeekDate: weekStart,
+                  endWeekDate: weekEnd,
+                  text,
+                },
+              ]
+            : [],
       };
     });
   }
@@ -343,11 +391,11 @@ export default function HighManagerDashboard() {
 
   async function onSummarizeAll() {
     const allRows = groups.flatMap((g) => g.rows);
-    await summarizeRows("All Cost Centers", "ALL", allRows);
+    await summarizeRows("All Cost Centers (Managers)", "ALL", allRows);
   }
 
   async function onSummarizeCostCenter(g: CostCenterGroup) {
-    await summarizeRows(`Cost Center ${g.costCenterLabel}`, g.costCenterLabel, g.rows);
+    await summarizeRows(`Cost Center ${g.costCenterLabel} (Managers)`, g.costCenterLabel, g.rows);
   }
 
   function downloadMarkdown() {
@@ -355,6 +403,7 @@ export default function HighManagerDashboard() {
 
     const lines: string[] = [];
     lines.push(`# ${summaryScope}`);
+
     if (summaryData.team_themes?.length) {
       lines.push("\n## Team themes");
       summaryData.team_themes.forEach((t) => lines.push(`- ${t}`));
@@ -389,12 +438,8 @@ export default function HighManagerDashboard() {
       <div className="rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
         <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-100 dark:border-white/[0.05]">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white/90">
-              High Manager Dashboard
-            </h2>
-            <div className="text-xs text-gray-500">
-              Weekly accomplishments grouped by cost center
-            </div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white/90">Manager Dashboard</h2>
+            <div className="text-xs text-gray-500">Weekly accomplishments (managers only), grouped by cost center</div>
           </div>
         </div>
 
@@ -422,14 +467,13 @@ export default function HighManagerDashboard() {
           </Button>
 
           <Button
-  size="sm"
-  variant="primary"
-  onClick={onSummarizeAll}
-  disabled={loading || summarizingKey === "ALL" || groups.length === 0}
->
-  {summarizingKey === "ALL" ? "Summarizing…" : "Summarize All"}
-</Button>
-
+            size="sm"
+            variant="primary"
+            onClick={onSummarizeAll}
+            disabled={loading || summarizingKey === "ALL" || groups.length === 0}
+          >
+            {summarizingKey === "ALL" ? "Summarizing…" : "Summarize All"}
+          </Button>
 
           {error && <span className="text-sm text-red-600 dark:text-red-300">{error}</span>}
         </div>
@@ -456,14 +500,13 @@ export default function HighManagerDashboard() {
               </div>
 
               <Button
-  size="sm"
-  variant="primary"
-  onClick={() => onSummarizeCostCenter(g)}
-  disabled={loading || summarizingKey === g.costCenterLabel || g.rows.length === 0}
->
-  {summarizingKey === g.costCenterLabel ? "Summarizing…" : "Summarize"}
-</Button>
-
+                size="sm"
+                variant="primary"
+                onClick={() => onSummarizeCostCenter(g)}
+                disabled={loading || summarizingKey === g.costCenterLabel || g.rows.length === 0}
+              >
+                {summarizingKey === g.costCenterLabel ? "Summarizing…" : "Summarize"}
+              </Button>
             </div>
 
             <div className="max-w-full overflow-x-auto">
@@ -471,7 +514,7 @@ export default function HighManagerDashboard() {
                 <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
                   <TableRow>
                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs w-64">
-                      User
+                      Manager
                     </TableCell>
                     <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs">
                       Accomplishment (selected week)
@@ -495,7 +538,11 @@ export default function HighManagerDashboard() {
                               {user.firstName} {user.lastName}
                             </span>
                             <span className="block text-gray-500 text-theme-xs dark:text-gray-400">
-                              {String(user.position ?? "")} · #{user.badge}
+                              {String(user.position ?? "")}
+                              {" · "}
+                              CC {user.costCenter ?? "—"}
+                              {" · "}
+                              #{user.badge}
                             </span>
                           </div>
                         </div>
@@ -533,7 +580,7 @@ export default function HighManagerDashboard() {
                   {!loading && g.rows.length === 0 && (
                     <tr>
                       <td className="px-5 py-8 text-center text-gray-500 dark:text-gray-400" colSpan={3}>
-                        No users found in this cost center.
+                        No managers found in this cost center.
                       </td>
                     </tr>
                   )}
@@ -556,9 +603,7 @@ export default function HighManagerDashboard() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
               <div>
                 <h3 className="text-lg font-semibold">AI Summary</h3>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
-                  {summaryScope}
-                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">{summaryScope}</div>
               </div>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={downloadMarkdown}>
