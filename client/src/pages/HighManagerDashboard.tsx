@@ -8,6 +8,9 @@ import Label from "../components/form/Label";
 import Button from "../components/ui/button/Button";
 import { envConfig } from "../config/envConfig";
 
+import { AccomplishmentSummaryDialog } from "@/components/modal/AccomplishmentSummaryDialog";
+import { sendEmail } from "@/Data/actions/MailAction";
+
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3005/api";
 
 /**
@@ -126,7 +129,7 @@ export default function HighManagerDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /* Summaries */
+  /* Summaries (for dialog component) */
   const [summarizingKey, setSummarizingKey] = useState<string | null>(null); // "ALL" or `CC-####`
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summaryData, setSummaryData] = useState<SummarizeResponse | null>(null);
@@ -150,10 +153,6 @@ export default function HighManagerDashboard() {
     }
   }
 
-  /**
-   * Tries the cost-center range endpoint.
-   * If your backend expects week-aligned dates and returns 0 rows, we'll fall back elsewhere.
-   */
   async function fetchWeeklyAccomplishmentsForCostCenter(cc: number): Promise<WA[]> {
     try {
       const res = await fetch(
@@ -162,8 +161,6 @@ export default function HighManagerDashboard() {
       );
       const data = res.ok ? await res.json() : [];
       const arr = Array.isArray(data) ? (data as WA[]) : [];
-
-      // extra safety: filter overlap in UI
       return arr.filter((wa) => overlapsRange(wa.startWeekDate, wa.endWeekDate, from, to));
     } catch {
       return [];
@@ -182,7 +179,7 @@ export default function HighManagerDashboard() {
   }
 
   function buildPayloadUsers(allUsers: User[], waList: WA[]): PayloadUser[] {
-    // Group ALL WAs by badge (not just one!)
+    // Group ALL WAs by badge (so each user can have multiple entries)
     const waByBadge = new Map<number, WA[]>();
     for (const wa of waList) {
       const badge = wa?.user?.badge;
@@ -284,7 +281,6 @@ export default function HighManagerDashboard() {
       return;
     }
 
-    // guard: if from > to, don't fetch
     if (from && to && from > to) {
       setError("Invalid date range: 'From' must be before 'To'.");
       return;
@@ -294,7 +290,7 @@ export default function HighManagerDashboard() {
     setError(null);
 
     try {
-      // 1) Fetch WAs per CC (best effort)
+      // 1) Fetch WAs per cost center
       const nextCache: Record<string, WA[]> = {};
       await Promise.all(
         uniqueManagerCostCenters.map(async (cc) => {
@@ -346,8 +342,13 @@ export default function HighManagerDashboard() {
 
   /* -------------------- Summarization -------------------- */
 
-  async function postSummarize(scopeLabel: string, key: string, payloadUsers: PayloadUser[]) {
+  async function postSummarize(key: string, payloadUsers: PayloadUser[]) {
     try {
+      if (from && to && from > to) {
+        setSumError("Invalid date range: 'From' must be before 'To'.");
+        return;
+      }
+
       setSummarizingKey(key);
       setSumError(null);
 
@@ -359,7 +360,7 @@ export default function HighManagerDashboard() {
           from,
           to,
           users: payloadUsers,
-          includeTeamSummary: false,
+          includeTeamSummary: false, // ✅ no team themes
         }),
       });
 
@@ -378,44 +379,34 @@ export default function HighManagerDashboard() {
 
   /**
    * ✅ Summarize ALL USERS in manager's cost center across the date range.
-   * Fixes "names only" by:
-   * - grouping multiple WAs per user into entries[]
-   * - falling back to per-user WA fetch if CC-range endpoint returns empty
+   * Uses CC cache if present; falls back to per-user WAs when needed.
    */
   async function onSummarizeManagerCostCenter(manager: User) {
     const cc = typeof manager.costCenter === "number" ? manager.costCenter : null;
     if (cc === null) return;
 
     const key = `CC-${cc}`;
-    const managerName = userDisplayName(manager);
 
     // 1) Fetch all users in CC
     const allUsers = await fetchUsersByCostCenter(cc);
 
-    // 2) Try CC range endpoint first (cached), else fetch
+    // 2) Try CC endpoint first (cached), else fetch
     let waList = waCacheByCostCenter[String(cc)];
-    if (!waList) {
-      waList = await fetchWeeklyAccomplishmentsForCostCenter(cc);
-    }
+    if (!waList) waList = await fetchWeeklyAccomplishmentsForCostCenter(cc);
 
-    // 3) If CC endpoint returned nothing but there are users,
-    // fallback to per-user fetch so we still get text for arbitrary date ranges.
+    // 3) If CC endpoint returns nothing, fallback to per-user
     if ((waList?.length ?? 0) === 0 && allUsers.length > 0) {
-      const perUser = await Promise.all(
-        allUsers.map(async (u) => await fetchWeeklyAccomplishmentsForUser(u.badge))
-      );
+      const perUser = await Promise.all(allUsers.map(async (u) => await fetchWeeklyAccomplishmentsForUser(u.badge)));
       waList = perUser.flat();
     }
 
     const payloadUsers = buildPayloadUsers(allUsers, waList ?? []);
-
-    await postSummarize(`Cost Center ${cc} (All Users) · requested by ${managerName}`, key, payloadUsers);
+    await postSummarize(key, payloadUsers);
   }
 
   async function onSummarizeAll() {
     const key = "ALL";
 
-    // Summarize all users across cost centers that appear on this page
     const seenBadges = new Set<number>();
     const allPayload: PayloadUser[] = [];
 
@@ -438,31 +429,29 @@ export default function HighManagerDashboard() {
       }
     }
 
-    await postSummarize(`All Cost Centers (All Users)`, key, allPayload);
+    await postSummarize(key, allPayload);
   }
 
   function downloadMarkdown() {
     if (!summaryData) return;
 
     const lines: string[] = [];
+    lines.push(`# AI Summary (${from} → ${to})`);
+    lines.push("");
 
-    if (summaryData.team_themes?.length) {
-      lines.push("\n## Team themes");
-      summaryData.team_themes.forEach((t) => lines.push(`- ${t}`));
-    }
-
-    lines.push("\n## Individuals");
     summaryData.users.forEach((u) => {
-      lines.push(`\n### ${u.name} (#${u.badge})\n`);
-
+      lines.push(`## ${u.name} (#${u.badge})`);
+      lines.push("");
       const md = String(u.summary_md ?? "").trim();
       lines.push(md.length ? md : "- (No accomplishments found in this range.)");
+      lines.push("");
     });
 
     const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
+    a.download = `ai_summary_${from}_${to}.md`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -540,9 +529,7 @@ export default function HighManagerDashboard() {
                     <TableCell className="px-5 py-4 align-top w-[320px]">
                       <div className="font-medium text-gray-900 dark:text-white/90">{userDisplayName(mgr)}</div>
 
-                      {mgr.position ? (
-                        <div className="text-xs text-gray-500 mt-1">{String(mgr.position)}</div>
-                      ) : null}
+                      {mgr.position ? <div className="text-xs text-gray-500 mt-1">{String(mgr.position)}</div> : null}
 
                       <div className="text-xs text-gray-500 mt-1">
                         Cost Center:{" "}
@@ -572,7 +559,7 @@ export default function HighManagerDashboard() {
                           ))}
                         </div>
                       ) : (
-                        <div /> // blank (no "—")
+                        <div /> // blank
                       )}
                     </TableCell>
 
@@ -600,58 +587,23 @@ export default function HighManagerDashboard() {
         </Table>
       </div>
 
-      {/* Summary Modal */}
-      {summaryOpen && summaryData && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          role="dialog"
-          aria-modal="true"
-          onKeyDown={(e) => e.key === "Escape" && setSummaryOpen(false)}
-        >
-          <div className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-              <div>
-                <h3 className="text-lg font-semibold">AI Summary</h3>
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={downloadMarkdown}>
-                  Export .md
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setSummaryOpen(false)}>
-                  Close
-                </Button>
-              </div>
-            </div>
-
-            <div className="px-6 py-5 space-y-6 max-h-[70vh] overflow-y-auto">
-
-
-              <div className="space-y-6">
-                {summaryData.users.map((u) => {
-                  const md = String(u.summary_md ?? "").trim();
-                  return (
-                    <div key={u.badge}>
-                      <div className="font-semibold text-gray-900 dark:text-gray-100">
-                        {u.name} <span className="text-gray-500">#{u.badge}</span>
-                      </div>
-
-                      <pre className="whitespace-pre-wrap break-words text-sm text-gray-800 dark:text-gray-200 mt-1">
-                        {md.length ? md : "- (No accomplishments found in this range.)"}
-                      </pre>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {sumError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
-                  {sumError}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ✅ Reuse the SAME summary dialog component as Accomplishments.tsx */}
+      <AccomplishmentSummaryDialog
+        open={summaryOpen}
+        onClose={() => setSummaryOpen(false)}
+        from={from}
+        to={to}
+        summaryData={summaryData as any}
+        sumError={sumError}
+        downloadMarkdown={downloadMarkdown}
+        Button={Button}
+        onSendEmail={async (draft: any) => {
+          const response = await sendEmail(draft);
+          if (!(response.status === 200 || response.status === 201)) {
+            throw new Error("Failed to send email.");
+          }
+        }}
+      />
     </div>
   );
 }
