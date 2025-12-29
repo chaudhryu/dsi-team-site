@@ -28,9 +28,8 @@ export default function App() {
 
           {/* App chrome */}
           <Route element={<AppLayout />}>
-
             {/*  Public landing */}
-            {/* <Route index element={<PublicHome />} /> */}
+            <Route index element={<PublicHome />} />
             <Route path="/images" element={<Images />} />
             <Route path="/projects-external" element={<Projects isInternal={false} />} />
 
@@ -47,7 +46,6 @@ export default function App() {
               <Route path="/users" element={<Users />} />
               <Route path="/databases" element={<Databases />} />
               {/* add other private routes here */}
-
             </Route>
           </Route>
 

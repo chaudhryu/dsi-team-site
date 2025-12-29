@@ -156,7 +156,7 @@ export default function AuthCallback() {
       } else {
         console.warn("No valid badge found; cannot initialize session.");
       }
-      navigate("/", { replace: true });
+      navigate("/dashboard", { replace: true });
     }
   };
 

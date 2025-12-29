@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageMeta from "../../components/common/PageMeta";
 import FeatureGrid from "../../components/home/FeatureGrid";
+import { useLogin } from "@/context/LoginContext";
+import { fetchEmployeeDetails } from "@/Data/actions/EmployeeAction";
 /**
  * Hero‑style landing page with image‑above‑text and a mount‑time fade‑in.
  */
@@ -9,13 +11,31 @@ export default function Home() {
   /* run‑once animation flag */
   const [visible, setVisible] = useState(false);
   useEffect(() => setVisible(true), []);
+  const { loginEmployee } = useLogin();
+  const [userDepartment, setUserDepartment] = useState<string>("ITS Teams Site");
+  // Fetch people from API
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!loginEmployee) return;
+        const res = await fetchEmployeeDetails((loginEmployee as any).badge);
+        if (res.status !== 200) {
+          // Optionally parse server error message
 
+          throw new Error(`Failed to load employee details (HTTP ${res.status})`);
+        }
+
+        const emp = res.data;
+        setUserDepartment(emp.department || "ITS Teams Site");
+      } catch (e: any) {
+        if (e?.name === "AbortError") return;
+        console.log(e?.message || "Failed to load team.");
+      }
+    })();
+  }, []);
   return (
     <>
-      <PageMeta
-        title="DSI WebApps – Home"
-        description="Landing page for the DSI WebApps team site"
-      />
+      <PageMeta title="DSI WebApps – Home" description="Landing page for the DSI WebApps team site" />
 
       {/* ─────────── Hero ─────────── */}
       <div
@@ -39,10 +59,7 @@ export default function Home() {
         <div
           className={`mx-auto flex max-w-2xl flex-col items-center px-6
                       transition-all duration-700
-                      ${visible
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 translate-y-6"
-            }`}
+                      ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
         >
           <img
             src="/images/LAMetroLogo.svg.png"
@@ -51,23 +68,22 @@ export default function Home() {
             loading="eager"
           />
 
-
-
           {/* Headline & Copy */}
-          <h1 className="text-center text-5xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-7xl">
-            DSI Web Apps Team
-          </h1>
+          {/* <h1 className="text-center text-5xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-7xl">
+            {userDepartment}
+          </h1> */}
+          {/* <p className="mt-8 text-center text-lg leading-8 text-gray-600 dark:text-gray-300">
+            Welcome to the DSI WebApps team hub. Explore our projects, read about the tech we use, and get involved in
+            shaping the digital experience for Metro riders.
+          </p> */}
           <p className="mt-8 text-center text-lg leading-8 text-gray-600 dark:text-gray-300">
-            Welcome to the DSI WebApps team hub. Explore our projects, read
-            about the tech we use, and get involved in shaping the digital
-            experience for Metro riders.
+            Welcome to the {userDepartment} team hub.
           </p>
-
           {/* CTA buttons */}
           <div className="mt-10 flex items-center justify-center gap-x-6">
-          <Link
-  to="/projects-external"
-  className="rounded-lg px-4 py-2.5 text-sm font-semibold
+            <Link
+              to="/projects-external"
+              className="rounded-lg px-4 py-2.5 text-sm font-semibold
              bg-neutral-900 text-white shadow transition
              duration-200 ease-out
              hover:bg-neutral-800 hover:shadow-lg hover:-translate-y-0.5 hover:scale-[1.02]
@@ -76,12 +92,9 @@ export default function Home() {
 
              dark:bg-white dark:text-neutral-900
              dark:hover:bg-neutral-200 dark:focus-visible:ring-white/70"
->
-  View projects
-</Link>
-
-
-
+            >
+              View projects
+            </Link>
           </div>
         </div>
 
