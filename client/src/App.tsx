@@ -25,36 +25,23 @@ export default function App() {
         <Routes>
           <Route path="/auth-response" element={<AuthCallback />} />
 
-          {/* ---------- Layout that everyone can see ---------- */}
+          {/* App chrome */}
           <Route element={<AppLayout />}>
-            <Route index element={<Home />} /> {/* Public */}
+            {/*  Public landing */}
+            {/* <Route index element={<PublicHome />} /> */}
             <Route path="/images" element={<Images />} />
-            {/* Public */}
-            <Route
-              path="/projects-external"
-              element={<Projects isInternal={false} />}
-            />
-            {/* ---------- Auth‑only pages ---------- */}
+            <Route path="/projects-external" element={<Projects isInternal={false} />} />
+
+            {/*  Private area */}
             <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<Home />} /> {/*  Home moved here */}
               <Route path="/profile" element={<UserProfiles />} />
-              <Route
-                path="/projects-internal"
-                element={<Projects isInternal={true} />}
-              />
+              <Route path="/projects-internal" element={<Projects isInternal={true} />} />
               <Route path="/calendar" element={<Calendar />} />
-              <Route
-                path="/submit-accomplishment"
-                element={<Accomplishments />}
-              />
-              <Route
-                path="/view-accomplishments"
-                element={<AccomplishmentsTable />}
-              />
+              <Route path="/submit-accomplishment" element={<Accomplishments />} />
+              <Route path="/view-accomplishments" element={<AccomplishmentsTable />} />
               <Route path="/users" element={<Users />} />
               <Route path="/databases" element={<Databases />} />
-
-
-              {/* add other private routes here */}
             </Route>
           </Route>
 
