@@ -1,22 +1,23 @@
 // src/pages/HighManagerDashboard.tsx
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DOMPurify from "dompurify";
 import "react-quill-new/dist/quill.snow.css";
 
-import { Table, TableBody, TableCell, TableHeader, TableRow } from "../components/ui/table";
+import { Table, TableBody, TableCell, TableRow } from "../components/ui/table";
 import Label from "../components/form/Label";
 import Button from "../components/ui/button/Button";
 import { envConfig } from "../config/envConfig";
+
+import { AccomplishmentSummaryDialog } from "@/components/modal/AccomplishmentSummaryDialog";
+import { sendEmail } from "@/Data/actions/MailAction";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3005/api";
 
 /**
  * IMPORTANT:
- * You previously had HIDDEN_BADGES = ["93467"] which is why one manager wasn't showing.
- * For this dashboard, we want BOTH managers to show, so we do NOT hide anyone here.
- * If you later want to hide specific service accounts, add them back carefully.
+ * We are NOT hiding any badges on this page.
  */
-const HIDDEN_BADGES = new Set<string>(); // ✅ show everyone (no hidden badges)
+const HIDDEN_BADGES = new Set<string>();
 
 /* -------------------- HTML helpers -------------------- */
 const sanitizeHtml = (html: string) =>
@@ -38,7 +39,7 @@ const plainTextFromHtml = (html: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
-/* -------------------- date helpers (local-time safe) -------------------- */
+/* -------------------- date helpers -------------------- */
 function ymdLocal(d: Date) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -50,51 +51,11 @@ function addDays(d: Date, n: number) {
   x.setDate(x.getDate() + n);
   return x;
 }
-function mondayStart(date = new Date()) {
-  const d = new Date(date);
-  const dow = d.getDay(); // 0..6 (Sun..Sat)
-  const diff = dow === 0 ? -6 : 1 - dow; // back to Monday
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-function sundayEnd(mon: Date) {
-  const s = new Date(mon);
-  s.setDate(mon.getDate() + 6);
-  s.setHours(23, 59, 59, 999);
-  return s;
-}
-// ISO week number (Thursday rule)
-function isoWeekNumber(d: Date) {
-  const utc = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const day = utc.getUTCDay() || 7;
-  utc.setUTCDate(utc.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil(((utc.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-  return { week: weekNo, year: utc.getUTCFullYear() };
-}
-function fmtShort(d: Date) {
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
 
-type WeekOpt = { start: string; end: string; label: string };
-
-function buildWeekOptions(center = new Date(), past = 26, future = 0): WeekOpt[] {
-  const currentMon = mondayStart(center);
-  const total = past + future + 1;
-  const weeks: WeekOpt[] = [];
-  for (let i = 0; i < total; i++) {
-    const offsetWeeks = future - i;
-    const mon = addDays(currentMon, offsetWeeks * 7);
-    const sun = sundayEnd(mon);
-    const { week } = isoWeekNumber(mon);
-    weeks.push({
-      start: ymdLocal(mon),
-      end: ymdLocal(sun),
-      label: `W${String(week).padStart(2, "0")} (${fmtShort(mon)} – ${fmtShort(sun)}, ${sun.getFullYear()})`,
-    });
-  }
-  return weeks.sort((a, b) => (a.start < b.start ? 1 : -1));
+/** overlap check (string compare works for YYYY-MM-DD) */
+function overlapsRange(startWeekDate: string, endWeekDate: string, from: string, to: string) {
+  // overlap if end >= from AND start <= to
+  return endWeekDate >= from && startWeekDate <= to;
 }
 
 /* -------------------- Types -------------------- */
@@ -118,12 +79,10 @@ type WA = {
   taskStatus?: string | null;
 };
 
-type Row = { user: User; wa: WA | null };
-
-type CostCenterGroup = {
-  costCenterLabel: string; // "12345" or "Unknown"
-  costCenterNumber: number | null;
-  rows: Row[];
+type PayloadUser = {
+  badge: number;
+  name: string;
+  entries: { startWeekDate: string; endWeekDate: string; text: string }[];
 };
 
 type UserSummary = {
@@ -134,67 +93,146 @@ type UserSummary = {
   blockers?: string[];
   next_focus?: string[];
 };
+
 type SummarizeResponse = { users: UserSummary[]; team_themes?: string[] };
 
-function isManagerUser(u: User): boolean {
-  // Only role === "manager" should show
-  return String(u.role ?? "")
-    .trim()
-    .toLowerCase() === "manager";
+function normalizeRole(role: unknown): string {
+  return String(role ?? "").trim().toLowerCase();
 }
 
+function isManagerUser(u: User): boolean {
+  return normalizeRole(u.role) === "manager";
+}
+
+function costCenterKey(u: User): string {
+  return typeof u.costCenter === "number" ? String(u.costCenter) : "Unknown";
+}
+
+function userDisplayName(u: User): string {
+  return `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || `#${u.badge}`;
+}
+
+/* -------------------- Component -------------------- */
 export default function HighManagerDashboard() {
-  /* Week dropdown */
-  const weekOptions = useMemo(() => {
-    const { week } = isoWeekNumber(new Date());
-    return buildWeekOptions(new Date(), Math.max(week - 1, 26), 0);
-  }, []);
+  // ✅ Date range (no week selector)
+  const [from, setFrom] = useState<string>(() => ymdLocal(addDays(new Date(), -28)));
+  const [to, setTo] = useState<string>(() => ymdLocal(new Date()));
 
-  const [weekStart, setWeekStart] = useState<string>(() => weekOptions[0]?.start ?? ymdLocal(mondayStart()));
-  const [weekEnd, setWeekEnd] = useState<string>(() => weekOptions[0]?.end ?? ymdLocal(sundayEnd(mondayStart())));
+  const [managerUsers, setManagerUsers] = useState<User[]>([]);
 
-  const onSelectWeek = (e: ChangeEvent<HTMLSelectElement>) => {
-    const start = e.target.value;
-    const opt = weekOptions.find((w) => w.start === start);
-    if (opt) {
-      setWeekStart(opt.start);
-      setWeekEnd(opt.end);
-    }
-  };
+  // cache: costCenter -> WAs (for current date range)
+  const [waCacheByCostCenter, setWaCacheByCostCenter] = useState<Record<string, WA[]>>({});
 
-  /* Data state */
-  const [users, setUsers] = useState<User[]>([]);
-  const [groups, setGroups] = useState<CostCenterGroup[]>([]);
+  // manager badge -> manager's OWN WAs in range (for display)
+  const [managerWAsByBadge, setManagerWAsByBadge] = useState<Record<number, WA[]>>({});
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /* Summaries */
-  const [summarizingKey, setSummarizingKey] = useState<string | null>(null); // "ALL" or costCenterLabel
+  /* Summaries (for dialog component) */
+  const [summarizingKey, setSummarizingKey] = useState<string | null>(null); // "ALL" or `CC-####`
   const [summaryOpen, setSummaryOpen] = useState(false);
-  const [summaryScope, setSummaryScope] = useState<string>("");
   const [summaryData, setSummaryData] = useState<SummarizeResponse | null>(null);
   const [sumError, setSumError] = useState<string | null>(null);
 
-  // 1) Load users ONCE, filter to MANAGERS, and console-log who is manager vs not
+  /* -------------------- data fetch helpers -------------------- */
+
+  async function fetchAllUsers(): Promise<User[]> {
+    const res = await fetch(`${API_BASE}/users`, { credentials: "include" });
+    const data = res.ok ? await res.json() : [];
+    return Array.isArray(data) ? (data as User[]) : [];
+  }
+
+  async function fetchUsersByCostCenter(cc: number): Promise<User[]> {
+    try {
+      const res = await fetch(`${API_BASE}/users/by-cost-center?costCenter=${cc}`, { credentials: "include" });
+      const data = res.ok ? await res.json() : [];
+      return Array.isArray(data) ? (data as User[]) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async function fetchWeeklyAccomplishmentsForCostCenter(cc: number): Promise<WA[]> {
+    try {
+      const res = await fetch(
+        `${API_BASE}/weekly-accomplishments/by-cost-center-and-date-range?costCenter=${cc}&startWeekDate=${from}&endWeekDate=${to}`,
+        { credentials: "include" }
+      );
+      const data = res.ok ? await res.json() : [];
+      const arr = Array.isArray(data) ? (data as WA[]) : [];
+      return arr.filter((wa) => overlapsRange(wa.startWeekDate, wa.endWeekDate, from, to));
+    } catch {
+      return [];
+    }
+  }
+
+  async function fetchWeeklyAccomplishmentsForUser(badge: number): Promise<WA[]> {
+    try {
+      const res = await fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, { credentials: "include" });
+      const data = res.ok ? await res.json() : [];
+      const arr = Array.isArray(data) ? (data as WA[]) : [];
+      return arr.filter((wa) => overlapsRange(wa.startWeekDate, wa.endWeekDate, from, to));
+    } catch {
+      return [];
+    }
+  }
+
+  function buildPayloadUsers(allUsers: User[], waList: WA[]): PayloadUser[] {
+    // Group ALL WAs by badge (so each user can have multiple entries)
+    const waByBadge = new Map<number, WA[]>();
+    for (const wa of waList) {
+      const badge = wa?.user?.badge;
+      if (typeof badge !== "number") continue;
+      const prev = waByBadge.get(badge) ?? [];
+      prev.push(wa);
+      waByBadge.set(badge, prev);
+    }
+
+    return allUsers
+      .filter((u) => !HIDDEN_BADGES.has(String(u.badge)))
+      .map((u) => {
+        const list = (waByBadge.get(u.badge) ?? [])
+          .filter((wa) => overlapsRange(wa.startWeekDate, wa.endWeekDate, from, to))
+          .sort((a, b) => (a.startWeekDate < b.startWeekDate ? -1 : 1));
+
+        const entries = list
+          .filter((wa) => hasContent(wa.accomplishments))
+          .map((wa) => ({
+            startWeekDate: wa.startWeekDate,
+            endWeekDate: wa.endWeekDate,
+            text: plainTextFromHtml(wa.accomplishments || ""),
+          }))
+          .filter((e) => e.text.length > 0);
+
+        return {
+          badge: u.badge,
+          name: userDisplayName(u),
+          entries,
+        };
+      });
+  }
+
+  /* -------------------- Load managers once -------------------- */
+
   useEffect(() => {
     (async () => {
       try {
         setError(null);
 
         console.log("[ManagerDashboard] Fetching users:", `${API_BASE}/users`);
-        const res = await fetch(`${API_BASE}/users`, { credentials: "include" });
-        const raw: User[] = res.ok ? await res.json() : [];
+        const raw = await fetchAllUsers();
 
         console.groupCollapsed(`[ManagerDashboard] /users returned ${raw.length} users`);
         raw.forEach((u) => {
           const roleRaw = u?.role;
-          const roleNorm = String(roleRaw ?? "").trim().toLowerCase();
+          const roleNorm = normalizeRole(roleRaw);
           const isHidden = HIDDEN_BADGES.has(String(u?.badge));
           const isManager = roleNorm === "manager";
 
           console.log({
             badge: u?.badge,
-            name: `${u?.firstName ?? ""} ${u?.lastName ?? ""}`.trim(),
+            name: userDisplayName(u),
             roleRaw,
             roleNorm,
             costCenter: u?.costCenter,
@@ -205,55 +243,46 @@ export default function HighManagerDashboard() {
         });
         console.groupEnd();
 
-        // ✅ no longer hiding 93467 (or anyone), so both managers will show
-        const filtered = raw
-          .filter((u) => !HIDDEN_BADGES.has(String(u.badge)))
-          .filter(isManagerUser);
+        const managers = raw.filter((u) => !HIDDEN_BADGES.has(String(u.badge))).filter(isManagerUser);
 
-        console.log(
-          `[ManagerDashboard] Managers that WILL show up: ${filtered.length}`,
-          filtered.map((u) => ({
-            badge: u.badge,
-            name: `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim(),
-            role: u.role,
-            costCenter: u.costCenter,
-          }))
-        );
+        // sort by cost center, then name
+        managers.sort((a, b) => {
+          const acc = a.costCenter ?? Number.MAX_SAFE_INTEGER;
+          const bcc = b.costCenter ?? Number.MAX_SAFE_INTEGER;
+          if (acc !== bcc) return acc - bcc;
 
-        filtered.sort((a, b) => {
           const al = (a.lastName || "").toLowerCase();
           const bl = (b.lastName || "").toLowerCase();
           if (al !== bl) return al.localeCompare(bl);
           return (a.firstName || "").localeCompare(b.firstName || "", undefined, { sensitivity: "base" });
         });
 
-        setUsers(filtered);
+        setManagerUsers(managers);
       } catch (e) {
         console.error(e);
         setError("Failed to load manager users.");
-        setUsers([]);
+        setManagerUsers([]);
       }
     })();
   }, []);
 
-  // Group MANAGERS by cost center
-  const usersByCostCenter = useMemo(() => {
-    const map = new Map<string, { costCenterNumber: number | null; users: User[] }>();
+  /* -------------------- Prefetch accomplishments for current range -------------------- */
 
-    for (const u of users) {
-      const cc = typeof u.costCenter === "number" ? u.costCenter : null;
-      const key = cc === null ? "Unknown" : String(cc);
-      if (!map.has(key)) map.set(key, { costCenterNumber: cc, users: [] });
-      map.get(key)!.users.push(u);
+  const uniqueManagerCostCenters = useMemo(() => {
+    return Array.from(
+      new Set(managerUsers.map((u) => u.costCenter).filter((x): x is number => typeof x === "number"))
+    ).sort((a, b) => a - b);
+  }, [managerUsers]);
+
+  async function loadRangeData() {
+    if (!managerUsers.length) {
+      setWaCacheByCostCenter({});
+      setManagerWAsByBadge({});
+      return;
     }
 
-    return map;
-  }, [users]);
-
-  // Load weekly accomplishments for selected week (only managers)
-  async function loadWeekByCostCenter() {
-    if (!users.length) {
-      setGroups([]);
+    if (from && to && from > to) {
+      setError("Invalid date range: 'From' must be before 'To'.");
       return;
     }
 
@@ -261,127 +290,86 @@ export default function HighManagerDashboard() {
     setError(null);
 
     try {
-      const costCenters = Array.from(usersByCostCenter.entries())
-        .map(([label, v]) => ({ label, cc: v.costCenterNumber }))
-        .sort((a, b) => {
-          if (a.cc === null && b.cc === null) return 0;
-          if (a.cc === null) return 1;
-          if (b.cc === null) return -1;
-          return a.cc - b.cc;
-        });
-
-      const results: CostCenterGroup[] = [];
-
+      // 1) Fetch WAs per cost center
+      const nextCache: Record<string, WA[]> = {};
       await Promise.all(
-        costCenters.map(async ({ label, cc }) => {
-          const groupUsers = usersByCostCenter.get(label)?.users ?? [];
-
-          // Unknown CC can't query backend by CC
-          if (cc === null) {
-            results.push({
-              costCenterLabel: label,
-              costCenterNumber: null,
-              rows: groupUsers.map((u) => ({ user: u, wa: null })),
-            });
-            return;
-          }
-
-          let weeklyAccomplishments: WA[] = [];
-          try {
-            const res = await fetch(
-              `${API_BASE}/weekly-accomplishments/by-cost-center-and-date-range?costCenter=${cc}&startWeekDate=${weekStart}&endWeekDate=${weekEnd}`,
-              { credentials: "include" }
-            );
-            weeklyAccomplishments = res.ok ? await res.json() : [];
-          } catch {
-            weeklyAccomplishments = [];
-          }
-
-          const waByBadge = new Map<number, WA>();
-          for (const wa of weeklyAccomplishments) {
-            const badge = wa?.user?.badge;
-            if (typeof badge === "number") waByBadge.set(badge, wa);
-          }
-
-          results.push({
-            costCenterLabel: label,
-            costCenterNumber: cc,
-            rows: groupUsers.map((u) => ({ user: u, wa: waByBadge.get(u.badge) ?? null })),
-          });
+        uniqueManagerCostCenters.map(async (cc) => {
+          const list = await fetchWeeklyAccomplishmentsForCostCenter(cc);
+          nextCache[String(cc)] = list;
         })
       );
+      setWaCacheByCostCenter(nextCache);
 
-      results.sort((a, b) => {
-        if (a.costCenterNumber === null && b.costCenterNumber === null) return 0;
-        if (a.costCenterNumber === null) return 1;
-        if (b.costCenterNumber === null) return -1;
-        return a.costCenterNumber - b.costCenterNumber;
-      });
+      // 2) Build manager display WAs (prefer CC cache, fallback to per-user)
+      const nextManagerMap: Record<number, WA[]> = {};
 
-      setGroups(results);
+      for (const m of managerUsers) {
+        const cc = typeof m.costCenter === "number" ? m.costCenter : null;
+
+        let list: WA[] = [];
+        if (cc !== null) {
+          const cached = nextCache[String(cc)] ?? [];
+          list = cached
+            .filter((wa) => wa?.user?.badge === m.badge)
+            .filter((wa) => overlapsRange(wa.startWeekDate, wa.endWeekDate, from, to))
+            .sort((a, b) => (a.startWeekDate < b.startWeekDate ? -1 : 1));
+        }
+
+        // fallback: if cost-center call didn’t return manager entries, fetch manager directly
+        if (list.length === 0) {
+          const direct = await fetchWeeklyAccomplishmentsForUser(m.badge);
+          list = direct.sort((a, b) => (a.startWeekDate < b.startWeekDate ? -1 : 1));
+        }
+
+        nextManagerMap[m.badge] = list;
+      }
+
+      setManagerWAsByBadge(nextManagerMap);
     } catch (e) {
       console.error(e);
-      setError("Failed to load weekly accomplishments.");
-      setGroups([]);
+      setError("Failed to load accomplishments for the selected range.");
+      setWaCacheByCostCenter({});
+      setManagerWAsByBadge({});
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadWeekByCostCenter();
+    loadRangeData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [users, weekStart, weekEnd]);
+  }, [managerUsers, from, to]);
 
-  /* -------------------- Summarization helpers -------------------- */
-  function buildPayloadUsersFromRows(rows: Row[]) {
-    return rows.map((r) => {
-      const name = `${r.user.firstName} ${r.user.lastName}`.trim();
-      const text = r.wa?.accomplishments ? plainTextFromHtml(r.wa.accomplishments) : "";
+  /* -------------------- Summarization -------------------- */
 
-      return {
-        badge: r.user.badge,
-        name: name || `#${r.user.badge}`,
-        entries:
-          hasContent(r.wa?.accomplishments) && text
-            ? [
-                {
-                  startWeekDate: weekStart,
-                  endWeekDate: weekEnd,
-                  text,
-                },
-              ]
-            : [],
-      };
-    });
-  }
-
-  async function summarizeRows(scopeLabel: string, key: string, rows: Row[]) {
+  async function postSummarize(key: string, payloadUsers: PayloadUser[]) {
     try {
+      if (from && to && from > to) {
+        setSumError("Invalid date range: 'From' must be before 'To'.");
+        return;
+      }
+
       setSummarizingKey(key);
       setSumError(null);
-
-      const payloadUsers = buildPayloadUsersFromRows(rows);
 
       const resp = await fetch(`${API_BASE}/ai/summarize-accomplishments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          from: weekStart,
-          to: weekEnd,
+          from,
+          to,
           users: payloadUsers,
-          includeTeamSummary: true,
+          includeTeamSummary: false, // ✅ no team themes
         }),
       });
 
       if (!resp.ok) throw new Error(await resp.text());
 
       const json = (await resp.json()) as SummarizeResponse;
-      setSummaryScope(`${scopeLabel} (${weekStart} → ${weekEnd})`);
       setSummaryData(json);
       setSummaryOpen(true);
-    } catch (e: any) {
+    } catch (e) {
       console.error(e);
       setSumError("Summarization failed. Try again or reduce the scope.");
     } finally {
@@ -389,288 +377,233 @@ export default function HighManagerDashboard() {
     }
   }
 
-  async function onSummarizeAll() {
-    const allRows = groups.flatMap((g) => g.rows);
-    await summarizeRows("All Cost Centers (Managers)", "ALL", allRows);
+  /**
+   * ✅ Summarize ALL USERS in manager's cost center across the date range.
+   * Uses CC cache if present; falls back to per-user WAs when needed.
+   */
+  async function onSummarizeManagerCostCenter(manager: User) {
+    const cc = typeof manager.costCenter === "number" ? manager.costCenter : null;
+    if (cc === null) return;
+
+    const key = `CC-${cc}`;
+
+    // 1) Fetch all users in CC
+    const allUsers = await fetchUsersByCostCenter(cc);
+
+    // 2) Try CC endpoint first (cached), else fetch
+    let waList = waCacheByCostCenter[String(cc)];
+    if (!waList) waList = await fetchWeeklyAccomplishmentsForCostCenter(cc);
+
+    // 3) If CC endpoint returns nothing, fallback to per-user
+    if ((waList?.length ?? 0) === 0 && allUsers.length > 0) {
+      const perUser = await Promise.all(allUsers.map(async (u) => await fetchWeeklyAccomplishmentsForUser(u.badge)));
+      waList = perUser.flat();
+    }
+
+    const payloadUsers = buildPayloadUsers(allUsers, waList ?? []);
+    await postSummarize(key, payloadUsers);
   }
 
-  async function onSummarizeCostCenter(g: CostCenterGroup) {
-    await summarizeRows(`Cost Center ${g.costCenterLabel} (Managers)`, g.costCenterLabel, g.rows);
+  async function onSummarizeAll() {
+    const key = "ALL";
+
+    const seenBadges = new Set<number>();
+    const allPayload: PayloadUser[] = [];
+
+    for (const cc of uniqueManagerCostCenters) {
+      const users = await fetchUsersByCostCenter(cc);
+
+      let waList = waCacheByCostCenter[String(cc)];
+      if (!waList) waList = await fetchWeeklyAccomplishmentsForCostCenter(cc);
+
+      if ((waList?.length ?? 0) === 0 && users.length > 0) {
+        const perUser = await Promise.all(users.map(async (u) => await fetchWeeklyAccomplishmentsForUser(u.badge)));
+        waList = perUser.flat();
+      }
+
+      const payload = buildPayloadUsers(users, waList ?? []);
+      for (const p of payload) {
+        if (seenBadges.has(p.badge)) continue;
+        seenBadges.add(p.badge);
+        allPayload.push(p);
+      }
+    }
+
+    await postSummarize(key, allPayload);
   }
 
   function downloadMarkdown() {
     if (!summaryData) return;
 
     const lines: string[] = [];
-    lines.push(`# ${summaryScope}`);
+    lines.push(`# AI Summary (${from} → ${to})`);
+    lines.push("");
 
-    if (summaryData.team_themes?.length) {
-      lines.push("\n## Team themes");
-      summaryData.team_themes.forEach((t) => lines.push(`- ${t}`));
-    }
-
-    lines.push("\n## Individuals");
     summaryData.users.forEach((u) => {
-      lines.push(`\n### ${u.name} (#${u.badge})\n`);
-      lines.push(u.summary_md);
-      if (u.blockers?.length) {
-        lines.push(`\n**Blockers**`);
-        u.blockers.forEach((b) => lines.push(`- ${b}`));
-      }
-      if (u.next_focus?.length) {
-        lines.push(`\n**Next focus**`);
-        u.next_focus.forEach((n) => lines.push(`- ${n}`));
-      }
+      lines.push(`## ${u.name} (#${u.badge})`);
+      lines.push("");
+      const md = String(u.summary_md ?? "").trim();
+      lines.push(md.length ? md : "- (No accomplishments found in this range.)");
+      lines.push("");
     });
 
     const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `summary_${summaryScope.replace(/[^\w\-]+/g, "_")}.md`;
+    a.download = `ai_summary_${from}_${to}.md`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
+  /* -------------------- Render -------------------- */
+
   return (
-    <div className="space-y-6">
-      {/* Header + Week Filter */}
-      <div className="rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-        <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-100 dark:border-white/[0.05]">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white/90">Manager Dashboard</h2>
-            <div className="text-xs text-gray-500">Weekly accomplishments (managers only), grouped by cost center</div>
-          </div>
-        </div>
+    <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+      {/* Toolbar (date range) */}
+      <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-100 dark:border-white/[0.05]">
+        <Label className="text-gray-700 text-theme-sm">Date range</Label>
 
-        <div className="flex flex-wrap items-center gap-3 px-4 py-3">
-          <Label className="text-gray-700 text-theme-sm">Filter by Week</Label>
+        <input
+          type="date"
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+          className="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+        />
 
-          <select
-            value={weekStart}
-            onChange={onSelectWeek}
-            className="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-          >
-            {weekOptions.map((w) => (
-              <option key={w.start} value={w.start}>
-                {w.label}
-              </option>
-            ))}
-          </select>
+        <span className="text-gray-500 text-theme-xs">→</span>
 
-          <span className="text-gray-500 text-theme-xs">
-            Showing {weekStart} → {weekEnd}
-          </span>
+        <input
+          type="date"
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          className="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+        />
 
-          <Button size="sm" variant="primary" onClick={loadWeekByCostCenter} disabled={loading}>
-            {loading ? "Loading…" : "Refresh"}
-          </Button>
+        <Button size="sm" variant="primary" onClick={loadRangeData} disabled={loading}>
+          {loading ? "Loading…" : "Refresh"}
+        </Button>
 
-          <Button
-            size="sm"
-            variant="primary"
-            onClick={onSummarizeAll}
-            disabled={loading || summarizingKey === "ALL" || groups.length === 0}
-          >
-            {summarizingKey === "ALL" ? "Summarizing…" : "Summarize All"}
-          </Button>
+        <Button
+          size="sm"
+          variant="primary"
+          onClick={onSummarizeAll}
+          disabled={loading || summarizingKey === "ALL" || managerUsers.length === 0}
+        >
+          {summarizingKey === "ALL" ? "Summarizing…" : "Summarize All"}
+        </Button>
 
-          {error && <span className="text-sm text-red-600 dark:text-red-300">{error}</span>}
-        </div>
+        {error && <span className="text-sm text-red-600 dark:text-red-300">{error}</span>}
       </div>
 
-      {/* Cost Center Groups */}
-      {groups.map((g) => {
-        const submittedCount = g.rows.filter((r) => hasContent(r.wa?.accomplishments)).length;
-        const totalCount = g.rows.length;
+      <div className="max-w-full overflow-x-auto">
+        <Table>
+          <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+            {loading && (
+              <tr>
+                <td className="px-5 py-6 text-gray-500 text-theme-sm dark:text-gray-400" colSpan={3}>
+                  Loading…
+                </td>
+              </tr>
+            )}
 
-        return (
-          <div
-            key={g.costCenterLabel}
-            className="relative overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-gray-100 dark:border-white/[0.05]">
-              <div>
-                <div className="text-sm font-semibold text-gray-900 dark:text-white/90">
-                  Cost Center: {g.costCenterLabel}
-                </div>
-                <div className="text-xs text-gray-500">
-                  Submitted: {submittedCount}/{totalCount}
-                </div>
-              </div>
+            {!loading && managerUsers.length === 0 && (
+              <tr>
+                <td className="px-5 py-10 text-center text-gray-500 dark:text-gray-400" colSpan={3}>
+                  No managers found.
+                </td>
+              </tr>
+            )}
 
-              <Button
-                size="sm"
-                variant="primary"
-                onClick={() => onSummarizeCostCenter(g)}
-                disabled={loading || summarizingKey === g.costCenterLabel || g.rows.length === 0}
-              >
-                {summarizingKey === g.costCenterLabel ? "Summarizing…" : "Summarize"}
-              </Button>
-            </div>
+            {!loading &&
+              managerUsers.map((mgr) => {
+                const ccLabel = costCenterKey(mgr);
+                const ccNumber = typeof mgr.costCenter === "number" ? mgr.costCenter : null;
+                const key = ccNumber === null ? "CC-unknown" : `CC-${ccNumber}`;
 
-            <div className="max-w-full overflow-x-auto">
-              <Table>
-                <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
-                  <TableRow>
-                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs w-64">
-                      Manager
+                const mgrWAs = managerWAsByBadge[mgr.badge] ?? [];
+
+                return (
+                  <TableRow key={mgr.badge}>
+                    {/* Left: Manager name + position + cost center */}
+                    <TableCell className="px-5 py-4 align-top w-[320px]">
+                      <div className="font-medium text-gray-900 dark:text-white/90">{userDisplayName(mgr)}</div>
+
+                      {mgr.position ? <div className="text-xs text-gray-500 mt-1">{String(mgr.position)}</div> : null}
+
+                      <div className="text-xs text-gray-500 mt-1">
+                        Cost Center:{" "}
+                        <span className="font-medium text-gray-700 dark:text-gray-200">{ccLabel}</span>
+                      </div>
                     </TableCell>
-                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs">
-                      Accomplishment (selected week)
+
+                    {/* Middle: Manager accomplishments in range (blank if none; no dashes) */}
+                    <TableCell className="px-5 py-4 align-top">
+                      {mgrWAs.length > 0 ? (
+                        <div className="space-y-4">
+                          {mgrWAs.map((wa) => (
+                            <div key={wa.id}>
+                              <div className="text-[11px] text-gray-500 mb-1">
+                                {wa.startWeekDate} → {wa.endWeekDate}
+                              </div>
+
+                              {hasContent(wa.accomplishments) ? (
+                                <div className="ql-snow">
+                                  <div
+                                    className="ql-editor max-w-none text-theme-sm text-gray-700 dark:text-gray-300"
+                                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(wa.accomplishments!) }}
+                                  />
+                                </div>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div /> // blank
+                      )}
                     </TableCell>
-                    <TableCell isHeader className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs w-32">
-                      Status
+
+                    {/* Right: Summarize ALL USERS for this manager's CC */}
+                    <TableCell className="px-5 py-4 align-top w-[180px]">
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          onClick={() => onSummarizeManagerCostCenter(mgr)}
+                          disabled={loading || ccNumber === null || summarizingKey === key}
+                        >
+                          {summarizingKey === key ? "Summarizing…" : "Summarize"}
+                        </Button>
+                      </div>
+
+                      {ccNumber === null ? (
+                        <div className="mt-2 text-xs text-gray-400 text-right">No cost center on user</div>
+                      ) : null}
                     </TableCell>
                   </TableRow>
-                </TableHeader>
+                );
+              })}
+          </TableBody>
+        </Table>
+      </div>
 
-                <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
-                  {g.rows.map(({ user, wa }) => (
-                    <TableRow key={user.badge}>
-                      <TableCell className="px-5 py-4 text-start">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-semibold text-gray-700 dark:text-gray-200">
-                            {`${(user.firstName || "?")[0] ?? "?"}${(user.lastName || "?")[0] ?? "?"}`}
-                          </div>
-                          <div>
-                            <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
-                              {user.firstName} {user.lastName}
-                            </span>
-                            <span className="block text-gray-500 text-theme-xs dark:text-gray-400">
-                              {String(user.position ?? "")}
-                              {" · "}
-                              CC {user.costCenter ?? "—"}
-                              {" · "}
-                              #{user.badge}
-                            </span>
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      <TableCell className="px-5 py-4 align-top">
-                        {hasContent(wa?.accomplishments) ? (
-                          <div className="ql-snow">
-                            <div
-                              className="ql-editor max-w-none text-theme-sm text-gray-700 dark:text-gray-300"
-                              dangerouslySetInnerHTML={{ __html: sanitizeHtml(wa!.accomplishments!) }}
-                            />
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </TableCell>
-
-                      <TableCell className="px-5 py-4">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                            (wa?.taskStatus ?? "Missing") === "Submitted"
-                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
-                              : wa
-                              ? "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
-                              : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                          }`}
-                        >
-                          {wa ? wa.taskStatus ?? "Submitted" : "Missing"}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-
-                  {!loading && g.rows.length === 0 && (
-                    <tr>
-                      <td className="px-5 py-8 text-center text-gray-500 dark:text-gray-400" colSpan={3}>
-                        No managers found in this cost center.
-                      </td>
-                    </tr>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Summary Modal */}
-      {summaryOpen && summaryData && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          role="dialog"
-          aria-modal="true"
-          onKeyDown={(e) => e.key === "Escape" && setSummaryOpen(false)}
-        >
-          <div className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-              <div>
-                <h3 className="text-lg font-semibold">AI Summary</h3>
-                <div className="text-xs text-gray-600 dark:text-gray-400">{summaryScope}</div>
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={downloadMarkdown}>
-                  Export .md
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setSummaryOpen(false)}>
-                  Close
-                </Button>
-              </div>
-            </div>
-
-            <div className="px-6 py-5 space-y-6 max-h-[70vh] overflow-y-auto">
-              {summaryData.team_themes?.length ? (
-                <div>
-                  <div className="text-sm font-semibold mb-1">Team themes</div>
-                  <ul className="list-disc pl-5 text-sm text-gray-800 dark:text-gray-100">
-                    {summaryData.team_themes.map((t, i) => (
-                      <li key={i}>{t}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-
-              <div className="space-y-6">
-                {summaryData.users.map((u) => (
-                  <div key={u.badge}>
-                    <div className="font-semibold text-gray-900 dark:text-gray-100">
-                      {u.name} <span className="text-gray-500">#{u.badge}</span>
-                    </div>
-                    <pre className="whitespace-pre-wrap break-words text-sm text-gray-800 dark:text-gray-200 mt-1">
-                      {u.summary_md}
-                    </pre>
-
-                    {u.blockers?.length ? (
-                      <div className="mt-2">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Blockers</div>
-                        <ul className="list-disc pl-5 text-sm">
-                          {u.blockers.map((b, i) => (
-                            <li key={i}>{b}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
-
-                    {u.next_focus?.length ? (
-                      <div className="mt-2">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Next focus</div>
-                        <ul className="list-disc pl-5 text-sm">
-                          {u.next_focus.map((n, i) => (
-                            <li key={i}>{n}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-
-              {sumError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
-                  {sumError}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ✅ Reuse the SAME summary dialog component as Accomplishments.tsx */}
+      <AccomplishmentSummaryDialog
+        open={summaryOpen}
+        onClose={() => setSummaryOpen(false)}
+        from={from}
+        to={to}
+        summaryData={summaryData as any}
+        sumError={sumError}
+        downloadMarkdown={downloadMarkdown}
+        Button={Button}
+        onSendEmail={async (draft: any) => {
+          const response = await sendEmail(draft);
+          if (!(response.status === 200 || response.status === 201)) {
+            throw new Error("Failed to send email.");
+          }
+        }}
+      />
     </div>
   );
 }
