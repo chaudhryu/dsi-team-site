@@ -69,7 +69,7 @@ const AppHeader: React.FC = () => {
             className="text-lg font-semibold text-neutral-100 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
             aria-label="Go to home"
           >
-            ITS Team Hub <i>(By DSI&nbsp;WebApps&nbsp;Team)</i>
+            ITS Team Hub
           </Link>
 
           {/* Mobile logo (also links home) */}

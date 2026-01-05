@@ -14,7 +14,7 @@ import Accomplishments from "./pages/Accomplishments";
 import Calendar from "./pages/Calendar";
 import AccomplishmentsTable from "./pages/AccomplishmentsTable";
 
-import ProtectedRoute from "./routes/ProtectedRoute";
+import ProtectedRoute, { PublicOnlyRoute } from "./routes/ProtectedRoute";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 
@@ -57,6 +57,7 @@ function readBadgeFromStorage(): number | null {
 
 async function fetchDbRoleForBadge(badge: number): Promise<string> {
   try {
+    debugger;
     const res = await fetch(`${API_BASE}/users`, { credentials: "include" });
     if (!res.ok) return "";
     const users = (await res.json()) as DbUser[];
@@ -140,6 +141,7 @@ function HighManagerOnlyRoute() {
     let cancelled = false;
 
     async function check() {
+      debugger;
       if (inProgress !== InteractionStatus.None) {
         if (!cancelled) setStatus("loading");
         return;
@@ -201,7 +203,6 @@ export default function App() {
           <Route path="/auth-response" element={<AuthCallback />} />
           {/* App chrome */}
           <Route element={<AppLayout />}>
-
             {/*  Public landing */}
             {/* 🚫 Logged-in users cannot see "/" */}
             <Route element={<PublicOnlyRoute />}>
@@ -209,7 +210,6 @@ export default function App() {
               <Route path="/signin" element={<SignIn />} />
               <Route path="/signup" element={<SignUp />} />
             </Route>
-            // <Route index element={<IndexGate />} />
 
             <Route index element={<IndexGate />} />
             <Route path="/images" element={<Images />} />
@@ -225,14 +225,11 @@ export default function App() {
               <Route path="/view-accomplishments" element={<AccomplishmentsTable />} />
               <Route path="/users" element={<Users />} />
               <Route path="/databases" element={<Databases />} />
-
               {/* ✅ high_manager-only route */}
               <Route element={<HighManagerOnlyRoute />}>
                 <Route path="/high-manager-dashboard" element={<HighManagerDashboard />} />
               </Route>
               {/* add other private routes here */}
-
-
             </Route>
           </Route>
 
