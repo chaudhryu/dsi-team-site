@@ -11,16 +11,12 @@ const LoginContext = createContext<LoginContextType | null>(null);
 
 export const LoginProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [loginEmployee, setLoginEmployee] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+
   //const [isAdmin, setIsAdmin] = useState(undefined)
   // ✅ rehydrate on refresh
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(STORAGE_KEY); // or localStorage
-      if (stored) setLoginEmployee(JSON.parse(stored));
-    } finally {
-      setIsLoading(false);
-    }
+    const stored = sessionStorage.getItem(STORAGE_KEY); // or localStorage
+    if (stored) setLoginEmployee(JSON.parse(stored));
   }, []);
   const initializeSession = (user: any) => {
     sessionStorage.setItem("loginEmployee", JSON.stringify(user));

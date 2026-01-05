@@ -619,12 +619,17 @@ export default function AccomplishmentsTable() {
         onClose={() => setSummaryOpen(false)}
         from={from}
         to={to}
+        costCenter={null}
         summaryData={summaryData}
         sumError={sumError}
         downloadMarkdown={downloadMarkdown}
         Button={Button}
         onSendEmail={async (draft) => {
-          const response = await sendEmail(draft);
+          const response = await sendEmail({
+            to: draft.to.split(/[;,]/).map((s) => s.trim()),
+            subject: draft.subject,
+            body: draft.body,
+          });
 
           if (!(response.status === 200 || response.status === 201)) {
             let msg = "Failed to send email.";

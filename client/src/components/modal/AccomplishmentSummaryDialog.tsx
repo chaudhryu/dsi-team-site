@@ -26,7 +26,7 @@ type Props = {
   sumError?: string | null;
 
   downloadMarkdown: () => void;
-
+  costCenter: number | string | null | undefined;
   Button: React.ComponentType<any>;
 
   // optional: wire this if you want email sending
@@ -82,15 +82,8 @@ function mdBulletsToHtml(md: string) {
 
 export function buildEmailHtmlForQuill(summaryData: any, from: string, to: string) {
   const parts: string[] = [];
-
-  // Title
-  parts.push(`<h2>AI Summary</h2>`);
-  parts.push(`<p><strong>${escapeHtml(from)} → ${escapeHtml(to)}</strong></p>`);
-  parts.push(`<p><br></p>`);
-
-  // Team themes (top)
+  console.log("Building email HTML for Quill:", summaryData, from, to);
   if (summaryData?.team_themes?.length) {
-    parts.push(`<h3>Team themes</h3>`);
     parts.push("<ul>");
     for (const t of summaryData.team_themes) {
       parts.push(`<li>${escapeHtml(String(t))}</li>`);
@@ -135,7 +128,8 @@ export function AccomplishmentSummaryDialog({
   to,
   summaryData,
   sumError,
-  downloadMarkdown,
+  // downloadMarkdown,
+  costCenter,
   Button,
   onSendEmail,
 }: Props) {
@@ -147,7 +141,7 @@ export function AccomplishmentSummaryDialog({
 
   const emailDraft: Partial<EmailDraft> = {
     to: "",
-    subject: `AI Summary (${from} → ${to})`,
+    subject: `${costCenter} - Team Summary (${from} → ${to})`,
     // if your EmailComposeDialog uses html, you can still paste markdown/plain text here.
     // If you want nicer HTML later, we can convert markdown -> HTML.
     body: emailBody,
@@ -165,16 +159,16 @@ export function AccomplishmentSummaryDialog({
         <div className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xl">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
             <div>
-              <h3 className="text-lg font-semibold">AI Summary</h3>
+              <h3 className="text-lg font-semibold">{costCenter} - Team Summary</h3>
               <div className="text-xs text-gray-600 dark:text-gray-400">
                 {from} → {to}
               </div>
             </div>
 
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={downloadMarkdown}>
+              {/* <Button size="sm" variant="outline" onClick={downloadMarkdown}>
                 Export .md
-              </Button>
+              </Button> */}
 
               {onSendEmail && (
                 <Button size="sm" variant="outline" onClick={() => setEmailOpen(true)}>
@@ -192,7 +186,7 @@ export function AccomplishmentSummaryDialog({
             {/* Team themes at top */}
             {summaryData.team_themes?.length ? (
               <div>
-                <div className="text-sm font-semibold mb-1">Team themes</div>
+                <div className="text-sm font-semibold mb-1">{costCenter} - Team Summary</div>
                 <ul className="list-disc pl-5 text-sm text-gray-800 dark:text-gray-100">
                   {summaryData.team_themes.map((t, i) => (
                     <li key={i}>{t}</li>
