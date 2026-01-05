@@ -46,11 +46,15 @@ export class AiService {
   private readonly baseURL: string;
 
   constructor(private readonly client: OpenAI, cfg: ConfigService) {
-    this.model = (cfg.get<string>("SUMMARY_MODEL") || "gemini-2.5-flash").trim();
+    this.model = (
+      cfg.get<string>("SUMMARY_MODEL") || "gemini-2.5-flash"
+    ).trim();
     this.baseURL = (cfg.get<string>("OPENAI_BASE_URL") || "").trim();
 
     this.logger.log(
-      `Config: model=${this.model}, baseURL=${this.baseURL || "(empty)"}, isGemini=${this.isGemini}`
+      `Config: model=${this.model}, baseURL=${
+        this.baseURL || "(empty)"
+      }, isGemini=${this.isGemini}`
     );
   }
 
@@ -78,7 +82,9 @@ export class AiService {
           .filter((e) => e?.text && e.text.trim())
           .map(
             (e) =>
-              `- (${e.startWeekDate}→${e.endWeekDate}) ${this.toPlain(e.text).slice(0, 2000)}`
+              `- (${e.startWeekDate}→${e.endWeekDate}) ${this.toPlain(
+                e.text
+              ).slice(0, 2000)}`
           );
 
         return [
@@ -121,7 +127,7 @@ export class AiService {
       "Do NOT invent facts or numbers.",
       "Return ONLY valid JSON (no code fences, no prose).",
       'Top-level JSON must be: {"users":[...]}',
-      'Each user must include: badge (number), name (string), summary_md (string).',
+      "Each user must include: badge (number), name (string), summary_md (string).",
     ];
 
     if (includeTeamSummary) {
@@ -164,14 +170,19 @@ export class AiService {
 
           const content: any = completion.choices?.[0]?.message?.content ?? "";
           const text = Array.isArray(content)
-            ? content.map((c: any) => (typeof c === "string" ? c : c?.text ?? "")).join("")
+            ? content
+                .map((c: any) => (typeof c === "string" ? c : c?.text ?? ""))
+                .join("")
             : String(content);
 
           return this.parseAndNormalizeModelOutput(text);
         } catch (e1: any) {
           const status = e1?.status || e1?.response?.status;
           const data = e1?.response?.data || e1?.message;
-          this.logger.error("[Gemini primary] failed", JSON.stringify({ status, data }));
+          this.logger.error(
+            "[Gemini primary] failed",
+            JSON.stringify({ status, data })
+          );
 
           // Fallback: stricter JSON-only instruction
           const fallback = await this.client.chat.completions.create({
@@ -190,7 +201,9 @@ export class AiService {
 
           const content2: any = fallback.choices?.[0]?.message?.content ?? "";
           const text2 = Array.isArray(content2)
-            ? content2.map((c: any) => (typeof c === "string" ? c : c?.text ?? "")).join("")
+            ? content2
+                .map((c: any) => (typeof c === "string" ? c : c?.text ?? ""))
+                .join("")
             : String(content2);
 
           return this.parseAndNormalizeModelOutput(text2);
@@ -215,18 +228,123 @@ export class AiService {
       const status = err?.status || err?.response?.status;
       const data = err?.response?.data || err?.error || err?.message || err;
 
-      this.logger.error(`[AI summarize][${provider}] FAILED`, JSON.stringify({ status, data }));
+      this.logger.error(
+        `[AI summarize][${provider}] FAILED`,
+        JSON.stringify({ status, data })
+      );
 
-      if (status === 400) throw new BadRequestException("AI request rejected (400).");
+      if (status === 400)
+        throw new BadRequestException("AI request rejected (400).");
       if (status === 401 || status === 403)
         throw new ForbiddenException("AI request rejected (auth/permission).");
       if (status === 404)
-        throw new NotFoundException("AI resource not found (check model/baseURL).");
+        throw new NotFoundException(
+          "AI resource not found (check model/baseURL)."
+        );
 
       // ✅ portable 429 handling for older Nest versions
-      if (status === 429) throw new HttpException("AI rate-limited (429).", 429);
+      if (status === 429)
+        throw new HttpException("AI rate-limited (429).", 429);
 
       throw new InternalServerErrorException("Summarization failed");
+    }
+  }
+  // team summary methods
+  private extractJsonObject(text: string): any {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start < 0 || end < 0 || end <= start) {
+      throw new Error("Model did not return a JSON object.");
+    }
+    const raw = text.slice(start, end + 1);
+    return JSON.parse(raw);
+  }
+
+  private normalizeTeamThemes(obj: any): { team_themes: string[] } {
+    const themes = obj?.team_themes;
+    if (!Array.isArray(themes)) return { team_themes: [] };
+
+    // Clean + clamp 3–8 (and remove empties / duplicates)
+    const cleaned = themes
+      .map((s) => String(s).trim())
+      .filter((s) => s.length > 0);
+
+    const deduped: string[] = [];
+    for (const t of cleaned) {
+      if (!deduped.some((x) => x.toLowerCase() === t.toLowerCase()))
+        deduped.push(t);
+    }
+
+    return { team_themes: deduped.slice(0, 8) };
+  }
+  private buildTeamSummaryPrompt(): string {
+    return [
+      "You are an expert at creating concise executive summaries of weekly accomplishments across a team.",
+      "Read all accomplishments across all users and produce cross-team themes.",
+      "Focus on outcomes, impact, and notable initiatives; merge duplicates; ignore trivial tasks.",
+      "Do NOT invent facts or numbers.",
+      "Return ONLY valid JSON (no code fences, no prose).",
+      'Top-level JSON must be: {"team_themes":[...]}',
+      "team_themes must be 5–10 short bullets (strings).",
+    ].join(" ");
+  }
+  async summarizeTeamThemes(
+    dto: SummarizeRequestDto
+  ): Promise<{ team_themes: string[] }> {
+    const system = this.buildTeamSummaryPrompt();
+
+    const input = [
+      `Date window: ${dto.from} → ${dto.to}`,
+      "DATA START",
+      this.buildCorpus(dto),
+      "DATA END",
+      "",
+      'Return ONLY JSON matching: {"team_themes":["...","..."]}',
+    ].join("\n");
+
+    try {
+      const completion = await this.client.chat.completions.create({
+        model: this.model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: input },
+        ],
+        temperature: 0,
+      });
+
+      const content: any = completion.choices?.[0]?.message?.content ?? "";
+      const text = Array.isArray(content)
+        ? content
+            .map((c: any) => (typeof c === "string" ? c : c?.text ?? ""))
+            .join("")
+        : String(content);
+
+      const parsed = this.extractJsonObject(text);
+      return this.normalizeTeamThemes(parsed);
+    } catch (err: any) {
+      const provider = this.isGemini ? "Gemini(OpenAI-compat)" : "OpenAI-like";
+      const status = err?.status || err?.response?.status;
+      const data = err?.response?.data || err?.error || err?.message || err;
+
+      this.logger.error(
+        `[AI summarizeTeamThemes][${provider}] FAILED`,
+        JSON.stringify({ status, data })
+      );
+
+      if (status === 400)
+        throw new BadRequestException("AI request rejected (400).");
+      if (status === 401 || status === 403)
+        throw new ForbiddenException("AI request rejected (auth/permission).");
+      if (status === 404)
+        throw new NotFoundException(
+          "AI resource not found (check model/baseURL)."
+        );
+      if (status === 429)
+        throw new HttpException("AI rate-limited (429).", 429);
+
+      throw new InternalServerErrorException(
+        "Team themes summarization failed"
+      );
     }
   }
 }

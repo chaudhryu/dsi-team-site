@@ -1,9 +1,19 @@
 // mail.controller.ts
 import { Body, Controller, Get, Post, Query } from "@nestjs/common";
 import { MailService } from "../services/mail.service";
-import { IsEmail, IsNotEmpty, IsString, MaxLength } from "class-validator";
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MaxLength,
+} from "class-validator";
 class SendMailDto {
-  @IsEmail() to: string;
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsEmail({}, { each: true })
+  to: string[]; // ["a@x.com", "b@y.com"]
   @IsString() @IsNotEmpty() subject: string;
   @IsString() @IsNotEmpty() body: string;
 }
