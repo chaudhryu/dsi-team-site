@@ -184,9 +184,11 @@ export default function HighManagerDashboard() {
   function buildPayloadUsers(allUsers: User[], waList: WA[]): PayloadUser[] {
     // Group ALL WAs by badge (so each user can have multiple entries)
     const waByBadge = new Map<number, WA[]>();
+
     for (const wa of waList) {
       const badge = wa?.user?.badge;
       if (typeof badge !== "number") continue;
+
       const prev = waByBadge.get(badge) ?? [];
       prev.push(wa);
       waByBadge.set(badge, prev);
@@ -211,6 +213,7 @@ export default function HighManagerDashboard() {
         return {
           badge: u.badge,
           name: userDisplayName(u),
+          role: u.role, // used for distintguishing managers
           entries,
         };
       });

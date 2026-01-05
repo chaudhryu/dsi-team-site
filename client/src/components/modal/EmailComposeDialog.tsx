@@ -26,10 +26,6 @@ type Props = {
   description?: string;
 };
 
-function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-}
-
 export function EmailComposeDialog({
   open,
   onOpenChange,
@@ -54,18 +50,62 @@ export function EmailComposeDialog({
     setSending(false);
   }, [open, initialDraft.to, initialDraft.subject, initialDraft.body]);
 
-  const canSend = isValidEmail(to) && subject.trim() && body.trim();
+  function splitRecipients(input: string) {
+    // allow comma or semicolon, ignore empty
+    return input
+      .split(/[;,]/g)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
+  function isValidEmail(email: string) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  function validateRecipients(input: string) {
+    const list = splitRecipients(input);
+    if (list.length === 0) return { ok: false, list, invalid: [] as string[] };
+
+    const invalid = list.filter((e) => !isValidEmail(e));
+    return { ok: invalid.length === 0, list, invalid };
+  }
+  const isHtmlEmpty = (value: string) =>
+    !value || value === "<p><br></p>" || value.replace(/<(.|\n)*?>/g, "").trim().length === 0;
+  const recipientsCheck = React.useMemo(() => validateRecipients(to), [to]);
+  const canSend = recipientsCheck.ok && subject.trim().length > 0 && !isHtmlEmpty(body);
 
   const handleSend = async () => {
     setError(null);
 
-    if (!isValidEmail(to)) return setError("Please enter a valid email address in To.");
-    if (!subject.trim()) return setError("Subject is required.");
-    if (!body.trim()) return setError("Body is required.");
+    const check = validateRecipients(to);
+    if (!check.list.length) {
+      setError("Please enter at least one recipient email in To (comma-separated).");
+      return;
+    }
+    if (!check.ok) {
+      setError(`Invalid email(s): ${check.invalid.join(", ")}`);
+      return;
+    }
+    if (!subject.trim()) {
+      setError("Subject is required.");
+      return;
+    }
+    if (isHtmlEmpty(body)) {
+      setError("Message is required.");
+      return;
+    }
 
     try {
       setSending(true);
-      await onSend({ to: to.trim(), subject: subject.trim(), body });
+
+      // Keep as comma-separated string OR send list.join(", ")
+      await onSend({
+        // to: check.list.join(", "),
+        to: check.list.join(", "),
+        subject: subject.trim(),
+        body,
+      });
+
       onOpenChange(false);
     } catch (e: any) {
       setError(e?.message ?? "Failed to send email.");
@@ -88,9 +128,14 @@ export function EmailComposeDialog({
             <input
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              placeholder="name@metro.net"
+              placeholder="name1@metro.net, name2@metro.net"
               className="w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2"
             />
+            <p className="text-xs text-muted-foreground">Separate multiple recipients with commas (or semicolons).</p>
+
+            {to.trim().length > 0 && !recipientsCheck.ok && (
+              <p className="text-xs text-red-600">Invalid: {recipientsCheck.invalid.join(", ")}</p>
+            )}
           </div>
 
           <div className="grid gap-2">

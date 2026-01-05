@@ -720,9 +720,13 @@ export default function Accomplishments() {
         sumError={sumError}
         downloadMarkdown={downloadMarkdown}
         Button={Button}
+        costCenter={null}
         onSendEmail={async (draft) => {
-          const response = await sendEmail(draft);
-
+          const response = await sendEmail({
+            to: draft.to.split(/[;,]/).map((s) => s.trim()),
+            subject: draft.subject,
+            body: draft.body,
+          });
           if (!(response.status === 200 || response.status === 201)) {
             let msg = "Failed to send email.";
 
