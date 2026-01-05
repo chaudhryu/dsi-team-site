@@ -28,7 +28,7 @@ export class MailService {
       html: `<p><strong>Hello! This email was sent from DSI</strong>.</p>`,
     });
   }
-  async sendHtmlEmail(opts: { to: string; subject: string; html: string }) {
+  async sendHtmlEmail(opts: { to: string[]; subject: string; html: string }) {
     const text = toPlainText(opts.html);
 
     await this.mailer.sendMail({

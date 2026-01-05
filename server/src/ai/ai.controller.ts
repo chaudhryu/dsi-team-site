@@ -30,4 +30,11 @@ export class AiController {
   summarize(@Body() dto: SummarizeRequestDto): Promise<SummarizeResponseDto> {
     return this.ai.summarize(dto);
   }
+  @Post("summarize-accomplishments-teams")
+  @HttpCode(HttpStatus.OK)
+  summarizeTeams(
+    @Body() dto: SummarizeRequestDto
+  ): Promise<SummarizeResponseDto> {
+    return this.ai.summarizeTeamThemes(dto);
+  }
 }
