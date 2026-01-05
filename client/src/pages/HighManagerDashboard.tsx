@@ -83,6 +83,7 @@ type PayloadUser = {
   badge: number;
   name: string;
   entries: { startWeekDate: string; endWeekDate: string; text: string }[];
+  role?: string | null;
 };
 
 type UserSummary = {
@@ -97,7 +98,9 @@ type UserSummary = {
 type SummarizeResponse = { users: UserSummary[]; team_themes?: string[] };
 
 function normalizeRole(role: unknown): string {
-  return String(role ?? "").trim().toLowerCase();
+  return String(role ?? "")
+    .trim()
+    .toLowerCase();
 }
 
 function isManagerUser(u: User): boolean {
@@ -119,7 +122,7 @@ export default function HighManagerDashboard() {
   const [to, setTo] = useState<string>(() => ymdLocal(new Date()));
 
   const [managerUsers, setManagerUsers] = useState<User[]>([]);
-
+  const [selectedMgr, setSelectedMgr] = useState<User | null>(null);
   // cache: costCenter -> WAs (for current date range)
   const [waCacheByCostCenter, setWaCacheByCostCenter] = useState<Record<string, WA[]>>({});
 
@@ -352,7 +355,7 @@ export default function HighManagerDashboard() {
       setSummarizingKey(key);
       setSumError(null);
 
-      const resp = await fetch(`${API_BASE}/ai/summarize-accomplishments`, {
+      const resp = await fetch(`${API_BASE}/ai/summarize-accomplishments-teams`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -532,8 +535,7 @@ export default function HighManagerDashboard() {
                       {mgr.position ? <div className="text-xs text-gray-500 mt-1">{String(mgr.position)}</div> : null}
 
                       <div className="text-xs text-gray-500 mt-1">
-                        Cost Center:{" "}
-                        <span className="font-medium text-gray-700 dark:text-gray-200">{ccLabel}</span>
+                        Cost Center: <span className="font-medium text-gray-700 dark:text-gray-200">{ccLabel}</span>
                       </div>
                     </TableCell>
 
@@ -569,7 +571,10 @@ export default function HighManagerDashboard() {
                         <Button
                           size="sm"
                           variant="primary"
-                          onClick={() => onSummarizeManagerCostCenter(mgr)}
+                          onClick={() => {
+                            setSelectedMgr(mgr);
+                            onSummarizeManagerCostCenter(mgr);
+                          }}
                           disabled={loading || ccNumber === null || summarizingKey === key}
                         >
                           {summarizingKey === key ? "Summarizing…" : "Summarize"}
@@ -593,12 +598,17 @@ export default function HighManagerDashboard() {
         onClose={() => setSummaryOpen(false)}
         from={from}
         to={to}
+        costCenter={summarizingKey === "ALL" ? "All Cost Centers" : selectedMgr ? selectedMgr.costCenter : ""}
         summaryData={summaryData as any}
         sumError={sumError}
         downloadMarkdown={downloadMarkdown}
         Button={Button}
         onSendEmail={async (draft: any) => {
-          const response = await sendEmail(draft);
+          const response = await sendEmail({
+            to: draft.to.split(/[;,]/).map((s: string) => s.trim()),
+            subject: draft.subject,
+            body: draft.body,
+          });
           if (!(response.status === 200 || response.status === 201)) {
             throw new Error("Failed to send email.");
           }
