@@ -10,6 +10,8 @@ import { envConfig } from "../config/envConfig";
 
 import { AccomplishmentSummaryDialog } from "@/components/modal/AccomplishmentSummaryDialog";
 import { sendEmail } from "@/Data/actions/MailAction";
+import { User, WA, SummarizeResponse, PayloadUser } from "./types";
+import DatePicker from "@/components/form/date-picker";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3005/api";
 
@@ -57,45 +59,6 @@ function overlapsRange(startWeekDate: string, endWeekDate: string, from: string,
   // overlap if end >= from AND start <= to
   return endWeekDate >= from && startWeekDate <= to;
 }
-
-/* -------------------- Types -------------------- */
-type User = {
-  badge: number;
-  firstName: string;
-  lastName: string;
-  email?: string | null;
-  position?: string | number | null;
-  role?: string | null;
-  costCenter?: number | null;
-};
-
-type WA = {
-  id: number;
-  accomplishments: string | null;
-  user: User;
-  costCenter?: number;
-  startWeekDate: string;
-  endWeekDate: string;
-  taskStatus?: string | null;
-};
-
-type PayloadUser = {
-  badge: number;
-  name: string;
-  entries: { startWeekDate: string; endWeekDate: string; text: string }[];
-  role?: string | null;
-};
-
-type UserSummary = {
-  badge: number;
-  name: string;
-  summary_md: string;
-  highlights?: string[];
-  blockers?: string[];
-  next_focus?: string[];
-};
-
-type SummarizeResponse = { users: UserSummary[]; team_themes?: string[] };
 
 function normalizeRole(role: unknown): string {
   return String(role ?? "")
@@ -213,7 +176,8 @@ export default function HighManagerDashboard() {
         return {
           badge: u.badge,
           name: userDisplayName(u),
-          role: u.role, // used for distintguishing managers
+          role: u.role ? u.role : "user", // used for distinguishing managers
+          costCenter: u.costCenter ?? 0,
           entries,
         };
       });
@@ -369,7 +333,7 @@ export default function HighManagerDashboard() {
           includeTeamSummary: false, // ✅ no team themes
         }),
       });
-
+      debugger;
       if (!resp.ok) throw new Error(await resp.text());
 
       const json = (await resp.json()) as SummarizeResponse;
@@ -438,22 +402,132 @@ export default function HighManagerDashboard() {
     await postSummarize(key, allPayload);
   }
 
+  // function downloadMarkdown() {
+  //   if (!summaryData) return;
+
+  //   const lines: string[] = [];
+  //   lines.push(`# AI Summary (${from} → ${to})`);
+  //   lines.push("");
+
+  //   summaryData.users.forEach((u) => {
+  //     lines.push(`## ${u.name} (#${u.badge})`);
+  //     lines.push("");
+  //     const md = String(u.summary_md ?? "").trim();
+  //     lines.push(md.length ? md : "- (No accomplishments found in this range.)");
+  //     lines.push("");
+  //   });
+
+  //   const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
+  //   const url = URL.createObjectURL(blob);
+  //   const a = document.createElement("a");
+  //   a.href = url;
+  //   a.download = `ai_summary_${from}_${to}.md`;
+  //   a.click();
+  //   URL.revokeObjectURL(url);
+  // }
   function downloadMarkdown() {
     if (!summaryData) return;
 
+    const isNewShape = typeof (summaryData as any)?.teams !== "undefined" && Array.isArray((summaryData as any).teams);
+
     const lines: string[] = [];
+
     lines.push(`# AI Summary (${from} → ${to})`);
     lines.push("");
 
-    summaryData.users.forEach((u) => {
-      lines.push(`## ${u.name} (#${u.badge})`);
-      lines.push("");
-      const md = String(u.summary_md ?? "").trim();
-      lines.push(md.length ? md : "- (No accomplishments found in this range.)");
-      lines.push("");
-    });
+    // Optional org themes (if you add it later)
+    if (isNewShape) {
+      const orgThemes = (summaryData as any).org_themes as string[] | undefined;
+      if (Array.isArray(orgThemes) && orgThemes.length) {
+        lines.push(`## Organization Themes`);
+        lines.push("");
+        orgThemes.forEach((t) => lines.push(`- ${String(t)}`));
+        lines.push("");
+      }
+    }
 
-    const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
+    if (isNewShape) {
+      const teams = (summaryData as any).teams as any[];
+
+      teams.forEach((team) => {
+        const costCenter = team?.costCenter ?? "N/A";
+        const managerName = team?.manager?.name ?? "N/A";
+        const managerBadge = team?.manager?.badge ?? 0;
+
+        lines.push(`## Cost Center ${costCenter}`);
+        lines.push(`**Manager:** ${managerName} (#${managerBadge})`);
+        lines.push("");
+        const mgrAch = team?.manager_achievements;
+        if (Array.isArray(mgrAch) && mgrAch.length) {
+          lines.push(`### Manager Achievements`);
+          lines.push("");
+          mgrAch.forEach((a: any) => lines.push(`- ${String(a)}`));
+          lines.push("");
+        }
+
+        const teamSummary = String(team?.team_summary ?? "").trim();
+        if (teamSummary) {
+          lines.push(teamSummary);
+          lines.push("");
+        }
+
+        const teamThemes = team?.team_themes;
+        if (Array.isArray(teamThemes) && teamThemes.length) {
+          lines.push(`### Team Themes`);
+          lines.push("");
+          teamThemes.forEach((t: any) => lines.push(`- ${String(t)}`));
+          lines.push("");
+        }
+
+        const users = Array.isArray(team?.users) ? team.users : [];
+        users.forEach((u: any) => {
+          lines.push(`### ${u?.name ?? "Unknown"} (#${u?.badge ?? "?"})`);
+          lines.push("");
+
+          const md = String(u?.summary_md ?? "").trim();
+          lines.push(md.length ? md : "- (No accomplishments found in this range.)");
+          lines.push("");
+
+          // Optional sections if you keep these fields
+          if (Array.isArray(u?.blockers) && u.blockers.length) {
+            lines.push(`**Blockers**`);
+            u.blockers.forEach((b: any) => lines.push(`- ${String(b)}`));
+            lines.push("");
+          }
+
+          if (Array.isArray(u?.next_focus) && u.next_focus.length) {
+            lines.push(`**Next focus**`);
+            u.next_focus.forEach((n: any) => lines.push(`- ${String(n)}`));
+            lines.push("");
+          }
+        });
+
+        lines.push("---");
+        lines.push("");
+      });
+    } else {
+      // Legacy shape: { users: [...], team_themes?: [...] }
+      const legacy = summaryData as any;
+
+      if (Array.isArray(legacy?.team_themes) && legacy.team_themes.length) {
+        lines.push(`## Team Themes`);
+        lines.push("");
+        legacy.team_themes.forEach((t: any) => lines.push(`- ${String(t)}`));
+        lines.push("");
+      }
+
+      (legacy.users ?? []).forEach((u: any) => {
+        lines.push(`## ${u?.name ?? "Unknown"} (#${u?.badge ?? "?"})`);
+        lines.push("");
+        const md = String(u?.summary_md ?? "").trim();
+        lines.push(md.length ? md : "- (No accomplishments found in this range.)");
+        lines.push("");
+      });
+    }
+
+    const blob = new Blob([lines.join("\n")], {
+      type: "text/markdown;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -476,7 +550,17 @@ export default function HighManagerDashboard() {
           onChange={(e) => setFrom(e.target.value)}
           className="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
         />
-
+        <DatePicker
+          id="date-picker"
+          placeholder="Select a date"
+          defaultDate={new Date(from)}
+          onChange={(dates, currentDateString) => {
+            // Handle your logic
+            console.log({ dates, currentDateString });
+            setFrom(ymdLocal(dates[0]));
+          }}
+          mode="single"
+        />
         <span className="text-gray-500 text-theme-xs">→</span>
 
         <input
