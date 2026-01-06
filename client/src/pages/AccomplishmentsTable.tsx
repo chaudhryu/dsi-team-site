@@ -11,6 +11,7 @@ import "react-quill-new/dist/quill.snow.css";
 import { useLogin } from "@/context/LoginContext";
 import { AccomplishmentSummaryDialog } from "@/components/modal/AccomplishmentSummaryDialog";
 import { sendEmail } from "@/Data/actions/MailAction";
+import { User, Row, SummarizeResponse, WA } from "./types";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 
@@ -33,40 +34,6 @@ function FullscreenSpinner({ label = "Loading…" }: { label?: string }) {
     </div>
   );
 }
-
-/* -------------------- Types -------------------- */
-type User = {
-  badge: number;
-  firstName: string;
-  lastName: string;
-  email?: string | null;
-  position?: string | number | null;
-};
-
-type WA = {
-  id: number;
-  accomplishments: string | null;
-  user: User;
-  costCenter: number;
-  startWeekDate: string; // YYYY-MM-DD
-  endWeekDate: string; // YYYY-MM-DD
-  taskStatus?: string | null;
-};
-
-type Row = {
-  user: User;
-  wa: WA | null; // accomplishment for the selected week (or null)
-};
-
-type UserSummary = {
-  badge: number;
-  name: string;
-  summary_md: string;
-  highlights?: string[];
-  blockers?: string[];
-  next_focus?: string[];
-};
-type SummarizeResponse = { users: UserSummary[]; team_themes?: string[] };
 
 /* -------------------- HTML helpers -------------------- */
 // Keep Quill's data-* attributes so lists/checkboxes render
@@ -321,6 +288,8 @@ export default function AccomplishmentsTable() {
             return {
               badge: u.badge,
               name: `${u.firstName} ${u.lastName}`,
+              role: u.role ? u.role : "user", // used for distinguishing managers
+              costCenter: u.costCenter ?? 0,
               entries: inRange.map((d) => ({
                 startWeekDate: d.startWeekDate,
                 endWeekDate: d.endWeekDate,
@@ -361,26 +330,103 @@ export default function AccomplishmentsTable() {
 
   function downloadMarkdown() {
     if (!summaryData) return;
+
     const lines: string[] = [];
     lines.push(`# Team summaries (${from} → ${to})`);
-    if (summaryData.team_themes?.length) {
-      lines.push("\n## Team themes");
-      summaryData.team_themes.forEach((t) => lines.push(`- ${t}`));
+
+    const hasTeams = Array.isArray((summaryData as any)?.teams);
+
+    // Helper to ensure we always show something
+    const asBullets = (arr: any, fallback: string) => {
+      if (Array.isArray(arr) && arr.length) return arr.map((x) => String(x));
+      return [fallback];
+    };
+
+    if (hasTeams) {
+      const teams = (summaryData as any).teams as any[];
+
+      for (const team of teams) {
+        const costCenter = team?.costCenter ?? "N/A";
+        const mgrName = team?.manager?.name ?? "N/A";
+        const mgrBadge = team?.manager?.badge ?? 0;
+
+        lines.push(`\n## Cost Center ${costCenter}`);
+        lines.push(`**Manager:** ${mgrName} (#${mgrBadge})`);
+
+        // Manager achievements (always show)
+        lines.push(`\n### Manager achievements`);
+        asBullets(team?.manager_achievements, "No comment").forEach((a) => lines.push(`- ${a}`));
+
+        // Team summary (always show)
+        const teamSummary = String(team?.team_summary ?? "").trim() || "No accomplishments reported for this period.";
+        lines.push(`\n### Team summary`);
+        lines.push(teamSummary);
+
+        // Team themes (always show)
+        lines.push(`\n### Team themes`);
+        asBullets(team?.team_themes, "No accomplishments reported for this period.").forEach((t) =>
+          lines.push(`- ${t}`)
+        );
+
+        // Individuals
+        lines.push(`\n### Individuals`);
+        const users = Array.isArray(team?.users) ? team.users : [];
+
+        if (users.length === 0) {
+          lines.push(`- (No individuals with accomplishments found in this range.)`);
+        } else {
+          for (const u of users) {
+            lines.push(`\n#### ${u?.name ?? "Unknown"} (#${u?.badge ?? "?"})\n`);
+            const md = String(u?.summary_md ?? "").trim();
+            lines.push(md.length ? md : "- (No accomplishments found in this range.)");
+
+            if (Array.isArray(u?.blockers) && u.blockers.length) {
+              lines.push(`\n**Blockers**`);
+              u.blockers.forEach((b: any) => lines.push(`- ${String(b)}`));
+            }
+
+            if (Array.isArray(u?.next_focus) && u.next_focus.length) {
+              lines.push(`\n**Next focus**`);
+              u.next_focus.forEach((n: any) => lines.push(`- ${String(n)}`));
+            }
+          }
+        }
+
+        lines.push(`\n---`);
+      }
+    } else {
+      // Legacy 1-team shape (your old prompt response)
+      const legacy = summaryData as any;
+
+      if (Array.isArray(legacy?.team_themes) && legacy.team_themes.length) {
+        lines.push(`\n## Team themes`);
+        legacy.team_themes.forEach((t: any) => lines.push(`- ${String(t)}`));
+      } else {
+        lines.push(`\n## Team themes`);
+        lines.push(`- No accomplishments reported for this period.`);
+      }
+
+      lines.push(`\n## Individuals`);
+      (legacy.users ?? []).forEach((u: any) => {
+        lines.push(`\n### ${u?.name ?? "Unknown"} (#${u?.badge ?? "?"})\n`);
+        const md = String(u?.summary_md ?? "").trim();
+        lines.push(md.length ? md : "- (No accomplishments found in this range.)");
+
+        if (Array.isArray(u?.blockers) && u.blockers.length) {
+          lines.push(`\n**Blockers**`);
+          u.blockers.forEach((b: any) => lines.push(`- ${String(b)}`));
+        }
+
+        if (Array.isArray(u?.next_focus) && u.next_focus.length) {
+          lines.push(`\n**Next focus**`);
+          u.next_focus.forEach((n: any) => lines.push(`- ${String(n)}`));
+        }
+      });
     }
-    lines.push("\n## Individuals");
-    summaryData.users.forEach((u) => {
-      lines.push(`\n### ${u.name} (#${u.badge})\n`);
-      lines.push(u.summary_md);
-      if (u.blockers?.length) {
-        lines.push(`\n**Blockers**`);
-        u.blockers.forEach((b) => lines.push(`- ${b}`));
-      }
-      if (u.next_focus?.length) {
-        lines.push(`\n**Next focus**`);
-        u.next_focus.forEach((n) => lines.push(`- ${n}`));
-      }
+
+    const blob = new Blob([lines.join("\n")], {
+      type: "text/markdown;charset=utf-8",
     });
-    const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -532,88 +578,7 @@ export default function AccomplishmentsTable() {
       </div>
 
       {/* 🔹 Summary Modal */}
-      {summaryOpen && summaryData && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          role="dialog"
-          aria-modal="true"
-          onKeyDown={(e) => e.key === "Escape" && setSummaryOpen(false)}
-        >
-          <div className="w-full max-w-3xl rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-              <div>
-                <h3 className="text-lg font-semibold">AI Summary</h3>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
-                  {from} → {to}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={downloadMarkdown}>
-                  Export .md
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setSummaryOpen(false)}>
-                  Close
-                </Button>
-              </div>
-            </div>
 
-            <div className="px-6 py-5 space-y-6 max-h-[70vh] overflow-y-auto">
-              {summaryData.team_themes?.length ? (
-                <div>
-                  <div className="text-sm font-semibold mb-1">Team themes</div>
-                  <ul className="list-disc pl-5 text-sm text-gray-800 dark:text-gray-100">
-                    {summaryData.team_themes.map((t, i) => (
-                      <li key={i}>{t}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-
-              <div className="space-y-6">
-                {summaryData.users.map((u) => (
-                  <div key={u.badge}>
-                    <div className="font-semibold text-gray-900 dark:text-gray-100">
-                      {u.name} <span className="text-gray-500">#{u.badge}</span>
-                    </div>
-                    {/* Render as plain text Markdown for safety (no HTML injection) */}
-                    <pre className="whitespace-pre-wrap break-words text-sm text-gray-800 dark:text-gray-200 mt-1">
-                      {u.summary_md}
-                    </pre>
-
-                    {u.blockers?.length ? (
-                      <div className="mt-2">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Blockers</div>
-                        <ul className="list-disc pl-5 text-sm">
-                          {u.blockers.map((b, i) => (
-                            <li key={i}>{b}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
-
-                    {u.next_focus?.length ? (
-                      <div className="mt-2">
-                        <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Next focus</div>
-                        <ul className="list-disc pl-5 text-sm">
-                          {u.next_focus.map((n, i) => (
-                            <li key={i}>{n}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-
-              {sumError && (
-                <div className="rounded-lg border border-red-2 00 bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
-                  {sumError}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
       <AccomplishmentSummaryDialog
         open={summaryOpen}
         onClose={() => setSummaryOpen(false)}
