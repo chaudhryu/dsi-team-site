@@ -1,15 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
-import {
-  CalenderIcon,
-  ChevronDownIcon,
-  GridIcon,
-  HorizontaLDots,
-  ListIcon,
-  UserCircleIcon,
-  TableIcon,
-} from "../icons";
+import { CalenderIcon, ChevronDownIcon, GridIcon, HorizontaLDots, ListIcon, UserCircleIcon, TableIcon } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
+import { useLogin } from "@/context/LoginContext";
 
 type NavItem = {
   name: string;
@@ -18,7 +11,7 @@ type NavItem = {
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
-const navItems: NavItem[] = [
+const baseNavItems: NavItem[] = [
   // ✅ Home tab is now your dashboard
   { icon: <GridIcon />, name: "Dashboard", path: "/" },
 
@@ -34,8 +27,6 @@ const navItems: NavItem[] = [
   { icon: <UserCircleIcon />, name: "User Management", path: "/users" },
   { name: "Projects", icon: <ListIcon />, path: "/projects-internal" },
   { name: "Databases", icon: <TableIcon />, path: "/databases" },
-
-  // ✅ Removed: High Manager Dashboard tab
 ];
 
 const othersItems: NavItem[] = []; // kept for structure
@@ -44,14 +35,24 @@ const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const location = useLocation();
 
-  const [openSubmenu, setOpenSubmenu] = useState<{ type: "main" | "others"; index: number } | null>(
-    null
-  );
+  const [openSubmenu, setOpenSubmenu] = useState<{ type: "main" | "others"; index: number } | null>(null);
   const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>({});
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const isActive = useCallback((path: string) => location.pathname === path, [location.pathname]);
 
+  const loginContext = useLogin();
+  const role = (loginContext?.loginEmployee as any)?.role as string | undefined;
+
+  // ✅ Decide dashboard route based on role
+  const dashboardPath = role == "high_manager" ? "/high-manager-dashboard" : "/";
+
+  // ✅ Build nav items with the computed dashboard route
+  const navItems = useMemo<NavItem[]>(() => {
+    debugger;
+    console.log("role:", role);
+    return baseNavItems.map((item) => (item.name === "Dashboard" ? { ...item, path: dashboardPath } : item));
+  }, [dashboardPath]);
   useEffect(() => {
     let submenuMatched = false;
 
