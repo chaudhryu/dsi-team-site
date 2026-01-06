@@ -4,6 +4,7 @@ import {
   IsArray,
   IsBoolean,
   IsDateString,
+  isInt,
   IsInt,
   IsOptional,
   IsString,
@@ -19,7 +20,8 @@ export class EntryDto {
 export class UserPayloadDto {
   @IsInt() @Min(1) badge!: number;
   @IsString() name!: string;
-  @IsString() role!: string;
+  @IsString() role: string | "user";
+  @IsInt() @Min(0) costCenter: number;
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => EntryDto)
@@ -42,6 +44,10 @@ export class UserSummaryDto {
   blockers?: string[];
   next_focus?: string[];
 }
+// export class SummarizeResponseDto {
+//   users?: UserSummaryDto[];
+//   team_themes?: string[];
+// }
 export class SummarizeResponseDto {
   users?: UserSummaryDto[];
   team_themes?: string[];
