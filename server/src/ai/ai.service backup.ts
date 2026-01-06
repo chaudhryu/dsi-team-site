@@ -16,12 +16,6 @@ import {
   SummarizeRequestDto,
   SummarizeResponseDto,
 } from "./dto/summarize-accomplishments.dto";
-import {
-  NormalizedTeamsResponse,
-  NormalizedTeam,
-  NormalizedManager,
-  NormalizedUser,
-} from "./types";
 
 /* -------------------- Schema (single source of truth) -------------------- */
 /**
@@ -151,7 +145,12 @@ export class AiService {
       "You are an expert at creating concise executive summaries of weekly accomplishments.",
       "Input is JSON containing a date window and a list of users with badge, name, role, costCenter, and weekly entries.",
 
-      "This request is for a SINGLE team view, but the output format MUST match the multi-team format for a shared UI.",
+      "First, produce per-person summaries:",
+      "For each person, produce 2–5 Markdown bullet points focusing on outcomes and impact.",
+      "Merge duplicates and ignore trivial tasks.",
+      "Do NOT invent facts or numbers.",
+
+      "This request is for a single team view, but the output format must match the multi-team format for a shared UI.",
 
       "Determine the team (costCenter) as follows:",
       "1) If there is a user whose role is exactly 'manager', use that manager's costCenter as the team costCenter.",
@@ -159,43 +158,21 @@ export class AiService {
       "3) Otherwise (multiple cost centers and no manager), choose the lowest numeric costCenter.",
 
       "If multiple managers exist for the chosen costCenter, choose the manager with the lowest badge number.",
-      "If no manager exists for the chosen costCenter, set manager to { badge: 0, name: 'N/A' }.",
-
-      "IMPORTANT: Even if the chosen team has no accomplishments (no entries for everyone), still include that team in the output.",
-      "If there are no meaningful accomplishments, use these placeholders:",
-      "- manager_achievements must be exactly ['No comment']",
-      "- team_summary must be exactly 'No accomplishments reported for this period.'",
-      "- team_themes must be exactly ['No accomplishments reported for this period.']",
-      "- users should still be included (can be empty array if no users).",
-
-      "First, produce per-person summaries for users in the chosen costCenter:",
-      "For each person, produce 2–5 Markdown bullet points focusing on outcomes and impact.",
-      "Merge duplicates and ignore trivial tasks.",
-      "Ignore obvious test content like 'test', 'test32', or random numbers.",
-      "Do NOT invent facts or numbers.",
-
-      "For the manager of the chosen team:",
-      "Extract ONLY the manager’s own accomplishments from their entries.",
-      "Produce manager_achievements as 2–5 short bullet strings.",
-      "If the manager has no meaningful accomplishments, set manager_achievements to exactly ['No comment'].",
 
       "Return ONLY valid JSON (no code fences, no prose).",
       'Top-level JSON must be exactly: {"teams":[...]}',
       "Output must include exactly ONE team object in teams[].",
-      "Team object must include:",
-      '{ "costCenter": number, "manager": { "badge": number, "name": string }, "manager_achievements": string[], "users": [{ badge: number, name: string, summary_md: string }] }',
+      "Each team object must include:",
+      "- costCenter: number",
+      '- manager: { badge: number, name: string } (if no manager exists, use { badge: 0, name: "N/A" })',
+      "- users: [{ badge: number, name: string, summary_md: string }]",
     ];
 
     if (includeTeamSummary) {
       base.push(
-        "Also include team-level fields:",
-        "- team_summary: 1–3 sentences focusing on outcomes and impact (or placeholder if none).",
-        "- team_themes: string[] with 3–8 short bullets capturing cross-team themes within the team (or placeholder if none)."
-      );
-    } else {
-      // still keep the keys for UI stability (recommended)
-      base.push(
-        "Even when includeTeamSummary is false, still include team_summary and team_themes using placeholders if needed."
+        "Also include team-level summary fields for that single team:",
+        "- team_summary: 1–3 sentences focusing on outcomes and impact.",
+        "- team_themes: string[] with 3–8 short bullets capturing cross-team themes within the team."
       );
     }
 
@@ -214,36 +191,78 @@ export class AiService {
       this.buildCorpus(dto),
       "DATA END",
       "",
-      'Return ONLY JSON matching: {"teams":[{"costCenter":9250,"manager":{"badge":0,"name":"N/A"},"manager_achievements":["No comment"],"team_summary":"...","team_themes":["..."],"users":[{"badge":87100,"name":"...","summary_md":"- ..."}]}]}',
+      'Return ONLY JSON matching: {"users":[{"badge":87100,"name":"...","summary_md":"- ..."}], "team_themes":["..."]}',
     ].join("\n");
 
     try {
-      const completion = await this.client.chat.completions.create({
+      if (this.isGemini) {
+        // ✅ Gemini OpenAI-compat path:
+        // IMPORTANT: do NOT send response_format for Gemini. We prompt for JSON and parse it ourselves.
+        try {
+          const completion = await this.client.chat.completions.create({
+            model: this.model,
+            messages: [
+              { role: "system", content: system },
+              { role: "user", content: input },
+            ],
+            temperature: 0,
+          });
+
+          const content: any = completion.choices?.[0]?.message?.content ?? "";
+          const text = Array.isArray(content)
+            ? content
+                .map((c: any) => (typeof c === "string" ? c : c?.text ?? ""))
+                .join("")
+            : String(content);
+
+          return this.parseAndNormalizeModelOutput(text);
+        } catch (e1: any) {
+          const status = e1?.status || e1?.response?.status;
+          const data = e1?.response?.data || e1?.message;
+          this.logger.error(
+            "[Gemini primary] failed",
+            JSON.stringify({ status, data })
+          );
+
+          // Fallback: stricter JSON-only instruction
+          const fallback = await this.client.chat.completions.create({
+            model: this.model,
+            messages: [
+              { role: "system", content: system },
+              {
+                role: "user",
+                content:
+                  input +
+                  "\n\nSTRICT OUTPUT RULES:\n- Output ONLY JSON\n- No markdown fences\n- No explanations\n",
+              },
+            ],
+            temperature: 0,
+          });
+
+          const content2: any = fallback.choices?.[0]?.message?.content ?? "";
+          const text2 = Array.isArray(content2)
+            ? content2
+                .map((c: any) => (typeof c === "string" ? c : c?.text ?? ""))
+                .join("")
+            : String(content2);
+
+          return this.parseAndNormalizeModelOutput(text2);
+        }
+      }
+
+      // OpenAI / other providers path (structured output supported)
+      const completion = await this.client.chat.completions.parse({
         model: this.model,
         messages: [
           { role: "system", content: system },
           { role: "user", content: input },
         ],
+        response_format: zodResponseFormat(SummaryZ, "AccomplishmentSummaries"),
         temperature: 0,
-        // IMPORTANT: do not send response_format when Gemini OpenAI-compat
       });
 
-      const content: any = completion.choices?.[0]?.message?.content ?? "";
-      const text = Array.isArray(content)
-        ? content
-            .map((c: any) => (typeof c === "string" ? c : c?.text ?? ""))
-            .join("")
-        : String(content);
-
-      // Parse + normalize to new structure
-      const parsed = this.extractJsonObject(text);
-
-      // You should have: normalizeTeamsResponse(parsed)
-      // which returns { teams: [{ costCenter, manager, manager_achievements, team_summary, team_themes, users }] }
-      const normalized = this.normalizeTeamsResponse(parsed);
-
-      // Return type should match your DTO expected by UI
-      return normalized as unknown as SummarizeResponseDto;
+      const parsed = completion.choices?.[0]?.message?.parsed as SummaryZType;
+      return parsed as SummarizeResponseDto;
     } catch (err: any) {
       const provider = this.isGemini ? "Gemini(OpenAI-compat)" : "OpenAI-like";
       const status = err?.status || err?.response?.status;
@@ -262,13 +281,14 @@ export class AiService {
         throw new NotFoundException(
           "AI resource not found (check model/baseURL)."
         );
+
+      // ✅ portable 429 handling for older Nest versions
       if (status === 429)
         throw new HttpException("AI rate-limited (429).", 429);
 
       throw new InternalServerErrorException("Summarization failed");
     }
   }
-
   // team summary methods
   private extractJsonObject(text: string): any {
     const start = text.indexOf("{");
@@ -297,7 +317,6 @@ export class AiService {
 
     return { team_themes: deduped.slice(0, 8) };
   }
-
   // private buildTeamSummaryPrompt(): string {
   //   return [
   //     "You are an expert at creating concise executive summaries of weekly accomplishments across a team.",
@@ -318,212 +337,24 @@ export class AiService {
 
       "For each costCenter, identify the manager as the user whose role is exactly 'manager'.",
       "If multiple managers exist in the same costCenter, choose the manager with the lowest badge number.",
-
-      "IMPORTANT: Include EVERY costCenter that has a manager in the output, even if that costCenter has no accomplishments or empty entries for all users.",
-      "Do NOT omit teams just because there are no entries.",
       "If a costCenter has no manager, omit that costCenter entirely from the output.",
 
       "For each included costCenter, read all entries from all users in that costCenter within the date window.",
-
-      "For the manager of each team:",
-      "Extract ONLY the manager’s own accomplishments from their entries.",
-      "Produce manager_achievements as 2–5 short bullet strings focusing on leadership actions, coordination, delivery, or impact.",
-      'If the manager has no meaningful accomplishments in the date window, set manager_achievements to exactly: ["No comment"].',
-      "Do NOT include team members’ work in manager_achievements.",
-
-      "Produce a concise team_summary (1–3 sentences) focusing on outcomes, impact, and notable initiatives for the whole team.",
-      'If there are no meaningful accomplishments for the entire team in the date window, set team_summary to: "No accomplishments reported for this period."',
-
+      "Produce a concise team_summary (1–3 sentences) focusing on outcomes, impact, and notable initiatives.",
       "Produce team_themes as 5–10 short bullet strings capturing cross-user initiatives for that team.",
-      'If there are no meaningful accomplishments for the entire team in the date window, set team_themes to exactly: ["No accomplishments reported for this period."].',
 
-      "Merge duplicate efforts and ignore trivial test entries (for example: 'test', 'test32', random numbers).",
+      "Merge duplicate efforts and ignore trivial or test entries.",
       "Do NOT invent facts, systems, timelines, or numbers that are not present in the input.",
 
       "Return ONLY valid JSON (no code fences, no markdown, no prose).",
       'Top-level JSON must be exactly: {"teams":[...]}',
       "Each team object must have the following shape:",
-      '{ "costCenter": number, "manager": { "badge": number, "name": string }, "manager_achievements": string[], "team_summary": string, "team_themes": string[] }',
+      '{ "costCenter": number, "manager": { "badge": number, "name": string }, "team_summary": string, "team_themes": string[] }',
     ].join(" ");
   }
-
-  private normalizeTeamsResponse(obj: any): NormalizedTeamsResponse {
-    const teamsRaw = obj?.teams;
-    if (!Array.isArray(teamsRaw)) return { teams: [] };
-
-    const normalizeString = (v: any) => String(v ?? "").trim();
-
-    const normalizeBadge = (v: any) => {
-      const n = Number(v);
-      return Number.isFinite(n) ? n : 0;
-    };
-
-    const normalizeCostCenter = (v: any) => {
-      const n = Number(v);
-      return Number.isFinite(n) ? n : 0;
-    };
-
-    const normalizeStringArray = (arr: any, max: number): string[] => {
-      if (!Array.isArray(arr)) return [];
-      const cleaned = arr
-        .map((s) => normalizeString(s))
-        .filter((s) => s.length > 0);
-
-      const deduped: string[] = [];
-      for (const t of cleaned) {
-        if (!deduped.some((x) => x.toLowerCase() === t.toLowerCase())) {
-          deduped.push(t);
-        }
-      }
-      return deduped.slice(0, max);
-    };
-
-    const normalizeSummaryMd = (v: any) => {
-      const s = normalizeString(v);
-      return s.length ? s : "- (No accomplishments found in this range.)";
-    };
-
-    const isTrivialLine = (line: string) => {
-      const s = normalizeString(line).toLowerCase();
-      if (!s) return true;
-      // treat pure "test"/numbers as trivial
-      if (s === "test" || s === "test32") return true;
-      if (/^[0-9\s]+$/.test(s)) return true;
-      return false;
-    };
-
-    const normalizeUsers = (usersRaw: any): NormalizedUser[] => {
-      if (!Array.isArray(usersRaw)) return [];
-
-      const users: NormalizedUser[] = [];
-
-      for (const u of usersRaw) {
-        const badge = normalizeBadge(u?.badge);
-        const name = normalizeString(u?.name) || "Unknown";
-        const summary_md = normalizeSummaryMd(u?.summary_md);
-
-        const userObj: NormalizedUser = { badge, name, summary_md };
-
-        // Optional arrays: keep only if present & non-empty after cleaning
-        const blockers = normalizeStringArray(u?.blockers, 10).filter(
-          (x) => !isTrivialLine(x)
-        );
-        if (blockers.length) userObj.blockers = blockers;
-
-        const next_focus = normalizeStringArray(u?.next_focus, 10).filter(
-          (x) => !isTrivialLine(x)
-        );
-        if (next_focus.length) userObj.next_focus = next_focus;
-
-        const highlights = normalizeStringArray(u?.highlights, 10).filter(
-          (x) => !isTrivialLine(x)
-        );
-        if (highlights.length) userObj.highlights = highlights;
-
-        // Basic validity: allow badge 0 if AI forgets, but don't keep totally empty garbage
-        const hasUserSignal =
-          badge !== 0 ||
-          name !== "Unknown" ||
-          (summary_md &&
-            summary_md !== "- (No accomplishments found in this range.)") ||
-          !!userObj.blockers?.length ||
-          !!userObj.next_focus?.length ||
-          !!userObj.highlights?.length;
-
-        if (hasUserSignal) users.push(userObj);
-      }
-
-      // Dedupe by badge (keep first), stable sort by name then badge
-      const deduped: NormalizedUser[] = [];
-      const seen = new Set<number>();
-      for (const u of users) {
-        // If badge is 0, don't dedupe by it (allow multiple unknowns)
-        if (u.badge !== 0) {
-          if (seen.has(u.badge)) continue;
-          seen.add(u.badge);
-        }
-        deduped.push(u);
-      }
-
-      deduped.sort((a, b) => {
-        const an = (a.name || "").toLowerCase();
-        const bn = (b.name || "").toLowerCase();
-        if (an < bn) return -1;
-        if (an > bn) return 1;
-        return (a.badge ?? 0) - (b.badge ?? 0);
-      });
-
-      return deduped;
-    };
-
-    const normalizedTeams: NormalizedTeam[] = [];
-
-    for (const t of teamsRaw) {
-      const costCenter = normalizeCostCenter(t?.costCenter);
-
-      const mgrObj = t?.manager ?? {};
-      const manager: NormalizedManager = {
-        badge: normalizeBadge(mgrObj?.badge),
-        name: normalizeString(mgrObj?.name) || "N/A",
-      };
-
-      // Manager achievements: default to ["No comment"]
-      let manager_achievements = normalizeStringArray(
-        t?.manager_achievements,
-        5
-      );
-      if (manager_achievements.length === 0)
-        manager_achievements = ["No comment"];
-
-      // Team summary: default placeholder if empty
-      let team_summary = normalizeString(t?.team_summary);
-      if (!team_summary)
-        team_summary = "No accomplishments reported for this period.";
-
-      // Team themes: default placeholder if empty
-      let team_themes = normalizeStringArray(t?.team_themes, 10);
-      if (team_themes.length === 0)
-        team_themes = ["No accomplishments reported for this period."];
-
-      // Users
-      const users = normalizeUsers(t?.users);
-
-      // Include team if it has a valid cost center and manager exists (or manager placeholder)
-      // Since your prompt now wants empty teams with manager included, we do NOT drop empty teams.
-      const hasSignal =
-        costCenter !== 0 ||
-        (manager.badge !== 0 && manager.name !== "N/A") ||
-        users.length > 0;
-
-      if (!hasSignal) continue;
-
-      normalizedTeams.push({
-        costCenter,
-        manager,
-        manager_achievements,
-        team_summary,
-        team_themes,
-        users,
-      });
-    }
-
-    // Dedupe teams by costCenter (keep first) and sort
-    const dedupedByCC: NormalizedTeam[] = [];
-    const seenCC = new Set<number>();
-    for (const t of normalizedTeams) {
-      if (seenCC.has(t.costCenter)) continue;
-      seenCC.add(t.costCenter);
-      dedupedByCC.push(t);
-    }
-
-    dedupedByCC.sort((a, b) => a.costCenter - b.costCenter);
-
-    return { teams: dedupedByCC };
-  }
-
   async summarizeTeamThemes(
     dto: SummarizeRequestDto
-  ): Promise<{ teams: NormalizedTeam[] }> {
+  ): Promise<{ team_themes: string[] }> {
     const system = this.buildTeamSummaryPrompt();
 
     const input = [
@@ -553,7 +384,7 @@ export class AiService {
         : String(content);
       console.log("AI Service - summarizeTeamThemes received content:", text);
       const parsed = this.extractJsonObject(text);
-      return this.normalizeTeamsResponse(parsed);
+      return this.normalizeTeamThemes(parsed);
     } catch (err: any) {
       const provider = this.isGemini ? "Gemini(OpenAI-compat)" : "OpenAI-like";
       const status = err?.status || err?.response?.status;
