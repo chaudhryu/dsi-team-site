@@ -13,6 +13,7 @@ import {
   SummarizeRequestDto,
   SummarizeResponseDto,
 } from "./dto/summarize-accomplishments.dto";
+import { NormalizedTeam, NormalizedTeamsResponse } from "./types";
 
 @Controller("ai")
 @UsePipes(
@@ -28,13 +29,15 @@ export class AiController {
   @Post("summarize-accomplishments")
   @HttpCode(HttpStatus.OK)
   summarize(@Body() dto: SummarizeRequestDto): Promise<SummarizeResponseDto> {
+    console.log("AI Controller - summarize called with DTO:", dto);
     return this.ai.summarize(dto);
   }
   @Post("summarize-accomplishments-teams")
   @HttpCode(HttpStatus.OK)
   summarizeTeams(
     @Body() dto: SummarizeRequestDto
-  ): Promise<SummarizeResponseDto> {
+  ): Promise<{ teams: NormalizedTeam[] }> {
+    console.log("AI Controller - summarizeTeams called with DTO:", dto);
     return this.ai.summarizeTeamThemes(dto);
   }
 }
