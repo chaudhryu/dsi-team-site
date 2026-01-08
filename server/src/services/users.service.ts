@@ -96,14 +96,24 @@ export class UsersService implements OnApplicationBootstrap {
       const existingUser = await this.findOneByBadge(user.badge);
 
       if (existingUser) {
-        if (
-          existingUser.costCenter !== user.costCenter ||
-          existingUser.reportToLevelOne !== user.reportToLevelOne ||
-          existingUser.reportToLevelTwo !== user.reportToLevelTwo
-        ) {
-          // Update existing user
-          await this.userRepo.update({ badge: user.badge }, user);
+        if (!existingUser.isHierarchyManuallyManaged) {
+          await this.userRepo.update(
+            { badge: user.badge },
+            {
+              costCenter: user.costCenter,
+              reportToLevelOne: user.reportToLevelOne,
+              reportToLevelTwo: user.reportToLevelTwo,
+            }
+          );
         }
+        // if (
+        //   existingUser.costCenter !== user.costCenter ||
+        //   existingUser.reportToLevelOne !== user.reportToLevelOne ||
+        //   existingUser.reportToLevelTwo !== user.reportToLevelTwo
+        // ) {
+        //   // Update existing user
+        //   await this.userRepo.update({ badge: user.badge }, user);
+        // }
         //  Existing user → allow login
         return {
           allowed: true,
