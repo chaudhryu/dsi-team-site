@@ -39,7 +39,7 @@ export default function FeatureGrid() {
       try {
         setLoading(true);
         setError(null);
-        debugger;
+
         const res = await getUserByCostCenter((loginEmployee as any).costCenter);
         if (res.status !== 200) {
           // Optionally parse server error message

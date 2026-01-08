@@ -64,7 +64,6 @@ export default function AuthCallback() {
   const checkAndSyncEmployeeInfo = async (badgeStr: string) => {
     let minimalUser: MinimalUser | null = null;
     const parsedBadge = Number(badgeStr);
-    debugger;
     try {
       // fetch employee details from FIS
       const response = await fetchEmployeeDetails(badgeStr);

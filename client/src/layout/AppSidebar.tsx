@@ -49,7 +49,6 @@ const AppSidebar: React.FC = () => {
 
   // ✅ Build nav items with the computed dashboard route
   const navItems = useMemo<NavItem[]>(() => {
-    debugger;
     console.log("role:", role);
     return baseNavItems.map((item) => (item.name === "Dashboard" ? { ...item, path: dashboardPath } : item));
   }, [dashboardPath]);
