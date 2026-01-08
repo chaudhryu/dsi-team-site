@@ -68,7 +68,6 @@ export class UsersController {
   async checkUserLoginAndSettingProfile(
     @Body() user: Partial<User>
   ): Promise<loginDetailsDto> {
-    debugger;
     const result = await this.usersService.checkUserLoginAndSettingProfile(
       user
     );

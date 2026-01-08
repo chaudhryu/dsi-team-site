@@ -352,7 +352,6 @@ export default function Accomplishments() {
 
   /* -------------------- Personal Gemini summary -------------------- */
   async function onSummarizeRange() {
-    debugger;
     if (!badge) return;
 
     try {

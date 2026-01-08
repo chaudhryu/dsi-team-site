@@ -57,7 +57,6 @@ function readBadgeFromStorage(): number | null {
 
 async function fetchDbRoleForBadge(badge: number): Promise<string> {
   try {
-    debugger;
     const res = await fetch(`${API_BASE}/users`, { credentials: "include" });
     if (!res.ok) return "";
     const users = (await res.json()) as DbUser[];
@@ -141,7 +140,6 @@ function HighManagerOnlyRoute() {
     let cancelled = false;
 
     async function check() {
-      debugger;
       if (inProgress !== InteractionStatus.None) {
         if (!cancelled) setStatus("loading");
         return;
