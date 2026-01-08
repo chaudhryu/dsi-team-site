@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.css";
 import Label from "./Label";
@@ -11,28 +11,56 @@ type PropsType = {
   mode?: "single" | "multiple" | "range" | "time";
   onChange?: Hook | Hook[];
   defaultDate?: DateOption;
+  value?: DateOption; // ✅ controlled value
   label?: string;
   placeholder?: string;
 };
 
-export default function DatePicker({ id, mode, onChange, label, defaultDate, placeholder }: PropsType) {
+export default function DatePicker({ id, mode, onChange, label, defaultDate, value, placeholder }: PropsType) {
+  const fpRef = useRef<flatpickr.Instance | null>(null);
+
+  // ✅ Create / destroy the flatpickr instance
   useEffect(() => {
-    const flatPickr = flatpickr(`#${id}`, {
+    const el = document.getElementById(id) as HTMLInputElement | null;
+    if (!el) return;
+
+    fpRef.current = flatpickr(el, {
       mode: mode || "single",
       static: true,
       monthSelectorType: "static",
-      // dateFormat: "Y-m-d",
-      dateFormat: "m/d/Y",
-      defaultDate,
+      dateFormat: "Y-m-d",
+      defaultDate: value ?? defaultDate, // ✅ initial value wins if provided
       onChange,
     });
 
     return () => {
-      if (!Array.isArray(flatPickr)) {
-        flatPickr.destroy();
-      }
+      fpRef.current?.destroy();
+      fpRef.current = null;
     };
-  }, [mode, onChange, id, defaultDate]);
+    // ⚠️ only depends on id (and static init options if you truly need)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  // ✅ Update instance when props change (controlled)
+  useEffect(() => {
+    const inst = fpRef.current;
+    if (!inst) return;
+
+    // Update mode if it changes
+    if (mode && inst.config.mode !== mode) {
+      inst.set("mode", mode);
+    }
+
+    // Update onChange handler if it changes
+    if (onChange) {
+      inst.set("onChange", onChange);
+    }
+
+    // Controlled value update
+    if (value !== undefined) {
+      inst.setDate(value, false); // false = don't trigger onChange
+    }
+  }, [mode, onChange, value]);
 
   return (
     <div>

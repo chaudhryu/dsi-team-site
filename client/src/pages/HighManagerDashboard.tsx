@@ -1,5 +1,5 @@
 // src/pages/HighManagerDashboard.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import DOMPurify from "dompurify";
 import "react-quill-new/dist/quill.snow.css";
 
@@ -333,7 +333,6 @@ export default function HighManagerDashboard() {
           includeTeamSummary: false, // ✅ no team themes
         }),
       });
-      debugger;
       if (!resp.ok) throw new Error(await resp.text());
 
       const json = (await resp.json()) as SummarizeResponse;
@@ -537,39 +536,57 @@ export default function HighManagerDashboard() {
   }
 
   /* -------------------- Render -------------------- */
-
+  const datePickerFromRef = useRef<any>(null);
   return (
     <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       {/* Toolbar (date range) */}
       <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-100 dark:border-white/[0.05]">
         <Label className="text-gray-700 text-theme-sm">Date range</Label>
 
-        <input
+        {/* <input
           type="date"
           value={from}
           onChange={(e) => setFrom(e.target.value)}
           className="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
-        />
+        /> */}
         <DatePicker
-          id="date-picker"
+          id="date-pickerFrom"
           placeholder="Select a date"
-          defaultDate={new Date(from)}
+          value={from ? from : undefined}
+          // onChange={(dates, currentDateString) => {
+          //   // Handle your logic
+          //   console.log({ dates, currentDateString });
+          //   if (dates?.length) setFrom(ymdLocal(dates[0]));
+          // }}
           onChange={(dates, currentDateString) => {
-            // Handle your logic
-            console.log({ dates, currentDateString });
-            setFrom(ymdLocal(dates[0]));
+            debugger;
+            if (dates?.length) setFrom(currentDateString);
           }}
           mode="single"
         />
         <span className="text-gray-500 text-theme-xs">→</span>
 
-        <input
+        {/* <input
           type="date"
           value={to}
           onChange={(e) => setTo(e.target.value)}
           className="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+        /> */}
+        <DatePicker
+          id="date-pickerTo"
+          placeholder="Select a date"
+          value={to ? to : undefined}
+          // onChange={(dates, currentDateString) => {
+          //   // Handle your logic
+          //   console.log({ dates, currentDateString });
+          //   if (dates?.length) setFrom(ymdLocal(dates[0]));
+          // }}
+          onChange={(dates, currentDateString) => {
+            debugger;
+            if (dates?.length) setTo(currentDateString);
+          }}
+          mode="single"
         />
-
         <Button size="sm" variant="primary" onClick={loadRangeData} disabled={loading}>
           {loading ? "Loading…" : "Refresh"}
         </Button>
