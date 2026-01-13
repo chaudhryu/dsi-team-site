@@ -12,6 +12,7 @@ import { useLogin } from "@/context/LoginContext";
 import { AccomplishmentSummaryDialog } from "@/components/modal/AccomplishmentSummaryDialog";
 import { sendEmail } from "@/Data/actions/MailAction";
 import { User, Row, SummarizeResponse, WA } from "./types";
+import DatePicker from "@/components/form/date-picker";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 
@@ -459,18 +460,48 @@ export default function AccomplishmentsTable() {
       {/* 🔹 AI Summarize (date range) */}
       <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-white/[0.05]">
         <Label className="text-gray-700 text-theme-sm">Summarize range</Label>
-        <input
+        {/* <input
           type="date"
           value={from}
           onChange={(e) => setFrom(e.target.value)}
           className="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+        /> */}
+        <DatePicker
+          id="date-pickerFrom"
+          placeholder="Select a date"
+          value={from ? from : undefined}
+          // onChange={(dates, currentDateString) => {
+          //   // Handle your logic
+          //   console.log({ dates, currentDateString });
+          //   if (dates?.length) setFrom(ymdLocal(dates[0]));
+          // }}
+          onChange={(dates, currentDateString) => {
+            debugger;
+            if (dates?.length) setFrom(currentDateString);
+          }}
+          mode="single"
         />
         <span className="text-gray-500 text-theme-xs">→</span>
-        <input
+        {/* <input
           type="date"
           value={to}
           onChange={(e) => setTo(e.target.value)}
           className="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+        /> */}{" "}
+        <DatePicker
+          id="date-pickerTo"
+          placeholder="Select a date"
+          value={to ? to : undefined}
+          // onChange={(dates, currentDateString) => {
+          //   // Handle your logic
+          //   console.log({ dates, currentDateString });
+          //   if (dates?.length) setFrom(ymdLocal(dates[0]));
+          // }}
+          onChange={(dates, currentDateString) => {
+            debugger;
+            if (dates?.length) setTo(currentDateString);
+          }}
+          mode="single"
         />
         <Button size="sm" variant="primary" onClick={onSummarizeRange} disabled={summarizing}>
           {summarizing ? "Summarizing…" : "Summarize"}
@@ -487,7 +518,7 @@ export default function AccomplishmentsTable() {
                 isHeader
                 className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 w-64"
               >
-                User
+                Team Member
               </TableCell>
               <TableCell
                 isHeader
