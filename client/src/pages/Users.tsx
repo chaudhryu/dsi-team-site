@@ -200,11 +200,12 @@ export default function Users() {
 
         const created: UserRow = await res.json();
         // Optimistic: append & sort by badge; or just reload()
-        setRows((prev) => {
-          const next = [...prev, created];
-          next.sort((a, b) => a.badge - b.badge);
-          return next;
-        });
+        // setRows((prev) => {
+        //   const next = [...prev, created];
+        //   next.sort((a, b) => a.badge - b.badge);
+        //   return next;
+        // });
+        load();
         handleClose();
         resetForm();
       }, 1200);
@@ -246,9 +247,6 @@ export default function Users() {
       {/* Header */}
       <header className="p-6 md:p-8">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Users</h1>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-          Directory of users from the backend (SQLite via Nest + TypeORM).
-        </p>
       </header>
 
       {/* Filters / Actions */}
@@ -271,12 +269,12 @@ export default function Users() {
               >
                 {loading ? "Refreshing…" : "Refresh"}
               </button>
-              {/* <button
+              <button
                 onClick={handleOpenUserForm}
                 className="inline-flex items-center rounded-xl bg-brand-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-600"
               >
                 + Add user
-              </button> */}
+              </button>
               <button
                 onClick={handleOpenManagerForm}
                 className="inline-flex items-center rounded-xl bg-brand-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-600"

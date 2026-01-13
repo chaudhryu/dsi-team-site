@@ -71,7 +71,16 @@ export class UsersService implements OnApplicationBootstrap {
     return this.userRepo.findOne({ where: { badge } });
   }
 
-  create(data: Partial<User>): Promise<User> {
+  async create(data: Partial<User>): Promise<User> {
+    const existingUser = await this.findOneByBadge(data.badge);
+
+    if (existingUser) {
+      // Merge new fields into existing user
+      const updated = this.userRepo.merge(existingUser, data);
+      return this.userRepo.save(updated);
+    }
+
+    // Create new user if not exists
     const user = this.userRepo.create(data);
     return this.userRepo.save(user);
   }
