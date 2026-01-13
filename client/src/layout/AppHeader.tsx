@@ -100,7 +100,7 @@ const AppHeader: React.FC = () => {
             isApplicationMenuOpen ? "flex" : "hidden"
           } w-full items-center justify-between gap-4 px-5 py-4 lg:flex lg:justify-end lg:px-0`}
         >
-          {!isAuthenticated && (
+          {/* {!isAuthenticated && (
             <Link
               to="/projects-external"
               className="inline-flex items-center rounded-md px-3 py-2 text-sm font-semibold
@@ -109,7 +109,7 @@ const AppHeader: React.FC = () => {
             >
               Projects
             </Link>
-          )}
+          )} */}
 
           <div className="flex items-center gap-2 2xsm:gap-3">
             <ThemeToggleButton />

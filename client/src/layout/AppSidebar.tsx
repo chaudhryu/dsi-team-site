@@ -24,9 +24,9 @@ const baseNavItems: NavItem[] = [
     ],
   },
 
-  { icon: <UserCircleIcon />, name: "User Management", path: "/users" },
-  { name: "Projects", icon: <ListIcon />, path: "/projects-internal" },
-  { name: "Databases", icon: <TableIcon />, path: "/databases" },
+  //{ icon: <UserCircleIcon />, name: "User Management", path: "/users" },
+  //{ name: "Projects", icon: <ListIcon />, path: "/projects-internal" }, no need for multi-project right now
+  //{ name: "Databases", icon: <TableIcon />, path: "/databases" },
 ];
 
 const othersItems: NavItem[] = []; // kept for structure
