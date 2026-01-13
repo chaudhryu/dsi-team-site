@@ -6,7 +6,7 @@ const AppFooter: React.FC = () => (
   <footer className="border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
     <div className="mx-auto max-w-7xl px-6 py-12">
       {/* top row ---------------------------------------------------- */}
-      <div className="flex flex-col items-center  gap-6 sm:flex-row">
+      <div className="flex flex-col items-center  gap-3 sm:flex-row">
         {/* logo (small) */}
         <Link to="/" className="flex items-center space-x-2">
           <img src="/images/LAMetroLogo.svg.png" alt="Metro logo" className="h-8 w-auto dark:hidden" />

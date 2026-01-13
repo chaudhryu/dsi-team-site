@@ -81,7 +81,7 @@ export default function Home() {
           </p>
           {/* CTA buttons */}
           <div className="mt-10 flex items-center justify-center gap-x-6">
-            <Link
+            {/* <Link
               to="/projects-external"
               className="rounded-lg px-4 py-2.5 text-sm font-semibold
              bg-neutral-900 text-white shadow transition
@@ -94,7 +94,7 @@ export default function Home() {
              dark:hover:bg-neutral-200 dark:focus-visible:ring-white/70"
             >
               View projects
-            </Link>
+            </Link> */}
           </div>
         </div>
 
