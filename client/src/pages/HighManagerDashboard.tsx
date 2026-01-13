@@ -12,6 +12,7 @@ import { AccomplishmentSummaryDialog } from "@/components/modal/AccomplishmentSu
 import { sendEmail } from "@/Data/actions/MailAction";
 import { User, WA, SummarizeResponse, PayloadUser } from "./types";
 import DatePicker from "@/components/form/date-picker";
+import { startOfWeek, endOfWeek } from "./helpers";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3005/api";
 
@@ -81,9 +82,18 @@ function userDisplayName(u: User): string {
 /* -------------------- Component -------------------- */
 export default function HighManagerDashboard() {
   // ✅ Date range (no week selector)
-  const [from, setFrom] = useState<string>(() => ymdLocal(addDays(new Date(), -28)));
-  const [to, setTo] = useState<string>(() => ymdLocal(new Date()));
-
+  // const [from, setFrom] = useState<string>(() => ymdLocal(addDays(new Date(), -28)));
+  // const [to, setTo] = useState<string>(() => ymdLocal(new Date()));
+  const [from, setFrom] = useState<string>(() => {
+    const now = new Date();
+    const start = startOfWeek(now, 1); // Monday start
+    return ymdLocal(start);
+  });
+  const [to, setTo] = useState<string>(() => {
+    const now = new Date();
+    const end = endOfWeek(now, 1);
+    return ymdLocal(end);
+  });
   const [managerUsers, setManagerUsers] = useState<User[]>([]);
   const [selectedMgr, setSelectedMgr] = useState<User | null>(null);
   // cache: costCenter -> WAs (for current date range)
@@ -587,7 +597,21 @@ export default function HighManagerDashboard() {
           }}
           mode="single"
         />
-        <Button size="sm" variant="primary" onClick={loadRangeData} disabled={loading}>
+        <Button
+          size="sm"
+          variant="primary"
+          onClick={() => {
+            const now = new Date();
+            const start = startOfWeek(now, 1); // Monday start
+            const end = endOfWeek(now, 1);
+
+            setFrom(ymdLocal(start));
+            setTo(ymdLocal(end));
+
+            loadRangeData();
+          }}
+          disabled={loading}
+        >
           {loading ? "Loading…" : "Refresh"}
         </Button>
 

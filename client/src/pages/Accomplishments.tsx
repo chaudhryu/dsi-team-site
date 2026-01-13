@@ -483,7 +483,7 @@ export default function Accomplishments() {
             </div>
 
             {/* Personal Gemini summary controls */}
-            <div className="flex flex-wrap items-center gap-2">
+            {/* <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-gray-600 dark:text-gray-400">Gemini summary range</span>
               <input
                 type="date"
@@ -501,7 +501,7 @@ export default function Accomplishments() {
               <Button size="sm" variant="primary" onClick={onSummarizeRange} disabled={summarizing}>
                 {summarizing ? "Summarizing…" : "Summarize (Gemini)"}
               </Button>
-            </div>
+            </div> */}
           </div>
 
           {/* Table */}
