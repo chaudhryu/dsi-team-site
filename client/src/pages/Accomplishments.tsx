@@ -15,15 +15,10 @@ import { sendEmail } from "@/Data/actions/MailAction";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 const LOGIN_KEY = envConfig.loginEmpKey || "loginEmployee";
-/** If your backend exposes a different path for Gemini summaries, change this: */
 const AI_SUMMARY_ENDPOINT = `${API_BASE}/ai/summarize-accomplishments`;
 
-/** ✅ Show a stable rolling window of weeks (so Missing weeks don’t “disappear” in January). */
-const DEFAULT_WEEKS_TO_SHOW = 52; // 1 year
-const LOAD_MORE_STEP = 26; // add 6 months at a time
-const MAX_AUTO_EXPAND_WEEKS = 260; // auto-expand up to ~5 years to include existing records (user can still load more)
+const ALLOWED_YEARS: number[] = [2025, 2026];
 
-/* -------------------- Full-screen Spinner -------------------- */
 function FullscreenSpinner({ label = "Loading…" }: { label?: string }) {
   return (
     <div
@@ -40,13 +35,12 @@ function FullscreenSpinner({ label = "Loading…" }: { label?: string }) {
   );
 }
 
-/* -------------------- Types -------------------- */
 type Accomplishment = {
   id: number;
-  accomplishments: string; // sanitized HTML string
+  accomplishments: string;
   dateSubmitted: string | null;
-  startWeekDate: string; // 'YYYY-MM-DD'
-  endWeekDate: string; // 'YYYY-MM-DD'
+  startWeekDate: string;
+  endWeekDate: string;
   taskStatus?: string | null;
   costCenter: number | null;
 };
@@ -61,7 +55,6 @@ type PersonalSummaryUser = {
 };
 type PersonalSummaryResp = { users: PersonalSummaryUser[] };
 
-/* -------------------- date helpers (local-time safe) -------------------- */
 function ymdLocal(d: Date) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -80,7 +73,7 @@ function parseYMD(ymd: string) {
 function mondayStart(date = new Date()) {
   const d = new Date(date);
   const dow = d.getDay(); // 0..6 (Sun..Sat)
-  const diff = dow === 0 ? -6 : 1 - dow; // back to Monday
+  const diff = dow === 0 ? -6 : 1 - dow;
   d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
   return d;
@@ -91,7 +84,6 @@ function sundayEnd(mon: Date) {
   s.setHours(23, 59, 59, 999);
   return s;
 }
-// ISO week number (Thursday rule)
 function isoWeekNumber(d: Date) {
   const utc = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   const day = utc.getUTCDay() || 7;
@@ -106,29 +98,27 @@ function fmtShort(d: Date) {
 
 type WeekOpt = { start: string; end: string; label: string };
 
-// Build a list of week options around "now" (current week first)
-function buildWeekOptions(center = new Date(), past = 26, future = 0): WeekOpt[] {
-  const currentMon = mondayStart(center);
-  const total = past + future + 1;
+function isoYearStartMonday(isoYear: number) {
+  return mondayStart(new Date(isoYear, 0, 4));
+}
+
+function buildWeekOptionsForIsoYear(isoYear: number, maxStart?: Date): WeekOpt[] {
+  const start = isoYearStartMonday(isoYear);
+  const next = isoYearStartMonday(isoYear + 1);
+
   const weeks: WeekOpt[] = [];
+  for (let mon = new Date(start); mon < next; mon = addDays(mon, 7)) {
+    if (maxStart && mon.getTime() > maxStart.getTime()) break;
 
-  for (let i = 0; i < total; i++) {
-    const offsetWeeks = future - i;
-    const mon = addDays(currentMon, offsetWeeks * 7);
     const sun = sundayEnd(mon);
-
-    // ✅ Use ISO year to avoid New Year label confusion
     const { week, year } = isoWeekNumber(mon);
     const label = `${year}-W${String(week).padStart(2, "0")} (${fmtShort(mon)} – ${fmtShort(sun)})`;
-
     weeks.push({ start: ymdLocal(mon), end: ymdLocal(sun), label });
   }
 
-  // most recent first
   return weeks.sort((a, b) => (a.start < b.start ? 1 : -1));
 }
 
-// Keep Quill's data-* attributes and safe attrs
 const sanitizeHtml = (html: string) =>
   DOMPurify.sanitize(html, {
     ALLOW_DATA_ATTR: true,
@@ -136,11 +126,10 @@ const sanitizeHtml = (html: string) =>
   });
 
 const plainTextFromHtml = (html: string) =>
-  DOMPurify.sanitize(html, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })
+  DOMPurify.sanitize(html ?? "", { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })
     .replace(/\u00a0/g, " ")
     .trim();
 
-/* -------------------- status badge helper -------------------- */
 function statusBadgeClasses(status?: string | null) {
   const s = (status ?? "").toLowerCase();
   if (s === "submitted") return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300";
@@ -149,10 +138,13 @@ function statusBadgeClasses(status?: string | null) {
   return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
 }
 
-/* ====================================================================== */
+function isFutureWeekStart(startYmd: string) {
+  const start = mondayStart(parseYMD(startYmd));
+  const current = mondayStart(new Date());
+  return start.getTime() > current.getTime();
+}
 
 export default function Accomplishments() {
-  /* ---- who is logged in (from localStorage) ---- */
   const lsUser = useMemo(() => {
     try {
       const raw = localStorage.getItem(LOGIN_KEY);
@@ -169,56 +161,67 @@ export default function Accomplishments() {
 
   const loginContext = useLogin();
 
-  /* ---- weeks to show (stable; user can expand) ---- */
-  const [weeksToShow, setWeeksToShow] = useState<number>(DEFAULT_WEEKS_TO_SHOW);
+  const currentIsoYear = useMemo(() => isoWeekNumber(new Date()).year, []);
+  const yearOptions = useMemo(() => ALLOWED_YEARS.filter((y) => y <= currentIsoYear), [currentIsoYear]);
+
+  const [selectedYear, setSelectedYear] = useState<number>(() => {
+    if (yearOptions.includes(currentIsoYear)) return currentIsoYear;
+    return yearOptions[yearOptions.length - 1] ?? ALLOWED_YEARS[0];
+  });
+
+  useEffect(() => {
+    if (yearOptions.length && !yearOptions.includes(selectedYear)) {
+      setSelectedYear(yearOptions[yearOptions.length - 1] ?? ALLOWED_YEARS[0]);
+    }
+  }, [yearOptions, selectedYear]);
 
   const weekOptions = useMemo(() => {
-    const past = Math.max(weeksToShow - 1, 0);
-    return buildWeekOptions(new Date(), past, 0);
-  }, [weeksToShow]);
+    const cutoff = selectedYear === currentIsoYear ? mondayStart(new Date()) : undefined;
+    return buildWeekOptionsForIsoYear(selectedYear, cutoff);
+  }, [selectedYear, currentIsoYear]);
 
   const [weekStart, setWeekStart] = useState<string>(() => weekOptions[0]?.start ?? ymdLocal(mondayStart()));
   const [weekEnd, setWeekEnd] = useState<string>(() => weekOptions[0]?.end ?? ymdLocal(sundayEnd(mondayStart())));
+
+  useEffect(() => {
+    if (!weekOptions.length) return;
+    const opt = weekOptions.find((w) => w.start === weekStart);
+    if (!opt) {
+      setWeekStart(weekOptions[0].start);
+      setWeekEnd(weekOptions[0].end);
+    } else if (opt.end !== weekEnd) {
+      setWeekEnd(opt.end);
+    }
+  }, [weekOptions, weekStart, weekEnd]);
 
   const selectedLabel = useMemo(() => {
     const opt = weekOptions.find((w) => w.start === weekStart);
     return opt ? opt.label : `${weekStart} – ${weekEnd}`;
   }, [weekOptions, weekStart, weekEnd]);
 
-  /* ---- data + UI state ---- */
   const [rows, setRows] = useState<Accomplishment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // editor modal state
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [text, setText] = useState("");
 
-  // current record for selected week (match by startWeekDate; more robust)
-  const currentRecord = useMemo(
-    () => rows.find((r) => r.startWeekDate === weekStart) || null,
-    [rows, weekStart]
-  );
+  const currentRecord = useMemo(() => rows.find((r) => r.startWeekDate === weekStart) || null, [rows, weekStart]);
 
-  // 🔹 Gemini summary (personal)
-  const [from, setFrom] = useState<string>(() => ymdLocal(addDays(mondayStart(new Date()), -21))); // last 3 weeks
+  const [from, setFrom] = useState<string>(() => ymdLocal(addDays(mondayStart(new Date()), -21)));
   const [to, setTo] = useState<string>(() => ymdLocal(sundayEnd(mondayStart(new Date()))));
   const [summarizing, setSummarizing] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summaryData, setSummaryData] = useState<PersonalSummaryResp | null>(null);
   const [sumError, setSumError] = useState<string | null>(null);
 
-  // load when we know the badge
   useEffect(() => {
     if (!badge) return;
-
     (async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, {
-          credentials: "include",
-        });
+        const res = await fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, { credentials: "include" });
         if (!res.ok) {
           console.error("GET user accomplishments failed", res.status, await res.text());
           setRows([]);
@@ -235,47 +238,22 @@ export default function Accomplishments() {
     })();
   }, [badge]);
 
-  /**
-   * ✅ Auto-expand (up to MAX_AUTO_EXPAND_WEEKS) so existing older records are inside the padded range.
-   * This helps show Missing weeks between old submissions.
-   */
-  useEffect(() => {
-    if (!rows.length) return;
-
-    const oldest = rows.reduce(
-      (min, r) => (r.startWeekDate < min ? r.startWeekDate : min),
-      rows[0].startWeekDate
-    );
-
-    const nowMon = mondayStart(new Date());
-    const oldestMon = mondayStart(parseYMD(oldest));
-    const diffMs = nowMon.getTime() - oldestMon.getTime();
-    if (diffMs < 0) return;
-
-    const neededWeeks = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1;
-
-    if (Number.isFinite(neededWeeks) && neededWeeks > 0) {
-      setWeeksToShow((prev) => Math.max(prev, Math.min(neededWeeks, MAX_AUTO_EXPAND_WEEKS)));
-    }
-  }, [rows]);
-
-  // helper to open modal with optional prefill
   const openModal = (prefill = "") => {
     setText(prefill);
     setError(null);
     setOpen(true);
   };
 
-  /* ---- save/create ---- */
   const handleSave = async () => {
     if (!badge) {
       setError("No logged-in user.");
       return;
     }
-
-    // Validate there's real (non-empty) content
-    const hasContent = plainTextFromHtml(text).length > 0;
-    if (!hasContent) {
+    if (isFutureWeekStart(weekStart)) {
+      setError("You cannot submit accomplishments for a future week.");
+      return;
+    }
+    if (plainTextFromHtml(text).length === 0) {
       setError("Please enter your accomplishments for the week.");
       return;
     }
@@ -287,7 +265,6 @@ export default function Accomplishments() {
 
     try {
       if (currentRecord) {
-        // EDIT
         const res = await fetch(`${API_BASE}/weekly-accomplishments/${currentRecord.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -306,7 +283,6 @@ export default function Accomplishments() {
           return;
         }
       } else {
-        // CREATE
         const today = ymdLocal(new Date());
         const res = await fetch(`${API_BASE}/weekly-accomplishments`, {
           method: "POST",
@@ -329,19 +305,14 @@ export default function Accomplishments() {
         }
       }
 
-      // close + refresh
       setOpen(false);
       setText("");
 
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, {
-          credentials: "include",
-        });
+        const res = await fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, { credentials: "include" });
         const data = res.ok ? await res.json() : [];
         setRows(Array.isArray(data) ? data : []);
-      } catch {
-        // ignore
       } finally {
         setLoading(false);
       }
@@ -353,38 +324,26 @@ export default function Accomplishments() {
     }
   };
 
-  /* -------------------- PADDED rows (show all weeks in range) -------------------- */
   const displayRows = useMemo(() => {
-    // index actual rows by startWeekDate (week identity)
     const byStart = new Map<string, Accomplishment>();
     for (const r of rows) byStart.set(r.startWeekDate, r);
 
-    // build placeholders for weeks in our current window
-    const padded: Accomplishment[] = weekOptions.map((w, idx) => {
+    return weekOptions.map((w, idx) => {
       const found = byStart.get(w.start);
       if (found) return found;
 
       return {
-        id: -1 - idx, // negative unique id for React keys
+        id: -1 - idx,
         accomplishments: "",
         dateSubmitted: null,
         startWeekDate: w.start,
         endWeekDate: w.end,
         taskStatus: "Missing",
         costCenter: null,
-      };
+      } as Accomplishment;
     });
-
-    // include any API rows outside our range (just in case)
-    const inRangeStarts = new Set(weekOptions.map((w) => w.start));
-    const extras = rows.filter((r) => !inRangeStarts.has(r.startWeekDate));
-
-    const all = [...padded, ...extras];
-    all.sort((a, b) => (a.startWeekDate < b.startWeekDate ? 1 : -1)); // most recent first
-    return all;
   }, [rows, weekOptions]);
 
-  /* -------------------- Personal Gemini summary -------------------- */
   async function onSummarizeRange() {
     if (!badge) return;
 
@@ -393,7 +352,6 @@ export default function Accomplishments() {
       setSumError(null);
 
       const inRange = rows.filter((d) => d.endWeekDate >= from && d.startWeekDate <= to);
-
       if (inRange.length === 0) {
         setSumError("No entries found in the selected date range.");
         return;
@@ -447,6 +405,7 @@ export default function Accomplishments() {
   function downloadMarkdown() {
     if (!summaryData?.users?.length) return;
     const u = summaryData.users[0];
+
     const lines: string[] = [];
     lines.push(`# Weekly summary (${from} → ${to}) — ${u.name} (#${u.badge})\n`);
     lines.push(u.summary_md || "_(no generated summary)_");
@@ -489,9 +448,8 @@ export default function Accomplishments() {
 
       <div className="grid gap-6">
         <ComponentCard title={`Your Weekly Accomplishments (Badge ${badge})`}>
-          {/* Actions: Refresh + Load older + Gemini summary range */}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 size="sm"
                 variant="outline"
@@ -508,14 +466,20 @@ export default function Accomplishments() {
                 {loading ? "Refreshing…" : "Refresh"}
               </Button>
 
-              <Button size="sm" variant="outline" onClick={() => setWeeksToShow((prev) => prev + LOAD_MORE_STEP)}>
-                Load older weeks
-              </Button>
-
-              <span className="text-xs text-gray-500 dark:text-gray-400">Showing {weeksToShow} weeks</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400">Year</span>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+              >
+                {yearOptions.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* Personal Gemini summary controls */}
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-gray-600 dark:text-gray-400">Gemini summary range</span>
               <input
@@ -537,7 +501,6 @@ export default function Accomplishments() {
             </div>
           </div>
 
-          {/* Table */}
           <div className="max-w-full overflow-x-auto">
             <table className="min-w-[900px] w-full text-left text-sm">
               <thead className="bg-gray-50 dark:bg-gray-800/60 text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-white/10">
@@ -551,8 +514,10 @@ export default function Accomplishments() {
               <tbody className="divide-y divide-gray-100 dark:divide-white/10">
                 {displayRows.map((r) => {
                   const hasText = plainTextFromHtml(r.accomplishments || "").length > 0;
-                  const status = r.taskStatus ?? (hasText ? "Submitted" : "Missing");
+                  const status =
+                    r.id > 0 ? r.taskStatus ?? (hasText ? "Submitted" : "Missing") : hasText ? "Submitted" : "Missing";
                   const isSubmitted = r.id > 0 && String(status).toLowerCase() === "submitted";
+                  const futureWeek = isFutureWeekStart(r.startWeekDate);
 
                   return (
                     <tr
@@ -577,6 +542,7 @@ export default function Accomplishments() {
                             <Button
                               size="sm"
                               variant="outline"
+                              disabled={futureWeek}
                               onClick={() => {
                                 setWeekStart(r.startWeekDate);
                                 setWeekEnd(r.endWeekDate);
@@ -624,7 +590,6 @@ export default function Accomplishments() {
         </ComponentCard>
       </div>
 
-      {/* Editor Modal */}
       {open && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
@@ -647,13 +612,11 @@ export default function Accomplishments() {
                 </div>
               )}
 
-              <div>
-                <ReactQuillEditor
-                  value={text}
-                  onChange={(value) => setText(value)}
-                  className="text-sm text-gray-900 dark:text-gray-100 pb-6"
-                />
-              </div>
+              <ReactQuillEditor
+                value={text}
+                onChange={(value) => setText(value)}
+                className="text-sm text-gray-900 dark:text-gray-100 pb-6"
+              />
             </div>
 
             <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-3">
@@ -668,7 +631,6 @@ export default function Accomplishments() {
         </div>
       )}
 
-      {/* ✅ Keep only ONE summary UI: AccomplishmentSummaryDialog */}
       <AccomplishmentSummaryDialog
         open={summaryOpen}
         onClose={() => setSummaryOpen(false)}
@@ -695,7 +657,6 @@ export default function Accomplishments() {
         }}
       />
 
-      {/* 🔄 Full-screen spinner while fetching accomplishments */}
       {loading && <FullscreenSpinner label="Loading your accomplishments…" />}
     </div>
   );
