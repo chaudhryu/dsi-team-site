@@ -18,6 +18,11 @@ const LOGIN_KEY = envConfig.loginEmpKey || "loginEmployee";
 /** If your backend exposes a different path for Gemini summaries, change this: */
 const AI_SUMMARY_ENDPOINT = `${API_BASE}/ai/summarize-accomplishments`;
 
+/** ✅ Show a stable rolling window of weeks (so Missing weeks don’t “disappear” in January). */
+const DEFAULT_WEEKS_TO_SHOW = 52; // 1 year
+const LOAD_MORE_STEP = 26; // add 6 months at a time
+const MAX_AUTO_EXPAND_WEEKS = 260; // auto-expand up to ~5 years to include existing records (user can still load more)
+
 /* -------------------- Full-screen Spinner -------------------- */
 function FullscreenSpinner({ label = "Loading…" }: { label?: string }) {
   return (
@@ -68,6 +73,10 @@ function addDays(d: Date, n: number) {
   x.setDate(x.getDate() + n);
   return x;
 }
+function parseYMD(ymd: string) {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+}
 function mondayStart(date = new Date()) {
   const d = new Date(date);
   const dow = d.getDay(); // 0..6 (Sun..Sat)
@@ -104,19 +113,22 @@ function buildWeekOptions(center = new Date(), past = 26, future = 0): WeekOpt[]
   const weeks: WeekOpt[] = [];
 
   for (let i = 0; i < total; i++) {
-    const offsetWeeks = future - i; // places current week at index = future
+    const offsetWeeks = future - i;
     const mon = addDays(currentMon, offsetWeeks * 7);
     const sun = sundayEnd(mon);
-    const { week } = isoWeekNumber(mon);
-    const label = `W${String(week).padStart(2, "0")} (${fmtShort(mon)} – ${fmtShort(sun)}, ${sun.getFullYear()})`;
+
+    // ✅ Use ISO year to avoid New Year label confusion
+    const { week, year } = isoWeekNumber(mon);
+    const label = `${year}-W${String(week).padStart(2, "0")} (${fmtShort(mon)} – ${fmtShort(sun)})`;
+
     weeks.push({ start: ymdLocal(mon), end: ymdLocal(sun), label });
   }
 
-  // most recent first (current week at top)
+  // most recent first
   return weeks.sort((a, b) => (a.start < b.start ? 1 : -1));
 }
 
-// Keep Quill's data-* attributes (used for lists/checkboxes) and common safe attrs.
+// Keep Quill's data-* attributes and safe attrs
 const sanitizeHtml = (html: string) =>
   DOMPurify.sanitize(html, {
     ALLOW_DATA_ATTR: true,
@@ -149,16 +161,22 @@ export default function Accomplishments() {
       return null;
     }
   }, []);
+
   const badge = useMemo<number | null>(() => {
     const n = Number(lsUser?.badge);
     return Number.isFinite(n) ? n : null;
   }, [lsUser]);
 
-  /* ---- internal week range (for padding only) ---- */
+  const loginContext = useLogin();
+
+  /* ---- weeks to show (stable; user can expand) ---- */
+  const [weeksToShow, setWeeksToShow] = useState<number>(DEFAULT_WEEKS_TO_SHOW);
+
   const weekOptions = useMemo(() => {
-    const { week } = isoWeekNumber(new Date());
-    return buildWeekOptions(new Date(), week - 1, 0);
-  }, []);
+    const past = Math.max(weeksToShow - 1, 0);
+    return buildWeekOptions(new Date(), past, 0);
+  }, [weeksToShow]);
+
   const [weekStart, setWeekStart] = useState<string>(() => weekOptions[0]?.start ?? ymdLocal(mondayStart()));
   const [weekEnd, setWeekEnd] = useState<string>(() => weekOptions[0]?.end ?? ymdLocal(sundayEnd(mondayStart())));
 
@@ -171,20 +189,16 @@ export default function Accomplishments() {
   const [rows, setRows] = useState<Accomplishment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // modal state
+  // editor modal state
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // form (HTML from editor)
   const [text, setText] = useState("");
 
-  const loginContext = useLogin();
-
-  // current record for selected week (only considers REAL API rows)
+  // current record for selected week (match by startWeekDate; more robust)
   const currentRecord = useMemo(
-    () => rows.find((r) => r.startWeekDate === weekStart && r.endWeekDate === weekEnd) || null,
-    [rows, weekStart, weekEnd]
+    () => rows.find((r) => r.startWeekDate === weekStart) || null,
+    [rows, weekStart]
   );
 
   // 🔹 Gemini summary (personal)
@@ -198,6 +212,7 @@ export default function Accomplishments() {
   // load when we know the badge
   useEffect(() => {
     if (!badge) return;
+
     (async () => {
       setLoading(true);
       try {
@@ -219,6 +234,30 @@ export default function Accomplishments() {
       }
     })();
   }, [badge]);
+
+  /**
+   * ✅ Auto-expand (up to MAX_AUTO_EXPAND_WEEKS) so existing older records are inside the padded range.
+   * This helps show Missing weeks between old submissions.
+   */
+  useEffect(() => {
+    if (!rows.length) return;
+
+    const oldest = rows.reduce(
+      (min, r) => (r.startWeekDate < min ? r.startWeekDate : min),
+      rows[0].startWeekDate
+    );
+
+    const nowMon = mondayStart(new Date());
+    const oldestMon = mondayStart(parseYMD(oldest));
+    const diffMs = nowMon.getTime() - oldestMon.getTime();
+    if (diffMs < 0) return;
+
+    const neededWeeks = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1;
+
+    if (Number.isFinite(neededWeeks) && neededWeeks > 0) {
+      setWeeksToShow((prev) => Math.max(prev, Math.min(neededWeeks, MAX_AUTO_EXPAND_WEEKS)));
+    }
+  }, [rows]);
 
   // helper to open modal with optional prefill
   const openModal = (prefill = "") => {
@@ -244,7 +283,6 @@ export default function Accomplishments() {
     setSaving(true);
     setError(null);
 
-    // Sanitize before sending to the API
     const cleanHtml = sanitizeHtml(text);
 
     try {
@@ -276,7 +314,7 @@ export default function Accomplishments() {
           credentials: "include",
           body: JSON.stringify({
             userBadge: badge,
-            costCenter: loginContext?.loginEmployee.costCenter,
+            costCenter: loginContext?.loginEmployee?.costCenter ?? null,
             accomplishments: cleanHtml,
             dateSubmitted: today,
             startWeekDate: weekStart,
@@ -295,7 +333,6 @@ export default function Accomplishments() {
       setOpen(false);
       setText("");
 
-      // re-load without adding another effect
       setLoading(true);
       try {
         const res = await fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, {
@@ -316,18 +353,15 @@ export default function Accomplishments() {
     }
   };
 
-  /* -------------------- PADDED rows (show all weeks) -------------------- */
+  /* -------------------- PADDED rows (show all weeks in range) -------------------- */
   const displayRows = useMemo(() => {
-    // index actual rows by week key
-    const byKey = new Map<string, Accomplishment>();
-    for (const r of rows) {
-      byKey.set(`${r.startWeekDate}|${r.endWeekDate}`, r);
-    }
+    // index actual rows by startWeekDate (week identity)
+    const byStart = new Map<string, Accomplishment>();
+    for (const r of rows) byStart.set(r.startWeekDate, r);
 
-    // build placeholders for weeks in our dropdown range
+    // build placeholders for weeks in our current window
     const padded: Accomplishment[] = weekOptions.map((w, idx) => {
-      const key = `${w.start}|${w.end}`;
-      const found = byKey.get(key);
+      const found = byStart.get(w.start);
       if (found) return found;
 
       return {
@@ -341,9 +375,9 @@ export default function Accomplishments() {
       };
     });
 
-    // include any API rows outside the current range (older/newer)
-    const inRangeKeys = new Set(padded.map((r) => `${r.startWeekDate}|${r.endWeekDate}`));
-    const extras = rows.filter((r) => !inRangeKeys.has(`${r.startWeekDate}|${r.endWeekDate}`));
+    // include any API rows outside our range (just in case)
+    const inRangeStarts = new Set(weekOptions.map((w) => w.start));
+    const extras = rows.filter((r) => !inRangeStarts.has(r.startWeekDate));
 
     const all = [...padded, ...extras];
     all.sort((a, b) => (a.startWeekDate < b.startWeekDate ? 1 : -1)); // most recent first
@@ -358,20 +392,17 @@ export default function Accomplishments() {
       setSummarizing(true);
       setSumError(null);
 
-      // Build the single-user payload (no `model` field)
       const inRange = rows.filter((d) => d.endWeekDate >= from && d.startWeekDate <= to);
 
-      // Optional guard: avoid empty submissions
       if (inRange.length === 0) {
         setSumError("No entries found in the selected date range.");
-        setSummarizing(false);
         return;
       }
 
       const payload = {
         from,
         to,
-        includeTeamSummary: false, // personal only
+        includeTeamSummary: false,
         users: [
           {
             badge,
@@ -393,7 +424,6 @@ export default function Accomplishments() {
       });
 
       if (!resp.ok) {
-        // Surface backend validation message in the UI
         const errText = await resp.text();
         try {
           const errJson = JSON.parse(errText);
@@ -459,31 +489,34 @@ export default function Accomplishments() {
 
       <div className="grid gap-6">
         <ComponentCard title={`Your Weekly Accomplishments (Badge ${badge})`}>
-          {/* Actions: Refresh + Gemini summary range */}
+          {/* Actions: Refresh + Load older + Gemini summary range */}
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  if (badge) {
-                    setLoading(true);
-                    fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, {
-                      credentials: "include",
-                    })
-                      .then((r) => (r.ok ? r.json() : []))
-                      .then((d) => setRows(Array.isArray(d) ? d : []))
-                      .catch(() => {})
-                      .finally(() => setLoading(false));
-                  }
+                  if (!badge) return;
+                  setLoading(true);
+                  fetch(`${API_BASE}/weekly-accomplishments/user/${badge}`, { credentials: "include" })
+                    .then((r) => (r.ok ? r.json() : []))
+                    .then((d) => setRows(Array.isArray(d) ? d : []))
+                    .catch(() => {})
+                    .finally(() => setLoading(false));
                 }}
               >
                 {loading ? "Refreshing…" : "Refresh"}
               </Button>
+
+              <Button size="sm" variant="outline" onClick={() => setWeeksToShow((prev) => prev + LOAD_MORE_STEP)}>
+                Load older weeks
+              </Button>
+
+              <span className="text-xs text-gray-500 dark:text-gray-400">Showing {weeksToShow} weeks</span>
             </div>
 
             {/* Personal Gemini summary controls */}
-            {/* <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-gray-600 dark:text-gray-400">Gemini summary range</span>
               <input
                 type="date"
@@ -501,7 +534,7 @@ export default function Accomplishments() {
               <Button size="sm" variant="primary" onClick={onSummarizeRange} disabled={summarizing}>
                 {summarizing ? "Summarizing…" : "Summarize (Gemini)"}
               </Button>
-            </div> */}
+            </div>
           </div>
 
           {/* Table */}
@@ -514,13 +547,16 @@ export default function Accomplishments() {
                   <th className="px-5 py-3 font-medium w-44">Status / Action</th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-gray-100 dark:divide-white/10">
                 {displayRows.map((r) => {
-                  const status = r.taskStatus ?? (r.accomplishments ? "Submitted" : "Missing");
-                  const isSubmitted = status === "Submitted";
+                  const hasText = plainTextFromHtml(r.accomplishments || "").length > 0;
+                  const status = r.taskStatus ?? (hasText ? "Submitted" : "Missing");
+                  const isSubmitted = r.id > 0 && String(status).toLowerCase() === "submitted";
+
                   return (
                     <tr
-                      key={`${r.startWeekDate}-${r.endWeekDate}`}
+                      key={`${r.startWeekDate}-${r.endWeekDate}-${r.id}`}
                       className="hover:bg-gray-50/70 dark:hover:bg-gray-800/40"
                     >
                       <td className="px-5 py-4 text-gray-600 dark:text-gray-400">
@@ -528,14 +564,11 @@ export default function Accomplishments() {
                       </td>
 
                       <td className="px-5 py-4 text-gray-800 dark:text-gray-200">
-                        {r.accomplishments ? (
-                          // ⬇️ Wrap with Quill's viewer classes so list markers render
+                        {hasText ? (
                           <div className="ql-snow">
                             <div
                               className="ql-editor max-w-none"
-                              dangerouslySetInnerHTML={{
-                                __html: sanitizeHtml(r.accomplishments),
-                              }}
+                              dangerouslySetInnerHTML={{ __html: sanitizeHtml(r.accomplishments) }}
                             />
                           </div>
                         ) : (
@@ -560,11 +593,12 @@ export default function Accomplishments() {
                         <div className="flex items-center gap-2">
                           <span
                             className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusBadgeClasses(
-                              status
+                              hasText ? "Submitted" : "Missing"
                             )}`}
                           >
-                            {status}
+                            {hasText ? "Submitted" : "Missing"}
                           </span>
+
                           {isSubmitted && (
                             <Button
                               size="sm"
@@ -634,82 +668,7 @@ export default function Accomplishments() {
         </div>
       )}
 
-      {/* Gemini Summary Modal */}
-      {summaryOpen && summaryData && summaryData.users?.[0] && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-          role="dialog"
-          aria-modal="true"
-          onKeyDown={(e) => e.key === "Escape" && setSummaryOpen(false)}
-        >
-          <div className="w-full max-w-2xl rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-              <div>
-                <h3 className="text-lg font-semibold">Your Gemini summary</h3>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
-                  {from} → {to}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={downloadMarkdown}>
-                  Export .md
-                </Button>
-                <Button size="sm" variant="outline" onClick={downloadMarkdown}>
-                  Send Email
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setSummaryOpen(false)}>
-                  Close
-                </Button>
-              </div>
-            </div>
-
-            <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
-              {sumError && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300">
-                  {sumError}
-                </div>
-              )}
-              {/* Render Markdown as plain text for safety */}
-              <pre className="whitespace-pre-wrap break-words text-sm text-gray-800 dark:text-gray-200">
-                {summaryData.users[0].summary_md}
-              </pre>
-
-              {summaryData.users[0].highlights?.length ? (
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Highlights</div>
-                  <ul className="list-disc pl-5 text-sm">
-                    {summaryData.users[0].highlights.map((h, i) => (
-                      <li key={i}>{h}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-
-              {summaryData.users[0].blockers?.length ? (
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mt-3">Blockers</div>
-                  <ul className="list-disc pl-5 text-sm">
-                    {summaryData.users[0].blockers.map((b, i) => (
-                      <li key={i}>{b}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-
-              {summaryData.users[0].next_focus?.length ? (
-                <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mt-3">Next focus</div>
-                  <ul className="list-disc pl-5 text-sm">
-                    {summaryData.users[0].next_focus.map((n, i) => (
-                      <li key={i}>{n}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ✅ Keep only ONE summary UI: AccomplishmentSummaryDialog */}
       <AccomplishmentSummaryDialog
         open={summaryOpen}
         onClose={() => setSummaryOpen(false)}
@@ -719,20 +678,23 @@ export default function Accomplishments() {
         sumError={sumError}
         downloadMarkdown={downloadMarkdown}
         Button={Button}
-        costCenter={null}
+        costCenter={loginContext?.loginEmployee?.costCenter ?? null}
         onSendEmail={async (draft) => {
           const response = await sendEmail({
-            to: draft.to.split(/[;,]/).map((s) => s.trim()),
+            to: draft.to
+              .split(/[;,]/)
+              .map((s) => s.trim())
+              .filter(Boolean),
             subject: draft.subject,
             body: draft.body,
           });
-          if (!(response.status === 200 || response.status === 201)) {
-            let msg = "Failed to send email.";
 
-            throw new Error(msg);
+          if (!(response.status === 200 || response.status === 201)) {
+            throw new Error("Failed to send email.");
           }
         }}
       />
+
       {/* 🔄 Full-screen spinner while fetching accomplishments */}
       {loading && <FullscreenSpinner label="Loading your accomplishments…" />}
     </div>
