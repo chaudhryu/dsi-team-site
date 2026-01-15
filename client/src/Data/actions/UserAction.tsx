@@ -7,3 +7,9 @@ export const getUserByCostCenter = async (costCenter: number) => {
   const promise = await backendApi.get(`/users/costcenter/${costCenter}`);
   return promise;
 };
+export const getTeamMembersByCostCenter = async (costCenter: number, excludeManager = false) => {
+  const promise = await backendApi.get(
+    `/users/team-member-by-cost-center?costCenter=${costCenter}&excludeManager=${excludeManager}`
+  );
+  return promise;
+};

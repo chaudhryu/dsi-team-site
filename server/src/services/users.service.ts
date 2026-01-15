@@ -67,6 +67,20 @@ export class UsersService implements OnApplicationBootstrap {
     });
   }
 
+  findTeamMembersByCostCenter(
+    costCenter: number,
+    excludeManager = false
+  ): Promise<User[]> {
+    this.logger.log("Fetching Team members by cost center");
+    const qb = this.userRepo
+      .createQueryBuilder("u")
+      .where("u.costCenter = :costCenter", { costCenter });
+    if (excludeManager) {
+      qb.andWhere("u.role = 'user'");
+    }
+    return qb.getMany();
+  }
+
   findOneByBadge(badge: number): Promise<User | null> {
     return this.userRepo.findOne({ where: { badge } });
   }

@@ -30,6 +30,17 @@ export class UsersController {
     return this.usersService.findByCostCenter(parseInt(costCenter));
   }
 
+  @Get("team-member-by-cost-center")
+  findTeamMembersByCostCenter(
+    @Query("costCenter") costCenter: string,
+    @Query("excludeManager") excludeManager?: string
+  ): Promise<User[]> {
+    return this.usersService.findTeamMembersByCostCenter(
+      parseInt(costCenter, 10),
+      excludeManager === "true"
+    );
+  }
+
   // GET /api/users/badge/96880
   @Get("badge/:badge")
   findOneByBadge(@Param("badge") badge: string): Promise<User | null> {

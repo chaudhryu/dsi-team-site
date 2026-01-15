@@ -13,6 +13,7 @@ import { AccomplishmentSummaryDialog } from "@/components/modal/AccomplishmentSu
 import { sendEmail } from "@/Data/actions/MailAction";
 import { User, Row, SummarizeResponse, WA } from "./types";
 import DatePicker from "@/components/form/date-picker";
+import { getTeamMembersByCostCenter } from "@/Data/actions/UserAction";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 
@@ -155,11 +156,14 @@ export default function AccomplishmentsTable() {
   useEffect(() => {
     (async () => {
       try {
-        const ures = await fetch(
-          `${API_BASE}/users/by-cost-center?costCenter=${loginContext?.loginEmployee.costCenter}`,
-          { credentials: "include" }
-        );
-        const raw: User[] = ures.ok ? await ures.json() : [];
+        const ures = await getTeamMembersByCostCenter(loginContext?.loginEmployee.costCenter, true);
+        if (ures.status !== 200) {
+          // Optionally parse server error message
+
+          throw new Error(`Failed to load team (HTTP ${ures.status})`);
+        }
+
+        const raw: User[] = await ures.data;
 
         // ⬇️ Filter out hidden badges (e.g., 93467) BEFORE sorting/setting state
         const udata = raw.filter((u) => !HIDDEN_BADGES.has(String(u.badge)));
