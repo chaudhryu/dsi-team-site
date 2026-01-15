@@ -735,7 +735,6 @@ export default function HighManagerDashboard() {
                               <div className="font-medium text-gray-900 dark:text-gray-100">{userDisplayName(user)}</div>
                               <div className="text-xs text-gray-500">
                                 #{user.badge}
-                                {user.role ? ` · ${String(user.role)}` : ""}
                               </div>
                             </td>
 
