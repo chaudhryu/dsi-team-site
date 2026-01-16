@@ -85,6 +85,7 @@ type WeekOpt = { start: string; end: string; label: string };
 function buildWeekOptions(center = new Date(), pastWeeks = 52): WeekOpt[] {
   const currentMon = startOfWeek(center, 1);
   const opts: WeekOpt[] = [];
+
   for (let i = 0; i <= pastWeeks; i++) {
     const start = addDays(currentMon, -7 * i);
     const end = endOfWeek(start, 1);
@@ -92,6 +93,7 @@ function buildWeekOptions(center = new Date(), pastWeeks = 52): WeekOpt[] {
     const endYmd = ymdLocal(end);
     opts.push({ start: startYmd, end: endYmd, label: `${startYmd} → ${endYmd}` });
   }
+
   return opts;
 }
 
@@ -388,9 +390,7 @@ export default function HighManagerDashboard() {
     if (!waList) waList = await fetchWeeklyAccomplishmentsForCostCenter(cc, from, to);
 
     if ((waList?.length ?? 0) === 0 && allUsers.length > 0) {
-      const perUser = await Promise.all(
-        allUsers.map(async (u) => await fetchWeeklyAccomplishmentsForUser(u.badge, from, to))
-      );
+      const perUser = await Promise.all(allUsers.map(async (u) => await fetchWeeklyAccomplishmentsForUser(u.badge, from, to)));
       waList = perUser.flat();
     }
 
@@ -412,9 +412,7 @@ export default function HighManagerDashboard() {
       if (!waList) waList = await fetchWeeklyAccomplishmentsForCostCenter(cc, from, to);
 
       if ((waList?.length ?? 0) === 0 && users.length > 0) {
-        const perUser = await Promise.all(
-          users.map(async (u) => await fetchWeeklyAccomplishmentsForUser(u.badge, from, to))
-        );
+        const perUser = await Promise.all(users.map(async (u) => await fetchWeeklyAccomplishmentsForUser(u.badge, from, to)));
         waList = perUser.flat();
       }
 
@@ -490,10 +488,15 @@ export default function HighManagerDashboard() {
   const peopleSections = useMemo(() => {
     return uniqueManagerCostCenters.map((cc) => {
       const ccKey = String(cc);
-      const users = usersByCostCenter[ccKey] ?? [];
-      const waList = peopleWaCacheByCostCenter[ccKey] ?? [];
 
+      const ccUsers = usersByCostCenter[ccKey] ?? [];
+      const ccManagers = managerUsers.filter((m) => typeof m.costCenter === "number" && m.costCenter === cc);
+
+      const managerBadges = new Set<number>(ccManagers.map((m) => m.badge));
+
+      const waList = peopleWaCacheByCostCenter[ccKey] ?? [];
       const waByBadge = new Map<number, WA[]>();
+
       for (const wa of waList) {
         const badge = wa?.user?.badge;
         if (typeof badge !== "number") continue;
@@ -502,20 +505,46 @@ export default function HighManagerDashboard() {
         waByBadge.set(badge, prev);
       }
 
-      const rows = users.map((u) => {
-        const list = (waByBadge.get(u.badge) ?? []).sort((a, b) => (a.startWeekDate < b.startWeekDate ? 1 : -1));
-        const exact = list.find((wa) => wa.startWeekDate === peopleWeekStart && wa.endWeekDate === peopleWeekEnd) ?? null;
-        return { user: u, wa: exact ?? null };
+      const getExactForBadge = (badge: number): WA | null => {
+        const list = waByBadge.get(badge) ?? [];
+        return list.find((wa) => wa.startWeekDate === peopleWeekStart && wa.endWeekDate === peopleWeekEnd) ?? null;
+      };
+
+      const byBadge = new Map<number, User>();
+      for (const u of [...ccManagers, ...ccUsers]) byBadge.set(u.badge, u);
+
+      const mergedUsers = Array.from(byBadge.values()).sort((a, b) => {
+        const am = managerBadges.has(a.badge);
+        const bm = managerBadges.has(b.badge);
+        if (am !== bm) return am ? -1 : 1;
+
+        const al = (a.lastName || "").toLowerCase();
+        const bl = (b.lastName || "").toLowerCase();
+        if (al !== bl) return al.localeCompare(bl);
+        return (a.firstName || "").localeCompare(b.firstName || "", undefined, { sensitivity: "base" });
       });
+
+      const rows = mergedUsers.map((u) => ({
+        user: u,
+        wa: getExactForBadge(u.badge),
+        isManager: managerBadges.has(u.badge),
+      }));
 
       return { costCenter: cc, rows };
     });
-  }, [uniqueManagerCostCenters, usersByCostCenter, peopleWaCacheByCostCenter, peopleWeekStart, peopleWeekEnd]);
+  }, [
+    uniqueManagerCostCenters,
+    usersByCostCenter,
+    peopleWaCacheByCostCenter,
+    peopleWeekStart,
+    peopleWeekEnd,
+    managerUsers,
+  ]);
 
   return (
-    <div className="space-y-10">
-      <div className="overflow-hidden rounded-2xl border-2 border-gray-400 bg-white shadow-md dark:border-white/[0.18] dark:bg-white/[0.03]">
-        <div className="flex flex-wrap items-center gap-3 p-4 border-b-2 border-gray-300 dark:border-white/[0.14]">
+    <div className="space-y-12">
+      <div className="overflow-hidden rounded-2xl border-4 border-gray-400 bg-white shadow-md dark:border-white/[0.18] dark:bg-white/[0.03]">
+        <div className="flex flex-wrap items-center gap-3 p-4 border-b-2 border-gray-400 dark:border-white/[0.18]">
           <Label className="text-gray-700 text-theme-sm">Date range</Label>
 
           <DatePicker
@@ -575,7 +604,7 @@ export default function HighManagerDashboard() {
 
         <div className="max-w-full overflow-x-auto">
           <Table>
-            <TableBody className="divide-y-2 divide-gray-200 dark:divide-white/[0.14]">
+            <TableBody className="divide-y-2 divide-gray-300 dark:divide-white/[0.18]">
               {loading && (
                 <tr>
                   <td className="px-5 py-6 text-gray-500 text-theme-sm dark:text-gray-400" colSpan={3}>
@@ -662,8 +691,8 @@ export default function HighManagerDashboard() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border-2 border-gray-400 bg-white shadow-md dark:border-white/[0.18] dark:bg-white/[0.03]">
-        <div className="flex flex-wrap items-end justify-between gap-3 p-4 border-b-2 border-gray-300 dark:border-white/[0.14]">
+      <div className="overflow-hidden rounded-2xl border-4 border-gray-400 bg-white shadow-md dark:border-white/[0.18] dark:bg-white/[0.03]">
+        <div className="flex flex-wrap items-end justify-between gap-3 p-4 border-b-2 border-gray-400 dark:border-white/[0.18]">
           <div>
             <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Users by Cost Center</div>
             <div className="text-xs text-gray-500">Week filter below does not change summaries above</div>
@@ -680,7 +709,7 @@ export default function HighManagerDashboard() {
                 setPeopleWeekStart(opt.start);
                 setPeopleWeekEnd(opt.end);
               }}
-              className="rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+              className="rounded-xl border-2 border-gray-400 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
             >
               {peopleWeekOptions.map((w) => (
                 <option key={w.start} value={w.start}>
@@ -703,9 +732,9 @@ export default function HighManagerDashboard() {
             {peopleSections.map((section) => (
               <div
                 key={section.costCenter}
-                className="rounded-2xl border-2 border-gray-400 bg-white shadow-md overflow-hidden dark:border-white/[0.18] dark:bg-white/[0.02]"
+                className="rounded-2xl border-4 border-gray-400 bg-white shadow-md overflow-hidden dark:border-white/[0.18] dark:bg-white/[0.02]"
               >
-                <div className="px-5 py-4 bg-gray-50 border-b-2 border-gray-300 dark:bg-gray-800/40 dark:border-white/[0.14]">
+                <div className="px-5 py-4 bg-gray-50 border-b-2 border-gray-400 dark:bg-gray-800/40 dark:border-white/[0.18]">
                   <div className="flex items-center justify-between gap-3">
                     <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                       Cost Center {section.costCenter}
@@ -719,59 +748,80 @@ export default function HighManagerDashboard() {
 
                 <div className="max-w-full overflow-x-auto">
                   <table className="min-w-[900px] w-full text-left text-sm">
-                    <thead className="bg-white dark:bg-transparent text-gray-600 dark:text-gray-300 border-b-2 border-gray-200 dark:border-white/10">
+                    <thead className="bg-white dark:bg-transparent text-gray-600 dark:text-gray-300 border-b-2 border-gray-400 dark:border-white/[0.18]">
                       <tr>
                         <th className="px-5 py-3 font-medium w-72">User</th>
                         <th className="px-5 py-3 font-medium">Accomplishment</th>
                         <th className="px-5 py-3 font-medium w-28">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y-2 divide-gray-200 dark:divide-white/10">
-                      {section.rows.map(({ user, wa }) => {
-                        const submitted = !!wa && hasContent(wa.accomplishments);
-                        return (
-                          <tr key={user.badge} className="hover:bg-gray-50/70 dark:hover:bg-gray-800/40">
-                            <td className="px-5 py-4">
-                              <div className="font-medium text-gray-900 dark:text-gray-100">{userDisplayName(user)}</div>
-                              <div className="text-xs text-gray-500">
-                                #{user.badge}
-                              </div>
-                            </td>
 
-                            <td className="px-5 py-4 text-gray-800 dark:text-gray-200 align-top">
-                              {submitted ? (
-                                <div className="ql-snow">
-                                  <div
-                                    className="ql-editor max-w-none text-theme-sm text-gray-700 dark:text-gray-300"
-                                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(wa!.accomplishments!) }}
-                                  />
-                                </div>
-                              ) : (
-                                <span className="text-gray-400">—</span>
-                              )}
-                            </td>
-
-                            <td className="px-5 py-4">
-                              <span
-                                className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                                  submitted
-                                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
-                                    : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                                }`}
-                              >
-                                {submitted ? "Submitted" : "Missing"}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-
-                      {!peopleLoading && section.rows.length === 0 && (
+                    <tbody className="divide-y-2 divide-gray-300 dark:divide-white/[0.18]">
+                      {peopleLoading ? (
                         <tr>
-                          <td className="px-5 py-8 text-center text-gray-500 dark:text-gray-400" colSpan={3}>
-                            No users found for this cost center.
+                          <td className="px-5 py-6 text-gray-500 dark:text-gray-400" colSpan={3}>
+                            Loading cost center accomplishments…
                           </td>
                         </tr>
+                      ) : (
+                        <>
+                          {section.rows.map(({ user, wa, isManager }) => {
+                            const submitted = !!wa && hasContent(wa.accomplishments);
+
+                            return (
+                              <tr key={user.badge} className="hover:bg-gray-50/70 dark:hover:bg-gray-800/40">
+                                <td className="px-5 py-4">
+                                  <div className="flex items-center gap-2">
+                                    <div className="font-medium text-gray-900 dark:text-gray-100">
+                                      {userDisplayName(user)}
+                                    </div>
+                                    {isManager ? (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border-2 border-gray-400 text-gray-700 dark:border-white/[0.18] dark:text-gray-200">
+                                        Manager
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    #{user.badge}
+                                  </div>
+                                </td>
+
+                                <td className="px-5 py-4 text-gray-800 dark:text-gray-200 align-top">
+                                  {submitted ? (
+                                    <div className="ql-snow">
+                                      <div
+                                        className="ql-editor max-w-none text-theme-sm text-gray-700 dark:text-gray-300"
+                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(wa!.accomplishments!) }}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400">—</span>
+                                  )}
+                                </td>
+
+                                <td className="px-5 py-4">
+                                  <span
+                                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                                      submitted
+                                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                                        : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                                    }`}
+                                  >
+                                    {submitted ? "Submitted" : "Missing"}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+
+                          {section.rows.length === 0 && (
+                            <tr>
+                              <td className="px-5 py-8 text-center text-gray-500 dark:text-gray-400" colSpan={3}>
+                                No users found for this cost center.
+                              </td>
+                            </tr>
+                          )}
+                        </>
                       )}
                     </tbody>
                   </table>
@@ -793,11 +843,17 @@ export default function HighManagerDashboard() {
         downloadMarkdown={downloadMarkdown}
         Button={Button}
         onSendEmail={async (draft: any) => {
+          const toList = String(draft.to ?? "")
+            .split(/[;,]/)
+            .map((s: string) => s.trim())
+            .filter(Boolean);
+
           const response = await sendEmail({
-            to: draft.to.split(/[;,]/).map((s: string) => s.trim()),
+            to: toList,
             subject: draft.subject,
             body: draft.body,
           });
+
           if (!(response.status === 200 || response.status === 201)) {
             throw new Error("Failed to send email.");
           }
