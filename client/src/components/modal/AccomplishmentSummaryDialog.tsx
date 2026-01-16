@@ -10,11 +10,6 @@ type SummaryUser = {
   next_focus?: string[];
 };
 
-type ManagerRef = {
-  badge: number;
-  name: string;
-};
-
 type TeamSummary = {
   costCenter: number;
   manager: { badge: number; name: string };
@@ -26,10 +21,9 @@ type TeamSummary = {
 
 type NewSummaryData = {
   teams: TeamSummary[];
-  org_themes?: string[]; // optional if you later add org rollup
+  org_themes?: string[];
 };
 
-// Back-compat with your current shape
 type LegacySummaryData = {
   users: SummaryUser[];
   team_themes?: string[];
@@ -40,18 +34,13 @@ type SummaryData = NewSummaryData | LegacySummaryData;
 type Props = {
   open: boolean;
   onClose: () => void;
-
   from: string;
   to: string;
-
   summaryData: SummaryData | null;
   sumError?: string | null;
-
   downloadMarkdown: () => void;
-  costCenter: number | string | null | undefined; // legacy single-team subject label
+  costCenter: number | string | null | undefined;
   Button: React.ComponentType<any>;
-
-  // optional: wire this if you want email sending
   onSendEmail?: (draft: EmailDraft) => Promise<void>;
 };
 
@@ -106,7 +95,6 @@ function isNewSummaryData(data: any): data is NewSummaryData {
 function normalizeToTeams(data: SummaryData, fallbackCostCenter?: number | string | null | undefined): TeamSummary[] {
   if (isNewSummaryData(data)) return data.teams ?? [];
 
-  // Legacy -> single “team” wrapper so UI can render the same way
   const cc =
     typeof fallbackCostCenter === "number"
       ? fallbackCostCenter
@@ -159,7 +147,6 @@ export function buildEmailHtmlForQuill(
   parts.push(`<p><strong>Date window:</strong> ${escapeHtml(from)} → ${escapeHtml(to)}</p>`);
   parts.push(`<p><br></p>`);
 
-  // Optional org themes (if you add this later)
   const orgThemes = (isNewSummaryData(summaryData) ? summaryData.org_themes : undefined) ?? [];
   if (orgThemes.length) {
     parts.push(`<h2>Organization Themes</h2>`);
@@ -232,7 +219,7 @@ export function AccomplishmentSummaryDialog({
   to,
   summaryData,
   sumError,
-  // downloadMarkdown,
+  downloadMarkdown,
   costCenter,
   Button,
   onSendEmail,
@@ -271,6 +258,10 @@ export function AccomplishmentSummaryDialog({
             </div>
 
             <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={downloadMarkdown}>
+                Export .md
+              </Button>
+
               {onSendEmail && (
                 <Button size="sm" variant="outline" onClick={() => setEmailOpen(true)}>
                   Send Email
@@ -284,7 +275,6 @@ export function AccomplishmentSummaryDialog({
           </div>
 
           <div className="px-6 py-5 space-y-6 max-h-[70vh] overflow-y-auto">
-            {/* Optional org themes (future-proof) */}
             {isNewSummaryData(summaryData) && summaryData.org_themes?.length ? (
               <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-4">
                 <div className="text-sm font-semibold mb-2">Organization Themes</div>
@@ -296,7 +286,6 @@ export function AccomplishmentSummaryDialog({
               </div>
             ) : null}
 
-            {/* Teams */}
             <div className="space-y-8">
               {teams.map((team) => {
                 const mgrName = team.manager?.name ?? "N/A";
@@ -314,6 +303,7 @@ export function AccomplishmentSummaryDialog({
                       <div className="text-xs text-gray-600 dark:text-gray-400">
                         Manager: {mgrName} <span className="text-gray-500">#{mgrBadge}</span>
                       </div>
+
                       {team.manager_achievements?.length ? (
                         <div className="mt-3">
                           <div className="text-sm font-semibold mb-1">Manager Comment</div>
@@ -324,15 +314,15 @@ export function AccomplishmentSummaryDialog({
                           </ul>
                         </div>
                       ) : null}
+
                       {team.team_summary ? (
                         <div className="mt-2 text-sm text-gray-800 dark:text-gray-200">{team.team_summary}</div>
                       ) : null}
                     </div>
 
-                    {/* Team themes */}
                     {team.team_themes?.length ? (
                       <div className="mt-4">
-                        <div className="text-sm font-semibold mb-1">Team Achivement</div>
+                        <div className="text-sm font-semibold mb-1">Team Achievement</div>
                         <ul className="list-disc pl-5 text-sm text-gray-800 dark:text-gray-100">
                           {team.team_themes.map((t, i) => (
                             <li key={i}>{t}</li>
@@ -341,7 +331,6 @@ export function AccomplishmentSummaryDialog({
                       </div>
                     ) : null}
 
-                    {/* Users list */}
                     <div className="mt-5 space-y-4">
                       {(team.users ?? []).map((u) => (
                         <div key={u.badge} className="rounded-xl border border-gray-200 dark:border-gray-800 p-4">
@@ -408,7 +397,6 @@ export function AccomplishmentSummaryDialog({
         </div>
       </div>
 
-      {/* Email dialog (only if onSendEmail provided) */}
       {onSendEmail && (
         <EmailComposeDialog
           open={emailOpen}
