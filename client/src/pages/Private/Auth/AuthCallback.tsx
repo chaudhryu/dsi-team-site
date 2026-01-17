@@ -11,6 +11,7 @@ import { useLogin } from "../../../context/LoginContext";
 import { envConfig } from "../../../config/envConfig";
 import { ErrorModal } from "@/components/modal/ErrorModal";
 import { Card, CardContent } from "@/components/ui/card";
+import axios, { AxiosError } from "axios";
 type MinimalUser = {
   badge: number;
   firstName: string;
@@ -60,9 +61,23 @@ export default function AuthCallback() {
         }
       });
   };
-
+  const mapAccessError = (reason?: string) => {
+    switch (reason) {
+      case "COSTCENTER_NOT_ALLOWED":
+        return "Your cost center is not enabled.";
+      case "NO_MANAGER_FOR_COST_CENTER":
+        return "No manager assigned to your cost center.";
+      case "USER_NOT_IN_MANAGER_TEAM":
+        return "You are not reporting to any assigned manager.";
+      case "INTERNAL_ERROR":
+        return "An internal error occurred.";
+      default:
+        return "You are not authorized to access this system.";
+    }
+  };
   const checkAndSyncEmployeeInfo = async (badgeStr: string) => {
     let minimalUser: MinimalUser | null = null;
+    let hasError = false; // ✅ local, synchronous
     const parsedBadge = Number(badgeStr);
     try {
       // fetch employee details from FIS
@@ -102,6 +117,7 @@ export default function AuthCallback() {
             }
           }
         }
+        debugger;
         const checkResponse = await checkUserLoginAndSettingProfile(minimalUser);
         if (checkResponse.status !== 200 && checkResponse.status !== 201) {
           // alert and sign user our of SSO
@@ -133,8 +149,27 @@ export default function AuthCallback() {
         }
         minimalUser.role = checkResponse.data.role || minimalUser.role; //assign role from server
       }
-    } catch {
+    } catch (ex) {
+      hasError = true; // ✅ stop the flow
       // fallback minimal user if EMP lookup fails
+      debugger;
+      if (axios.isAxiosError(ex)) {
+        const axiosError = ex as AxiosError<any>;
+        const reason = axiosError.response?.data?.reason;
+
+        setError({
+          title: "Access denied",
+          message: mapAccessError(reason) + " Please contact your manager or DSI admin for assistance.",
+        });
+      } else {
+        // Non-Axios error
+        setError({
+          title: "Unexpected error",
+          message: "An unexpected error occurred. Please try again later.",
+        });
+      }
+
+      // Fallback minimal user
       minimalUser = {
         badge: Number.isFinite(parsedBadge) ? parsedBadge : 0,
         firstName: "",
@@ -144,6 +179,10 @@ export default function AuthCallback() {
         role: "User",
       };
     } finally {
+      if (hasError) {
+        // do not proceed if there is an error
+        return;
+      }
       if (minimalUser && minimalUser.badge) {
         // hydrate app state if your context supports it (optional)
         try {
@@ -181,7 +220,7 @@ export default function AuthCallback() {
         title={error?.title ?? ""}
         message={error?.message ?? ""}
         onCloseButtonLabel="Logout"
-        onClose={() => instance.logoutRedirect}
+        onClose={() => instance.logoutRedirect()}
       />
     </>
   );

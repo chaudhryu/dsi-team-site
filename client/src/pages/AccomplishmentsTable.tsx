@@ -480,7 +480,6 @@ export default function AccomplishmentsTable() {
           //   if (dates?.length) setFrom(ymdLocal(dates[0]));
           // }}
           onChange={(dates, currentDateString) => {
-            debugger;
             if (dates?.length) setFrom(currentDateString);
           }}
           mode="single"
@@ -502,7 +501,6 @@ export default function AccomplishmentsTable() {
           //   if (dates?.length) setFrom(ymdLocal(dates[0]));
           // }}
           onChange={(dates, currentDateString) => {
-            debugger;
             if (dates?.length) setTo(currentDateString);
           }}
           mode="single"
