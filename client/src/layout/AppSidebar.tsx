@@ -252,7 +252,7 @@ const AppSidebar: React.FC = () => {
           {isExpanded || isHovered || isMobileOpen ? (
             <img src="/images/LAMetroLogo.svg.png" alt="Logo" className="mx-auto h-12 w-auto" />
           ) : (
-            <img src="/images/logo/metroLogoSmall.webp" alt="Logo" className="mx-auto h-8 w-auto" />
+            <img src="/images/LAMetroLogo.svg.png" alt="Logo" className="mx-auto h-8 w-auto" />
           )}
         </Link>
       </div>
