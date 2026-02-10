@@ -143,6 +143,7 @@ export default function AccomplishmentsTable() {
   const [users, setUsers] = useState<User[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   /* 🔹 Summarization (date range + modal) */
   const [from, setFrom] = useState<string>(() => ymdLocal(addDays(mondayStart(new Date()), -21))); // last 3 weeks
@@ -226,6 +227,7 @@ export default function AccomplishmentsTable() {
       return;
     }
     setLoading(true);
+    setLoadError(null);
     (async () => {
       try {
         // const perUser = await Promise.all(
@@ -287,10 +289,12 @@ export default function AccomplishmentsTable() {
           setRows(usersWithWeeklyAccomplishment);
         } catch (fetchErr) {
           console.error("Failed to fetch weekly accomplishments:", fetchErr);
+          setLoadError("Failed to load accomplishments for the selected week. Please try again.");
           setRows(users.map((u) => ({ user: u, wa: null })));
         }
       } catch (e) {
         console.error("Failed to load accomplishments per user", e);
+        setLoadError("Failed to load accomplishments. Please try again.");
         setRows(users.map((u) => ({ user: u, wa: null })));
       } finally {
         setLoading(false);
@@ -532,6 +536,13 @@ export default function AccomplishmentsTable() {
         </Button>
         <span className="text-gray-500 text-theme-xs">(AI summary for all users in range)</span>
       </div>
+
+      {/* Error message */}
+      {loadError && (
+        <div className="px-4 py-3 border-b border-gray-100 dark:border-white/[0.05] bg-red-50 dark:bg-red-900/20">
+          <p className="text-sm text-red-600 dark:text-red-400">{loadError}</p>
+        </div>
+      )}
 
       {/* Table */}
       <div className="max-w-full overflow-x-auto">
