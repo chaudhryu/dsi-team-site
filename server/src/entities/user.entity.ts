@@ -42,6 +42,10 @@ export class User {
   readOnly: number;
   @Column({ default: false })
   isHierarchyManuallyManaged: boolean;
+  
+  @Column({ default: false })
+  auditEnabled: boolean;
+  
   @OneToMany(() => WeeklyAccomplishment, (wa) => wa.user)
   weeklyAccomplishments: WeeklyAccomplishment[];
 }

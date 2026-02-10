@@ -69,6 +69,17 @@ export class UsersController {
     return this.usersService.updateByBadge(Number(badge), data);
   }
 
+  // PUT /api/users/badge/:badge/toggle-audit
+  @Put("badge/:badge/toggle-audit")
+  async toggleAudit(
+    @Param("badge") badge: string,
+    @Body() data: { auditEnabled: boolean }
+  ): Promise<User | null> {
+    return this.usersService.updateByBadge(Number(badge), {
+      auditEnabled: data.auditEnabled,
+    });
+  }
+
   // DELETE /api/users/badge/96880
   @Delete("badge/:badge")
   removeByBadge(@Param("badge") badge: string): Promise<void> {

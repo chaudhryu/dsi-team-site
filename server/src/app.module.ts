@@ -12,16 +12,19 @@ import {
 } from "./entities";
 import { Project } from "./entities/project.entity";
 import { Technology } from "./entities/technlogy.entity";
+import { UserActivityLog } from "./entities/UserActivityLog.entity";
 
 import { UsersController } from "./controllers/users.controller";
 import { WeeklyAccomplishmentsController } from "./controllers/weekly-accomplishments.controller";
 import { ProjectsController } from "./controllers/projects.controller";
 import { TechnologiesController } from "./controllers/technologies.controller";
+import { UserActivityLogsController } from "./controllers/user-activity-logs.controller";
 
 import { UsersService } from "./services/users.service";
 import { WeeklyAccomplishmentService } from "./services/weekly-accomplishment.service";
 import { ProjectsService } from "./services/projects.service";
 import { TechnologiesService } from "./services/technologies.service";
+import { UserActivityLogsService } from "./services/user-activity-logs.service";
 
 /* Feature modules */
 import { AiModule } from "./ai/ai.module";
@@ -72,6 +75,7 @@ import { MailController } from "./controllers/mail.controller";
           Database,
           DatabaseLogin,
           WeeklyAccomplishment,
+          UserActivityLog,
         ];
 
         if (dbType === "mssql") {
@@ -116,6 +120,7 @@ import { MailController } from "./controllers/mail.controller";
       Database,
       DatabaseLogin,
       WeeklyAccomplishment,
+      UserActivityLog,
     ]),
 
     AiModule, // 👈 AI feature module
@@ -128,12 +133,14 @@ import { MailController } from "./controllers/mail.controller";
     ProjectsController,
     TechnologiesController,
     MailController,
+    UserActivityLogsController,
   ],
   providers: [
     UsersService,
     WeeklyAccomplishmentService,
     ProjectsService,
     TechnologiesService,
+    UserActivityLogsService,
   ],
 })
 export class AppModule {}
