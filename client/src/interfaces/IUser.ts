@@ -9,4 +9,5 @@ export interface UserRow {
   role: string;
   reportToLevelOne: string;
   reportToLevelTwo: string;
+  auditEnabled?: boolean | null;
 }

@@ -13,6 +13,7 @@ import Images from "./pages/UiElements/Images";
 import Accomplishments from "./pages/Accomplishments";
 import Calendar from "./pages/Calendar";
 import AccomplishmentsTable from "./pages/AccomplishmentsTable";
+import UserActivityLogs from "./pages/UserActivityLogs";
 
 import ProtectedRoute, { PublicOnlyRoute } from "./routes/ProtectedRoute";
 import AppLayout from "./layout/AppLayout";
@@ -222,6 +223,7 @@ export default function App() {
               <Route path="/submit-accomplishment" element={<Accomplishments />} />
               <Route path="/view-accomplishments" element={<AccomplishmentsTable />} />
               <Route path="/users" element={<Users />} />
+              <Route path="/user-activity-logs/:badge" element={<UserActivityLogs />} />
               <Route path="/databases" element={<Databases />} />
               {/* ✅ high_manager-only route */}
               <Route element={<HighManagerOnlyRoute />}>

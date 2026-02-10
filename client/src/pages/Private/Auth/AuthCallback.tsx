@@ -6,6 +6,7 @@ import { InteractionRequiredAuthError, InteractionStatus } from "@azure/msal-bro
 import Swal from "sweetalert2";
 import { fetchEmployeeDetails, fetchEmployeeHierarchy } from "../../../Data/actions/EmployeeAction";
 import { checkUserLoginAndSettingProfile } from "@/Data/actions/UserAction";
+import { createActivityLog } from "@/Data/actions/UserActivityAction";
 import { getMsGraphMe } from "../../../Data/api/graphApi";
 import { useLogin } from "../../../context/LoginContext";
 import { envConfig } from "../../../config/envConfig";
@@ -148,6 +149,18 @@ export default function AuthCallback() {
           }
         }
         minimalUser.role = checkResponse.data.role || minimalUser.role; //assign role from server
+        
+        // Log login activity if audit is enabled for this user
+        try {
+          await createActivityLog({
+            badge: minimalUser.badge,
+            activityType: "login",
+            metadata: JSON.stringify({ timestamp: new Date().toISOString() }),
+          });
+        } catch (logErr) {
+          // Don't fail login if activity logging fails
+          console.warn("Failed to log login activity:", logErr);
+        }
       }
     } catch (ex) {
       hasError = true; // ✅ stop the flow

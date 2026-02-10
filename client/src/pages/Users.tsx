@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { envConfig } from "../config/envConfig";
 import { Form, FormControl, FormMessage, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +13,7 @@ import { fetchEmployeeDetails, fetchEmployeeHierarchy } from "@/Data/actions/Emp
 import { IReportTo } from "@/interfaces/IReportTo";
 import { Spinner } from "@/components/ui/shadcn-io/spinner";
 import { UserRow } from "@/interfaces/IUser";
+import { toggleUserAudit } from "@/Data/actions/UserActivityAction";
 
 const API_BASE = envConfig.backendApiBaseUrl || "http://localhost:3000/api";
 
@@ -30,6 +32,7 @@ const roles: IRole[] = [
 ];
 
 export default function Users() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<UserRow[]>([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
@@ -240,6 +243,22 @@ export default function Users() {
     }
   };
 
+  const handleToggleAudit = async (badge: number, currentValue: boolean) => {
+    try {
+      await toggleUserAudit(badge, !currentValue);
+      setRows((prev) =>
+        prev.map((u) => (u.badge === badge ? { ...u, auditEnabled: !currentValue } : u))
+      );
+    } catch (err) {
+      console.error("Failed to toggle audit:", err);
+      alert("Failed to toggle audit. Please try again.");
+    }
+  };
+
+  const handleViewLogs = (badge: number) => {
+    navigate(`/user-activity-logs/${badge}`);
+  };
+
   const dialogOpen = openManagerForm || openUserForm;
 
   return (
@@ -310,6 +329,8 @@ export default function Users() {
                 <th className="px-6 py-3 font-medium">Report To Level One</th>
                 <th className="px-6 py-3 font-medium">Report To Level Two</th>
                 <th className="px-6 py-3 font-medium">Read Only</th>
+                <th className="px-6 py-3 font-medium">Audit Enabled</th>
+                <th className="px-6 py-3 font-medium">Actions</th>
               </tr>
             </thead>
 
@@ -336,12 +357,34 @@ export default function Users() {
                       {u.readOnly ? "Yes" : "No"}
                     </span>
                   </td>
+                  <td className="px-6 py-3">
+                    <button
+                      onClick={() => handleToggleAudit(u.badge, u.auditEnabled ?? false)}
+                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium cursor-pointer ${
+                        u.auditEnabled
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                          : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
+                      }`}
+                    >
+                      {u.auditEnabled ? "Enabled" : "Disabled"}
+                    </button>
+                  </td>
+                  <td className="px-6 py-3">
+                    {u.auditEnabled && (
+                      <button
+                        onClick={() => handleViewLogs(u.badge)}
+                        className="text-brand-600 hover:text-brand-700 text-sm font-medium"
+                      >
+                        View Logs
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
 
               {filtered.length === 0 && !loading && (
                 <tr>
-                  <td className="px-6 py-8 text-center text-gray-500 dark:text-gray-400" colSpan={10}>
+                  <td className="px-6 py-8 text-center text-gray-500 dark:text-gray-400" colSpan={12}>
                     No users found.
                   </td>
                 </tr>

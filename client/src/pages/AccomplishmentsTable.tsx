@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHeader, TableRow } from "../component
 import Label from "../components/form/Label";
 import Button from "../components/ui/button/Button";
 import { envConfig } from "../config/envConfig";
+import { createActivityLog } from "@/Data/actions/UserActivityAction";
 
 /* ⬇️ DOMPurify + Quill viewer CSS so stored HTML renders correctly */
 import DOMPurify from "dompurify";
@@ -262,6 +263,24 @@ export default function AccomplishmentsTable() {
             const usersWeeklyAccomplishment: WA | undefined = weeklyAccomplishments.find(
               (wa) => wa.user.badge === user.badge
             );
+            
+            // Track when viewing accomplishment (if audit is enabled for the user)
+            if (usersWeeklyAccomplishment?.id) {
+              createActivityLog({
+                badge: user.badge,
+                activityType: "view_accomplishment",
+                accomplishmentId: usersWeeklyAccomplishment.id,
+                metadata: JSON.stringify({ 
+                  weekStart, 
+                  weekEnd,
+                  viewedAt: new Date().toISOString() 
+                }),
+              }).catch((err) => {
+                // Don't fail the view if logging fails
+                console.warn("Failed to log accomplishment view:", err);
+              });
+            }
+            
             return { user: user, wa: usersWeeklyAccomplishment } as Row;
           });
           console.log(usersWithWeeklyAccomplishment);
