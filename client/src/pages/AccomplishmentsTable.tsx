@@ -285,7 +285,10 @@ export default function AccomplishmentsTable() {
           });
           console.log(usersWithWeeklyAccomplishment);
           setRows(usersWithWeeklyAccomplishment);
-        } catch {}
+        } catch (fetchErr) {
+          console.error("Failed to fetch weekly accomplishments:", fetchErr);
+          setRows(users.map((u) => ({ user: u, wa: null })));
+        }
       } catch (e) {
         console.error("Failed to load accomplishments per user", e);
         setRows(users.map((u) => ({ user: u, wa: null })));
