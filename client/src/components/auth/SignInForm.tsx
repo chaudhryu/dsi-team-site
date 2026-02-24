@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { ChevronLeftIcon} from "../../icons";
+import { ChevronLeftIcon } from "../../icons";
 
 import Button from "../ui/button/Button";
 import { useMsal } from "@azure/msal-react";
@@ -8,7 +8,7 @@ import { loginRequest } from "../../config/authConfig";
 export default function SignInForm() {
   const { instance } = useMsal();
   const handleMicrosoftLogin = () => {
-    instance.loginRedirect(loginRequest);     // 🔑
+    instance.loginRedirect(loginRequest); // 🔑
   };
   return (
     <div className="flex flex-col flex-1">
@@ -28,14 +28,17 @@ export default function SignInForm() {
               Sign In
             </h1>
 
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Enter your Metro email and password to sign in!
-            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Enter your Metro email and password to sign in!</p>
           </div>
-          <Button className="w-full" size="sm" onClick={handleMicrosoftLogin}>
+
+          {/* Updated button with a lightening hover state to match AppHeader interaction patterns */}
+          <Button
+            className="w-full flex items-center justify-center gap-2 !bg-gray-900 hover:!bg-gray-800 !text-white !border !border-gray-700 hover:!border-gray-500 shadow-sm hover:shadow-md transition-all duration-200"
+            size="sm"
+            onClick={handleMicrosoftLogin}
+          >
             Sign in with Microsoft
           </Button>
-
         </div>
       </div>
     </div>

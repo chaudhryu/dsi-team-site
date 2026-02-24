@@ -111,9 +111,6 @@ const AppHeader: React.FC = () => {
             </Link>
           )} */}
 
-          <div className="flex items-center gap-2 2xsm:gap-3">
-            <ThemeToggleButton />
-          </div>
 
           {isAuthenticated ? (
             <button
