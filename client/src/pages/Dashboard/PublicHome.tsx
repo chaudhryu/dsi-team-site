@@ -45,12 +45,11 @@ export default function Home() {
 
           {/* Headline & Copy */}
           <h1 className="text-center text-5xl font-semibold tracking-tight text-gray-900 dark:text-white sm:text-7xl">
-            ITS Teams Site
-          </h1>
-          <p className="mt-8 text-center text-lg leading-8 text-gray-600 dark:text-gray-300">
-            Welcome to the ITS Team Site. Explore the applications from our ITS Teams, read about the technologies we
-            use, and get involved in shaping the digital experience for Metro riders.
-          </p>
+  ITS Teams Site
+</h1>
+<p className="mt-8 text-center text-lg leading-8 text-gray-600 dark:text-gray-300">
+  Welcome to the ITS Team Site. Explore the applications from our ITS Teams, read about the technologies we use, and get involved in shaping the digital experience for Metro riders. For team members, this platform also serves as your central hub to securely log weekly accomplishments, ensuring our collective progress is tracked and celebrated.
+</p>
 
           {/* CTA buttons */}
           <div className="mt-10 flex items-center justify-center gap-x-6">

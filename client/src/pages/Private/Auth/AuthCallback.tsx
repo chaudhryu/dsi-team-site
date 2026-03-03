@@ -12,6 +12,7 @@ import { envConfig } from "../../../config/envConfig";
 import { ErrorModal } from "@/components/modal/ErrorModal";
 import { Card, CardContent } from "@/components/ui/card";
 import axios, { AxiosError } from "axios";
+import { Loader2 } from "lucide-react";
 type MinimalUser = {
   badge: number;
   firstName: string;
@@ -208,14 +209,27 @@ export default function AuthCallback() {
     if (inProgress === InteractionStatus.None) {
       requestUserProfileData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instance, navigate, inProgress]);
 
   return (
-    <>
-      <Card>
-        <CardContent className="p-6"> Authenticating User...</CardContent>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50/50 p-4">
+      <Card className="w-full max-w-md shadow-lg border-muted/60">
+        <CardContent className="flex flex-col items-center justify-center space-y-6 p-8">
+          <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-primary/10">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          </div>
+          
+          <div className="text-center space-y-2">
+            <h3 className="text-xl font-semibold tracking-tight text-foreground">
+              Authenticating
+            </h3>
+            <p className="text-sm text-muted-foreground animate-pulse">
+              Securely logging you in and setting up your workspace...
+            </p>
+          </div>
+        </CardContent>
       </Card>
+
       <ErrorModal
         open={!!error}
         title={error?.title ?? ""}
@@ -223,6 +237,6 @@ export default function AuthCallback() {
         onCloseButtonLabel="Logout"
         onClose={() => instance.logoutRedirect()}
       />
-    </>
+    </div>
   );
 }
