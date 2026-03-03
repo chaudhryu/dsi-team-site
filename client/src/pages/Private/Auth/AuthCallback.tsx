@@ -147,6 +147,7 @@ export default function AuthCallback() {
             return;
           }
         }
+        minimalUser.costCenter = checkResponse.data.user?.costCenter || minimalUser.costCenter; // assign cost center from server if available
         minimalUser.role = checkResponse.data.role || minimalUser.role; //assign role from server
       }
     } catch (ex) {

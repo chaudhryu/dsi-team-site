@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { envConfig } from "../config/envConfig";
+import { TrashBinIcon } from "@/icons";
 import { Form, FormControl, FormMessage, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -113,7 +114,9 @@ export default function Users() {
     if (!term) return rows;
 
     return rows.filter((u) => {
-      const hay = `${u.badge} ${u.firstName ?? ""} ${u.lastName ?? ""} ${u.email ?? ""} ${u.position ?? ""}`.toLowerCase();
+      const hay = `${u.badge} ${u.firstName ?? ""} ${u.lastName ?? ""} ${u.email ?? ""} ${u.position ?? ""} ${
+        u.costCenter ?? ""
+      }`.toLowerCase();
       return hay.includes(term);
     });
   }, [rows, q]);
@@ -256,7 +259,7 @@ export default function Users() {
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search by badge, name, email, position"
+                placeholder="Search by badge, name, email, position, cost center"
                 className="mt-1 block w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
@@ -273,14 +276,14 @@ export default function Users() {
                 onClick={handleOpenUserForm}
                 className="inline-flex items-center rounded-xl bg-brand-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-600"
               >
-                + Add user
+                + Add/Update user
               </button>
 
               <button
                 onClick={handleOpenManagerForm}
                 className="inline-flex items-center rounded-xl bg-brand-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-600"
               >
-                + Add manager
+                + Add/Update manager
               </button>
             </div>
           </div>
@@ -300,6 +303,7 @@ export default function Users() {
           <table className="min-w-[900px] w-full text-left text-sm">
             <thead className="bg-gray-50 dark:bg-gray-800/60 text-gray-600 dark:text-gray-300">
               <tr>
+                <th className="px-6 py-3 font-medium">#</th>
                 <th className="px-6 py-3 font-medium">Badge</th>
                 <th className="px-6 py-3 font-medium">First Name</th>
                 <th className="px-6 py-3 font-medium">Last Name</th>
@@ -316,6 +320,12 @@ export default function Users() {
             <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
               {filtered.map((u) => (
                 <tr key={u.badge} className="hover:bg-gray-50/70 dark:hover:bg-gray-800/40">
+                  <td className="px-6 py-3">
+                    {" "}
+                    <button className="inline-flex items-center rounded-xl border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <TrashBinIcon className="h-4 w-4" />
+                    </button>
+                  </td>
                   <td className="px-6 py-3">{u.badge}</td>
                   <td className="px-6 py-3">{u.firstName ?? ""}</td>
                   <td className="px-6 py-3">{u.lastName ?? ""}</td>
