@@ -33,7 +33,7 @@ import { MailController } from "./controllers/mail.controller";
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: [".env", `.env.${process.env.NODE_ENV || "development"}`],
+      envFilePath: [`.env.${process.env.NODE_ENV || "development"}`, ".env"],
     }),
 
     TypeOrmModule.forRootAsync({
@@ -63,6 +63,7 @@ import { MailController } from "./controllers/mail.controller";
           "DB_TYPE =",
           cfg.get("DB_TYPE")
         );
+        console.log("ALLOWED_COSTCENTERS =", cfg.get("ALLOWED_COSTCENTERS"));
         const entities = [
           User,
           Application,
