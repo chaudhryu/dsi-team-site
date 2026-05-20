@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useSidebar } from "../context/SidebarContext";
-import { ThemeToggleButton } from "../components/common/ThemeToggleButton";
 import { useIsAuthenticated, useMsal } from "@azure/msal-react";
 
 const AppHeader: React.FC = () => {
