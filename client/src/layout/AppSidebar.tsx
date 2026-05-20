@@ -43,15 +43,21 @@ const AppSidebar: React.FC = () => {
 
   const loginContext = useLogin();
   const role = (loginContext?.loginEmployee as any)?.role as string | undefined;
-
+  const badge = (loginContext?.loginEmployee as any)?.badge as number | undefined;
   // ✅ Decide dashboard route based on role
   const dashboardPath = role == "high_manager" ? "/high-manager-dashboard" : "/";
 
-  // ✅ Build nav items with the computed dashboard route
   const navItems = useMemo<NavItem[]>(() => {
-    console.log("role:", role);
-    return baseNavItems.map((item) => (item.name === "Dashboard" ? { ...item, path: dashboardPath } : item));
-  }, [dashboardPath]);
+    return baseNavItems
+      .map((item) => (item.name === "Dashboard" ? { ...item, path: dashboardPath } : item))
+      .filter((item) => {
+        // 🛡️ Hide "User Management" if the badge is not 87100
+        if (item.name === "User Management" && badge !== 87100) {
+          return false;
+        }
+        return true;
+      });
+  }, [dashboardPath, badge]);
   useEffect(() => {
     let submenuMatched = false;
 
