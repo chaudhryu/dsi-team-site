@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
-import { CalenderIcon, ChevronDownIcon, GridIcon, HorizontaLDots } from "../icons";
+import { CalenderIcon, ChevronDownIcon, GridIcon, HorizontaLDots, UserCircleIcon } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 import { useLogin } from "@/context/LoginContext";
 
@@ -24,7 +24,7 @@ const baseNavItems: NavItem[] = [
     ],
   },
 
-  //{ icon: <UserCircleIcon />, name: "User Management", path: "/users" },
+  { icon: <UserCircleIcon />, name: "User Management", path: "/users" },
   //{ name: "Projects", icon: <ListIcon />, path: "/projects-internal" }, no need for multi-project right now
   //{ name: "Databases", icon: <TableIcon />, path: "/databases" },
 ];
