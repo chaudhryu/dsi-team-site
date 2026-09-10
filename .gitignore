@@ -24,4 +24,4 @@ dist-ssr
 *.sln
 *.sw?
 server/dev.sqlite
-server/.env.development
+server/.env*
